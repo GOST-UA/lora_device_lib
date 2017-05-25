@@ -3,6 +3,8 @@ LoraDeviceLib
 
 A LoRaWAN device implementation
 
+[![Build Status](https://travis-ci.org/cjhdev/lora_device_lib.svg?branch=master)](https://travis-ci.org/cjhdev/lora_device_lib)
+
 ## Highlights
 
 - Region database with optional support for multiple regions at run-time
