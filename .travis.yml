@@ -1,0 +1,11 @@
+notifications:
+    email: false
+language: C
+script:
+    - cd test
+    - make build_and_run
+    - make coverage
+
+    
+    
+    
