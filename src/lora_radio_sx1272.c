@@ -1,6 +1,6 @@
 #include "lora_mac.h"
 #include "lora_radio.h"
-#include "sx1272_regs.h"
+#include "lora_regs_sx1272.h"
 #include <string.h>
 
 static const uint8_t spreadingFactor[] = {
