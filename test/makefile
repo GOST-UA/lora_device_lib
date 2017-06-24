@@ -84,6 +84,10 @@ $(DIR_BIN)/tc_loraradio: $(addprefix $(DIR_BUILD)/, tc_loraradio.o lora_radio.o 
 	@ echo linking $@
 	@ $(CC) $(LDFLAGS) $^ -o $@
 
+$(DIR_BIN)/tc_loraevent: $(addprefix $(DIR_BUILD)/, tc_loraevent.o lora_event.o $(OBJ_CMOCKA))
+	@ echo linking $@
+	@ $(CC) $(LDFLAGS) $^ -o $@
+
 
 
 
