@@ -94,6 +94,8 @@ enum lora_frame_result LoraFrame_decode(const uint8_t *netKey, const uint8_t *ap
  * */
 uint16_t LoraFrame_getPhyPayloadSize(uint8_t dataLen, uint8_t optsLen);
 
+bool LoraFrame_isUpstream(enum message_type type);
+
 #ifdef __cplusplus
 }
 #endif

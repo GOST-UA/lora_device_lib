@@ -30,7 +30,16 @@ uint32_t getTime(void);
 
 void Event_init(struct lora_event *self)
 {
+    size_t i;
+    
     (void)memset(self, 0, sizeof(*self));
+    
+    self->free = self->pool;
+
+    for(i=0U; i < sizeof(self->pool)/sizeof(*self->pool)-1U; i++){
+        
+        self->pool[i].next = &self->pool[i+1];    
+    }
 }
 
 void Event_receive(struct lora_event *self, enum on_input_types type, uint32_t time)
@@ -60,25 +69,28 @@ void Event_tick(struct lora_event *self)
         }
     }
     
+    struct on_timeout to;
     struct on_timeout *ptr = self->head;
+    struct on_timeout *prev = NULL;
     
-    while(ptr != NULL){
+    while((ptr != NULL) && (time >= ptr->time)){
         
-        if(time >= ptr->time){
+        to = *ptr;
             
-            event_handler_t handler = ptr->handler;
-            void *receiver = ptr->receiver;
+        if(prev == NULL){
             
-            self->head = self->head->next;
-            ptr->next = self->free;
-            self->free = ptr;
-            
-            handler(receiver, time - ptr->time);
+            self->head = ptr->next;
         }
         else{
             
-            break;
-        }        
+            prev->next = ptr->next;                
+        }
+         
+        ptr->next = self->free;
+        self->free = ptr;         
+        ptr = to.next;
+            
+        to.handler(to.receiver, time - to.time);        
     }
 }
 
@@ -88,38 +100,61 @@ void *Event_onTimeout(struct lora_event *self, uint32_t timeout, void *receiver,
     
     uint32_t time = getTime();
     
-    if(self->free != NULL){
+    if((time + timeout) >= time){
+    
+        if(self->free != NULL){
 
-        struct on_timeout *to = self->free;
-        self->free = self->free->next;
-        
-        to->time = time;
-        to->handler = handler;
-        to->receiver = receiver;
-
-        if(self->head == NULL){
-
-            self->head = to;
-        }
-        else{
-
+            struct on_timeout *to = self->free;
             struct on_timeout *ptr = self->head;
+            struct on_timeout *prev = NULL;
+            self->free = self->free->next;
+            
+            to->time = time + timeout;
+            to->handler = handler;
+            to->receiver = receiver;
+            to->next = NULL;
+            
+            if(ptr == NULL){
 
-            do{
+                self->head = to;
+            }
+            else{
 
-                if(time < ptr->time){
+                while(ptr != NULL){
 
-                    break;
-                }
-                else{
+                    if(to->time < ptr->time){
+                        
+                        if(prev == NULL){
+                            
+                            self->head = to;
+                        }
+                        else{
+                            
+                            prev->next = to;                                                        
+                        }
+                        
+                        to->next = ptr;
 
-                    ptr = ptr->next;
+                        break;
+                    }
+                    else{
+
+                        prev = ptr;
+                        ptr = ptr->next;
+                    }
                 }
             }
-            while(ptr->next != NULL);
-        }
 
-        retval = (void *)to;
+            retval = (void *)to;
+        }
+        else{
+            
+            LORA_ERROR("timer pool exhausted")
+        }
+    }
+    else{
+        
+        LORA_ERROR("time wrap")
     }
 
     return retval;
@@ -168,7 +203,7 @@ void Event_cancel(struct lora_event *self, void **event)
                         prev->next = ptr->next;
                     }
                     
-                    ptr->next = self->free;
+                    ptr->next = self->free;                    
                     self->free = ptr;
                     break;
                 }                
@@ -183,9 +218,4 @@ void Event_cancel(struct lora_event *self, void **event)
         }        
     }
 }
-
-
-
-
-
 

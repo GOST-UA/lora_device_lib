@@ -16,7 +16,9 @@ CMOCKA_DEFINES += -DHAVE_SIGNAL_H
 CMOCKA_DEFINES += -DHAVE_INTTYPES_H
 CMOCKA_DEFINES += -DHAVE_MALLOC_H
 
-CFLAGS := -Wall -Werror -g -fprofile-arcs -ftest-coverage $(INCLUDES) $(CMOCKA_DEFINES)
+DEBUG_DEFINES += -D'LORA_ERROR(...)=do{printf(__VA_ARGS__);printf("\n");}while(0)'
+
+CFLAGS := -Wall -Werror -g -fprofile-arcs -ftest-coverage $(INCLUDES) $(CMOCKA_DEFINES) #{DEBUG_DEFINES}
 LDFLAGS := -fprofile-arcs -g
 
 SRC := $(notdir $(wildcard $(DIR_ROOT)/src/*.c))
@@ -85,6 +87,10 @@ $(DIR_BIN)/tc_loraradio: $(addprefix $(DIR_BUILD)/, tc_loraradio.o lora_radio.o 
 	@ $(CC) $(LDFLAGS) $^ -o $@
 
 $(DIR_BIN)/tc_loraevent: $(addprefix $(DIR_BUILD)/, tc_loraevent.o lora_event.o $(OBJ_CMOCKA))
+	@ echo linking $@
+	@ $(CC) $(LDFLAGS) $^ -o $@
+
+$(DIR_BIN)/tc_mac: $(addprefix $(DIR_BUILD)/, tc_mac.o lora_mac.o $(OBJ_CMOCKA))
 	@ echo linking $@
 	@ $(CC) $(LDFLAGS) $^ -o $@
 

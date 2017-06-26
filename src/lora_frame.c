@@ -10,7 +10,6 @@ const size_t LORA_PHYPAYLOAD_OVERHEAD = (1U + 4U + 1U + 2U + 4U);
 
 /* static function prototypes *****************************************/
 
-static bool isUpstream(enum message_type type);
 static void cipher(enum message_type type, const uint8_t *key, uint32_t devAddr, uint32_t counter, uint8_t *data, uint8_t len);
 static uint32_t cmac(enum message_type type, const uint8_t *key, uint32_t devAddr, uint32_t counter, const uint8_t *msg, uint8_t len);
 static void xor128(uint8_t *acc, const uint8_t *op);
@@ -196,10 +195,7 @@ uint16_t LoraFrame_getPhyPayloadSize(uint8_t dataLen, uint8_t optsLen)
     return LORA_PHYPAYLOAD_OVERHEAD + ((dataLen > 0) ? 1U : 0U) + dataLen + optsLen;
 }
 
-
-/* static functions ***************************************************/
-
-static bool isUpstream(enum message_type type)
+bool LoraFrame_isUpstream(enum message_type type)
 {
     bool retval;
     
@@ -220,6 +216,8 @@ static bool isUpstream(enum message_type type)
     return retval;
 }
 
+/* static functions ***************************************************/
+
 static void cipher(enum message_type type, const uint8_t *key, uint32_t devAddr, uint32_t counter, uint8_t *data, uint8_t len)
 {
     struct lora_aes_ctx ctx;
@@ -236,7 +234,7 @@ static void cipher(enum message_type type, const uint8_t *key, uint32_t devAddr,
     a[2] = 0x00U;
     a[3] = 0x00U;
     a[4] = 0x00U;
-    a[5] = (isUpstream(type) ? 0x00U : 0x01U);
+    a[5] = (LoraFrame_isUpstream(type) ? 0x00U : 0x01U);
     a[6] = (uint8_t)devAddr;
     a[7] = (uint8_t)(devAddr >> 8);
     a[8] = (uint8_t)(devAddr >> 16);
@@ -281,7 +279,7 @@ static uint32_t cmac(enum message_type type, const uint8_t *key, uint32_t devAdd
     b[2] = 0x00U;
     b[3] = 0x00U;
     b[4] = 0x00U;
-    b[5] = (isUpstream(type) ? 0x00U : 0x01U);
+    b[5] = (LoraFrame_isUpstream(type) ? 0x00U : 0x01U);
     b[6] = (uint8_t)devAddr;
     b[7] = (uint8_t)(devAddr >> 8);
     b[8] = (uint8_t)(devAddr >> 16);

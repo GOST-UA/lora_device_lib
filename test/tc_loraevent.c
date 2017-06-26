@@ -68,11 +68,94 @@ static void test_Event_onInput_tx_complete(void **user)
     Event_tick(state);    
 }
 
+static void test_Event_onInput_tx_complete_cancel(void **user)
+{
+    struct lora_event *state = (struct lora_event *)(*user);
+    
+    /* can't specify zero function calls */
+    ignore_function_calls(dummy_handler);
+    
+    /* register the event */    
+    int dummy_receiver = 42;    
+    void *event_ptr = Event_onInput(state, EVENT_TX_COMPLETE, &dummy_receiver, dummy_handler);
+    
+    /* should get a reference back */
+    assert_non_null(event_ptr);
+    
+    /* let's cancel it */
+    Event_cancel(state, &event_ptr);
+    
+    assert_null(event_ptr);
+    
+    /* fire event at time 1 */
+    Event_receive(state, EVENT_TX_COMPLETE, 1);
+    
+    /* if we tick 30 units later delay will be 29 */
+    will_return(getTime, 30);
+
+    Event_tick(state);
+}
+
+static void test_Event_onTimeout(void **user)
+{
+    struct lora_event *state = (struct lora_event *)(*user);
+    
+    /* this experiment will call dummy_handler() once */
+    expect_function_calls(dummy_handler, 1);
+    
+    /* register the event to timeout in 25 units from now (1) */    
+    int dummy_receiver = 42;    
+    will_return(getTime, 1);
+    void *event_ptr = Event_onTimeout(state, 25, &dummy_receiver, dummy_handler);
+    
+    /* should get a reference back */
+    assert_non_null(event_ptr);
+    
+    /* if we tick 30 units later delay will be 4 */
+    will_return(getTime, 30);
+    expect_value(dummy_handler, receiver, (void *)&dummy_receiver);     
+    expect_value(dummy_handler, delay, 4);                                 
+    Event_tick(state);
+    
+    /* tick again without advancing time...dummy_handler should not be called */
+    will_return(getTime, 30);
+    Event_tick(state);
+}
+
+static void test_Event_onTimeout_cancel(void **user)
+{
+    struct lora_event *state = (struct lora_event *)(*user);
+    
+    /* can't specify zero calls so disable call counter - parameter check will ensure function wont be called */
+    ignore_function_calls(dummy_handler);
+    
+    /* register the event to timeout in 25 units from now (1) */    
+    int dummy_receiver = 42;    
+    will_return(getTime, 1);
+    
+    void *event_ptr = Event_onTimeout(state, 25, &dummy_receiver, dummy_handler);
+    
+    /* should get a reference back */
+    assert_non_null(event_ptr);
+    
+    /* let's cancel it */
+    Event_cancel(state, &event_ptr);
+    
+    assert_null(event_ptr);
+    
+    /* if we tick 30 units later delay will be 4 ... but the event will not be handled since it cancelled */
+    will_return(getTime, 30);
+    Event_tick(state);
+}
+
 int main(void)
 {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(test_Event_init),
-        cmocka_unit_test_setup(test_Event_onInput_tx_complete, setup_Event_init)
+        cmocka_unit_test_setup(test_Event_onInput_tx_complete, setup_Event_init),
+        cmocka_unit_test_setup(test_Event_onTimeout, setup_Event_init),
+        cmocka_unit_test_setup(test_Event_onTimeout_cancel, setup_Event_init),
+        cmocka_unit_test_setup(test_Event_onInput_tx_complete_cancel, setup_Event_init),
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);

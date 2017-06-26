@@ -36,10 +36,10 @@ typedef void (*event_handler_t)(void *receiver, uint32_t delay);
 /** radio IO event source */
 enum on_input_types {
   
-  EVENT_TX_COMPLETE,
-  EVENT_RX_READY,
-  EVENT_RX_TIMEOUT,
-  EVENT_NUM_EVENTS
+    EVENT_TX_COMPLETE,
+    EVENT_RX_READY,
+    EVENT_RX_TIMEOUT,
+    EVENT_NUM_EVENTS
 };
 
 /** IO event state */
@@ -55,6 +55,7 @@ struct on_input {
 struct on_timeout {
     
     struct on_timeout *next;
+        
     event_handler_t handler;
     uint32_t time;
     void *receiver;
