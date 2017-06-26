@@ -306,6 +306,11 @@ bool ChannelList_beaconSetting(const struct lora_channel_list *self, struct lora
     return false;
 }
 
+enum lora_region_id ChannelList_region(const struct lora_channel_list *self)
+{
+    return self->region;
+}
+
 /* static functions ***************************************************/
 
 #if 0

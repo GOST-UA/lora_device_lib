@@ -81,9 +81,10 @@ struct lora_mac {
     
     uint8_t nbTrans;    /**< number of transmissions for each uplink message */
     
-    uint32_t rx1Interval;
-    uint32_t rx2Interval;
+    uint32_t rx1_interval;
+    uint32_t rx2_interval;
     
+    #define RX_WDT_INTERVAL 60000
     
     struct lora_channel_list *channels;
     struct lora_radio *radio;

@@ -98,4 +98,6 @@ bool ChannelList_rx1Setting(const struct lora_channel_list *self, struct lora_ch
 bool ChannelList_rx2Setting(const struct lora_channel_list *self, struct lora_channel_setting *setting);
 bool ChannelList_beaconSetting(const struct lora_channel_list *self, struct lora_channel_setting *setting);
 
+enum lora_region_id ChannelList_region(const struct lora_channel_list *self);
+
 #endif

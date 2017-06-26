@@ -20,6 +20,36 @@ struct lora_event {
     
 };
 
+enum lora_region_id ChannelList_region(const struct lora_channeL_list *self)
+{
+    return EU_863_870;
+}
+
+
+bool LoraRadio_setParameters(struct lora_radio *self, uint32_t freq, enum signal_bandwidth bw, enum spreading_factor sf)
+{
+    return false;
+}
+
+void LoraRadio_transmit(struct lora_radio *self, const void *data, uint8_t len)
+{
+}
+
+void LoraRadio_receive(struct lora_radio *self)
+{    
+}
+
+uint8_t LoraRadio_collect(struct lora_radio *self, void *data, uint8_t max)
+{
+    return 0;
+}
+
+void ChannelList_registerTransmission(struct lora_channel_list *self, uint32_t timeNow, uint8_t payloadLen)
+{
+}
+
+
+
 static int setup_LoraMAC(void **user)
 {
     static struct lora_mac self;

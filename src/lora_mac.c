@@ -1,8 +1,10 @@
 #include "lora_mac.h"
 #include "lora_channel_list.h"
+#include "lora_radio.h"
 #include "lora_event.h"
 #include "lora_frame.h"
 #include "lora_debug.h"
+
 
 #include <string.h>
 
@@ -26,10 +28,12 @@ static void rx2Finish(struct lora_mac *self, uint32_t time);
 static void resetRadio(void *receiver, uint32_t time);
 static void collect(struct lora_mac *self);
 
+#if 0
 static void beaconStart(void *receiver, uint32_t time);
 static void beaconReady(void *receiver, uint32_t time);
 static void beaconTimeout(void *receiver, uint32_t time);
 static void beaconFinish(struct lora_mac *self, uint32_t time);
+#endif
 
 /* functions **********************************************************/
 
@@ -46,9 +50,10 @@ void LoraMAC_init(struct lora_mac *self, struct lora_channel_list *channels, str
     self->radio = radio;    
     self->events = events;
     
-    struct region_defaults defaults = LoraRegion_getDefaultSettings(ChannelList_region(self->channels));
+    const struct region_defaults *defaults = LoraRegion_getDefaultSettings(ChannelList_region(self->channels));
     
-    
+    self->rx1_interval = defaults->receive_delay1 * 1000U;
+    self->rx2_interval = defaults->receive_delay2 * 1000U;
     
 }
 
@@ -229,7 +234,7 @@ static void tx(void *receiver, uint32_t time)
             
             self->txComplete = Event_onInput(self->events, time + EVENT_TX_COMPLETE, self, txComplete);
             
-            self->resetRadio = Event_onTimeout(self->events, time + DEVICE_WDT_INTERVAL, self, resetRadio);
+            self->resetRadio = Event_onTimeout(self->events, time + RX_WDT_INTERVAL, self, resetRadio);
             
             LoraRadio_transmit(self->radio, self->buffer, self->bufferLen);
         }
@@ -249,11 +254,11 @@ static void txComplete(void *receiver, uint32_t time)
     struct lora_mac *self = (struct lora_mac *)receiver;    
     uint32_t interval;
     
-    if(time < INTERVAL_RX1){
+    if(time < self->rx1_interval){
         
         self->state = WAIT_RX1;
     
-        interval = INTERVAL_RX1 - time;
+        interval = self->rx1_interval - time;
     
         (void)Event_onTimeout(self->events, interval, self, rx1Start);    
     }    
@@ -269,7 +274,7 @@ static void rx1Start(void *receiver, uint32_t time)
     
         if(LoraRadio_setParameters(self->radio, settings.freq, settings.bw, settings.sf)){
     
-            if(time < INTERVAL_RX1){
+            if(time < self->rx2_interval){
         
                 self->state = RX1;
                 
@@ -311,12 +316,11 @@ static void rx1Finish(struct lora_mac *self, uint32_t time)
 {
     uint32_t timeNow = 0U;  //fixme
     
-    ChanneList_registerTransmission(self->channels, timeNow, self->bufferLen);
+    ChannelList_registerTransmission(self->channels, timeNow, self->bufferLen);
     self->state = WAIT_RX2;    
     
-    LoraRegion_getDefaultSettings(ChannelList_region(self->channels), 
     
-    (void)Event_onTimeout(self->events, WAIT_RX2_INTERVAL, self, rx2Start);
+    (void)Event_onTimeout(self->events, self->rx2_interval, self, rx2Start);
 }
 
 static void rx2Start(void *receiver, uint32_t time)
@@ -417,6 +421,7 @@ static void collect(struct lora_mac *self)
     }
 }
 
+#if 0
 static void beaconStart(void *receiver, uint32_t time)
 {
     LORA_ASSERT(self != NULL)
@@ -434,7 +439,7 @@ static void beaconStart(void *receiver, uint32_t time)
             self->rxReady = Event_onInput(self->events, EVENT_RX_READY, self, beaconReady);
             self->rxTimeout = Event_onInput(self->events, EVENT_RX_TIMEOUT, self, beaconTimeout);
             
-            self->resetRadio = Event_onTimeout(self->events, DEVICE_WDT_INTERVAL, self, resetRadio);
+            self->resetRadio = Event_onTimeout(self->events, RX_WDT_INTERVAL, self, resetRadio);
             
             LoraRadio_receive(self->radio);                                
         }
@@ -476,3 +481,4 @@ static void beaconFinish(struct lora_mac *self, uint32_t time)
     self->state = IDLE;   
 }
 
+#endif
