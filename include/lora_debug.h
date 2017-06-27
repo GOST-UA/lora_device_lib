@@ -26,6 +26,10 @@
     #define LORA_ERROR(X)
 #endif
 
+#ifndef LORA_MSG
+    #define LORA_MSG(...)
+#endif
+
 #ifndef LORA_ASSERT
     #define LORA_ASSERT(X)
 #endif

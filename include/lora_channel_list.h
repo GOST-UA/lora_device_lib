@@ -76,7 +76,7 @@ bool ChannelList_setRateAndPower(struct lora_channel_list *self, uint8_t rate, u
 
 uint32_t ChannelList_waitTime(const struct lora_channel_list *self, uint32_t timeNow);
 
-struct lora_adr_ans ChannelList_adrRequest(struct lora_channel_list *self, uint8_t rate, uint8_t power, uint16_t mask, uint8_t maskControl, uint8_t redundancy);
+struct lora_adr_ans ChannelList_adrRequest(struct lora_channel_list *self, uint8_t rate, uint8_t power, uint16_t mask, uint8_t maskControl);
 
 void ChannelList_registerTransmission(struct lora_channel_list *self, uint32_t timeNow, uint8_t payloadLen);
 

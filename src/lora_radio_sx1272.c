@@ -110,7 +110,7 @@ static void transmit(struct lora_radio *self, const void *data, uint8_t len)
     }
 }
 
-static uint8_t collect  (struct lora_radio *self, void *data, uint8_t max)
+static uint8_t collect(struct lora_radio *self, void *data, uint8_t max)
 {   
     // manipulate state...
     
@@ -181,7 +181,7 @@ static void raiseInterrupt(struct lora_radio *self, uint8_t n)
 {    
     switch(n){
     case 0U:
-        LoraMAC_eventTXComplete(self->mac);
+        LoraMAC_eventTXComplete(self->mac, 0U);
         break;
     case 1U:
     case 2U:

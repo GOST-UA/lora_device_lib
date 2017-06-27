@@ -84,6 +84,9 @@ struct lora_mac {
     uint32_t rx1_interval;
     uint32_t rx2_interval;
     
+    uint8_t macAns[16U];
+    uint8_t macAnsLen;
+    
     #define RX_WDT_INTERVAL 60000
     
     struct lora_channel_list *channels;
@@ -94,6 +97,42 @@ struct lora_mac {
     void *rxTimeout;
     void *txComplete;
     void *resetRadio;
+    
+    struct {
+        
+        uint32_t time;
+        uint8_t gateway_count;
+        uint8_t margin;                
+    
+    }lastLinkCheck;
+    
+    
+    
+    
+    struct {
+        
+        bool LinkADRAns_pending;
+        uint8_t LinkADRAns[1];
+        
+        bool DutyCycleAns_pending;
+        
+        bool RXParamSetupAns_pending;
+        uint8_t RXParamSetupAns[1];
+        
+        bool DevStatusAns_pending;
+        uint8_t DevStatusAns[2];
+        
+        bool NewChannelAns_pending;
+        uint8_t NewChannelAns[1];
+        
+        bool RXTimingSetupAns_pending;
+        
+        bool TXParamSetupAns_pending;
+        
+        bool DlChannelAns_pending;
+        uint8_t DlChannelAns[1]; 
+        
+    } cmd;
     
     rxCompleteCB rxCompleteHandler;
     void *rxCompleteReceiver;

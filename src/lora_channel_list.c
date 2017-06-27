@@ -190,7 +190,7 @@ uint32_t ChannelList_waitTime(const struct lora_channel_list *self, uint32_t tim
     return retval;
 }
 
-struct lora_adr_ans ChannelList_adrRequest(struct lora_channel_list *self, uint8_t rate, uint8_t power, uint16_t mask, uint8_t maskControl, uint8_t redundancy)
+struct lora_adr_ans ChannelList_adrRequest(struct lora_channel_list *self, uint8_t rate, uint8_t power, uint16_t mask, uint8_t maskControl)
 {
     struct lora_adr_ans retval = {
         .channelOK = false,

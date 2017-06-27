@@ -80,7 +80,7 @@ void test_ChannelList_waitTime_noChannel(void **user)
     assert_int_equal(0, ChannelList_waitTime(self, 1234U));
 
     // no channel
-    assert_int_equal(0, ChannelList_frequency(self));    
+    //assert_int_equal(0, ChannelList_frequency(self));    
 }
 
 void test_ChannelList_waitTime_fresh(void **user)
