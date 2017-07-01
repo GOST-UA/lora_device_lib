@@ -114,11 +114,10 @@ void LoraCMAC_update(struct lora_cmac_ctx *ctx, const void *data, uint8_t len)
     }
 }
 
-uint32_t LoraCMAC_finish(struct lora_cmac_ctx *ctx)
+void LoraCMAC_finish(struct lora_cmac_ctx *ctx, void *out, size_t outMax)
 {
     LORA_ASSERT(ctx != NULL)
 
-    uint32_t retval;
     word_t k1[WORD_BLOCK_SIZE];
     word_t k2[WORD_BLOCK_SIZE];
     word_t k[WORD_BLOCK_SIZE];
@@ -173,9 +172,7 @@ uint32_t LoraCMAC_finish(struct lora_cmac_ctx *ctx)
 
     LoraAES_encrypt(ctx->aes_ctx, (uint8_t *)m);
 
-    (void)memcpy(&retval, m, sizeof(retval));
-
-    return retval;
+    (void)memcpy(out, m, (outMax > sizeof(m)) ? sizeof(m) : outMax);
 }
 
 /* static functions  **************************************************/

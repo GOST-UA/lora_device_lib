@@ -1,3 +1,24 @@
+/* Copyright (c) 2017 Cameron Harper
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * */
+
 #include "lora_mac.h"
 #include "lora_channel_list.h"
 #include "lora_radio.h"
@@ -7,6 +28,9 @@
 
 
 #include <string.h>
+
+/* types **************************************************************/
+
 
 /* static function prototypes *****************************************/
 
@@ -35,6 +59,8 @@ static void beaconTimeout(void *receiver, uint32_t time);
 static void beaconFinish(struct lora_mac *self, uint32_t time);
 #endif
 
+static void radioEvent(void *receiver, enum lora_radio_event event, uint32_t time);
+
 /* functions **********************************************************/
 
 void LoraMAC_init(struct lora_mac *self, struct lora_channel_list *channels, struct lora_radio *radio, struct lora_event *events)
@@ -55,6 +81,7 @@ void LoraMAC_init(struct lora_mac *self, struct lora_channel_list *channels, str
     self->rx1_interval = defaults->receive_delay1 * 1000U;
     self->rx2_interval = defaults->receive_delay2 * 1000U;
     
+    LoraRadio_setEventHandler(self->radio, self, radioEvent);
 }
 
 void LoraMAC_setSession(struct lora_mac *self, uint32_t devAddr, const void *nwkSKey, const void *appSKey)
@@ -103,20 +130,7 @@ bool LoraMac_setRateAndPower(struct lora_mac *self, uint8_t rate, uint8_t power)
     return ChannelList_setRateAndPower(self->channels, rate, power);
 }
 
-void LoraMAC_eventTXComplete(struct lora_mac *self, uint32_t time)
-{
-    Event_receive(self->events, EVENT_TX_COMPLETE, time);
-}
 
-void LoraMAC_eventRXReady(struct lora_mac *self, uint32_t time)
-{
-    Event_receive(self->events, EVENT_RX_READY, time);
-}
-
-void LoraMAC_eventRXTimeout(struct lora_mac *self, uint32_t time)
-{
-    Event_receive(self->events, EVENT_RX_TIMEOUT, time);
-}
 
 bool LoraMAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *data, uint8_t len, void *receiver, txCompleteCB cb)
 {
@@ -161,7 +175,7 @@ bool LoraMAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const voi
                     
                     //check if beacon interval
                     
-                    (void)Event_onTimeout(self->events, 0, self, tx);
+                    (void)Event_onTimeout(self->events, ChanneList_waitTime(self->channels, timeNow), self, tx);
                     
                     self->state = WAIT_TX;
                     
@@ -211,6 +225,46 @@ bool LoraMAC_setNbTrans(struct lora_mac *self, uint8_t nbTrans)
     }
     
     return retval;
+}
+
+bool LoraMAC_requestJoin(struct lora_mac *self, void *receiver, joinConfirmation cb)
+{
+    uint8_t buffer[8U+8U+2U];
+    
+    if(self->state == IDLE){
+        
+        (void)getAppEUI(buffer, 8U);
+        (void)getDevEUI(&buffer[8], 8U);
+        (void)memcpy(&buffer[16], self->devNonce, sizeof(self->devNonce));
+        
+        struct lora_frame f = {
+
+            .type = FRAME_TYPE_JOIN_REQ,
+            .devAddr = 0U,
+            .counter = upCount(self),
+            .ack = false,
+            .adr = false,
+            .adrAckReq = false,
+            .pending = false,
+            .opts = NULL,
+            .optsLen = 0U,
+            .port = port,
+            .data = ((len > 0U) ? (const uint8_t *)data : NULL),
+            .dataLen = len
+        };
+
+        self->bufferLen = LoraFrame_encode(self->appKey, &f, self->buffer, sizeof(self->buffer));
+        
+        //wait = ChanneList_waitTime(self->channels, timeNow);
+        
+        //check if beacon interval
+        
+        (void)Event_onTimeout(self->events, 0, self, tx);
+        
+        self->state = WAIT_TX;
+        
+        retval = true;        
+    }
 }
 
 /* static functions ***************************************************/
@@ -369,15 +423,23 @@ static void rx2Finish(struct lora_mac *self, uint32_t time)
 {
     Event_cancel(self->events, &self->resetRadio);
     
-    if(!self->confirmed && (self->txCount < self->nbTrans)){
-        
+    if(self->confirmed && (self->txCount < MAX_RETRIES)){
+                    
         self->txCount++;
-        //do resend
+        self->state = WAIT_TX;
+        (void)Event_onTimeout(self->events, ChannelList_waitTime(self->channels, getTime()), self, tx));
+    }
+    else if(!self->confirmed && (self->txCount < self->nbTrans)){
+            
+        self->txCount++;
+        self->state = WAIT_TX;
+        (void)Event_onTimeout(self->events, ChannelList_waitTime(self->channels, getTime()), self, tx));
     } 
-    
-    //check redundancy settings
-    //check confirm settings
-    self->state = IDLE;
+    else{
+        
+        
+        self->state = IDLE;
+    }    
 }
 
 static void resetRadio(void *receiver, uint32_t time)
@@ -406,17 +468,92 @@ static void collect(struct lora_mac *self)
     
     if(LoraFrame_decode(self->nwkSKey, self->appSKey, self->buffer, self->bufferLen, &result)){
         
-        //check counter
-        //check address?
+        switch(result.type){
+        case FRAME_TYPE_JOIN_ACCEPT:
         
-        if(result.optsLen > 0U){
-            
-            //process mac layer
-        }
+            if(self->joinPending){
+                
+                if(result.dataLen >= 12U){
+                    
+                    uint8_t appNonce[3];
+                    uint8_t netID[3];
+                    uint8_t devAddr[4];
+                    uint8_t dlSettings;
+                    uint8_t rxDelay;
+                    uint8_t hdr;
+                    
+                    (void)memcpy(appNonce, &in[0], sizeof(appNonce));
+                    pos += sizeof(appNonce);
+                    (void)memcpy(netID, &in[pos], sizeof(netID));
+                    pos += sizeof(netID);
+                    (void)memcpy(devAddr, &in[pos], sizeof(devAddr));
+                    pos += sizeof(devAddr);
+                    dlSettings = in[pos];
+                    pos += sizeof(dlSettings);
+                    (void)memcpy(rxDelay, &in[pos], sizeof(rxDelay));
+                    pos += sizeof(rxDelay);
+                    
+                    struct lora_aes_ctx aes;
+                    struct lora_cmac_ctx aes;
+                    
+                    LoraAES_init(&aes, self->appKey);
+                    
+                    hdr = 1U;
+                    LoraCMAC_init(&cmac, &aes);
+                    LoraCMAC_update(&cmac, &hdr, sizeof(hdr));
+                    LoraCMAC_update(&cmac, appNonce, sizeof(appNonce));
+                    LoraCMAC_update(&cmac, netID, sizeof(netID));
+                    LoraCMAC_update(&cmac, self->devNonce, sizeof(self->devNonce));
+                    
+                    LoraCMAC_finish(&cmac, self->nwkSKey, sizeof(self->nwkSKey));
+                    
+                    hdr = 2U;
+                    LoraCMAC_init(&cmac, &aes);
+                    LoraCMAC_update(&cmac, &hdr, sizeof(hdr));
+                    LoraCMAC_update(&cmac, appNonce, sizeof(appNonce));
+                    LoraCMAC_update(&cmac, netID, sizeof(netID));
+                    LoraCMAC_update(&cmac, self->devNonce, sizeof(self->devNonce));
+                    
+                    LoraCMAC_finish(&cmac, self->appSKey, sizeof(self->nwkSKey));                    
+                    
+                    self->personalised = true;
+                    self->joined = true;
+                }
+            }
+            break
         
-        if(self->rxCompleteHandler){
+        case FRAME_TYPE_DATA_UNCONFIRMED_DOWN:
+        case FRAME_TYPE_DATA_CONFIRMED_DOWN:
             
-            self->rxCompleteHandler(self->rxCompleteReceiver, self, result.port, result.data, result.dataLen);
+            if(self->personalised){
+            
+                if(self->devAddr == result.devAddr){
+                
+                    //check counter
+                
+                    if(result.optsLen > 0U){
+                        
+                        //process mac layer
+                        //LoraMAC_processCommands(self, result.opts, result.optsLen);
+                    }
+                    
+                    if(result.port == 0U){
+                                    
+                        //LoraMAC_processCommands(self, result.data, result.dataLen);
+                    }
+                    else{
+                        
+                        if(self->rxCompleteHandler){
+                            
+                            self->rxCompleteHandler(self->rxCompleteReceiver, self, result.port, result.data, result.dataLen);
+                        }
+                    }
+                }
+            }
+            break;
+        
+        default:
+            break;
         }
     }
 }
@@ -482,3 +619,20 @@ static void beaconFinish(struct lora_mac *self, uint32_t time)
 }
 
 #endif
+
+static void radioEvent(void *receiver, enum lora_radio_event event, uint32_t time)
+{
+    switch(event){
+    case LORA_RADIO_TX_COMPLETE:
+        Event_receive(self->events, EVENT_TX_COMPLETE, time);
+        break;
+    case LORA_RADIO_RX_READY:
+        Event_receive(self->events, EVENT_RX_READY, time);
+        break;
+    case LORA_RADIO_RX_TIMEOUT:
+        Event_receive(self->events, EVENT_RX_TIMEOUT, time);
+        break;
+    default:
+        break;
+    }
+}

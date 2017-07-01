@@ -16,7 +16,6 @@ A LoRaWAN device implementation
     - Channel masking
     - Duty cycle limiter
 - Frame encode/decode functions with integrated cryptography
-- Separation of concerns
 - Tests
 
 ## Porting Guide

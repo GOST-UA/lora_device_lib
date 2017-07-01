@@ -1,4 +1,24 @@
-#include "lora_mac.h"
+/* Copyright (c) 2017 Cameron Harper
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * */
+
 #include "lora_radio.h"
 #include "lora_regs_sx1272.h"
 #include <string.h>
@@ -60,7 +80,7 @@ static void writeReg(struct lora_radio *self, uint8_t reg, uint8_t data);
 static void writeFIFO(struct lora_radio *self, const uint8_t *data, uint8_t len);
 static void setOpMode(struct lora_radio *self, enum op_mode mode);
 
-static void initRadio(struct lora_radio *self, enum lora_radio_type type, struct lora_mac *mac, const struct lora_board *board);
+static void initRadio(struct lora_radio *self, enum lora_radio_type type, const struct lora_board *board);
 static void transmit(struct lora_radio *self, const void *data, uint8_t len);
 static uint8_t collect(struct lora_radio *self, void *data, uint8_t max);
 static bool setParameters(struct lora_radio *self, uint32_t freq, enum signal_bandwidth bw, enum spreading_factor sf);
@@ -76,12 +96,10 @@ const struct lora_radio_if LoraRadio_if_sx1272 = {
 
 /* static functions ***************************************************/
 
-static void initRadio(struct lora_radio *self, enum lora_radio_type type, struct lora_mac *mac, const struct lora_board *board)
+static void initRadio(struct lora_radio *self, enum lora_radio_type type, const struct lora_board *board)
 {
     (void)memset(self, 0, sizeof(*self));
     (void)memcpy(&self->board, board, sizeof(*board));
-
-    self->mac = mac;
     
     self->type = LORA_RADIO_SX1272;
 
@@ -181,7 +199,10 @@ static void raiseInterrupt(struct lora_radio *self, uint8_t n)
 {    
     switch(n){
     case 0U:
-        LoraMAC_eventTXComplete(self->mac, 0U);
+        if(self->eventHandler != NULL){
+            
+            self->eventHandler(self->eventReceiver, LORA_RADIO_TX_COMPLETE, 0U);
+        }
         break;
     case 1U:
     case 2U:

@@ -1,3 +1,24 @@
+/* Copyright (c) 2017 Cameron Harper
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * */
+
 #include "lora_aes.h"
 #include "lora_cmac.h"
 #include "lora_frame.h"
@@ -273,6 +294,7 @@ static uint32_t cmac(enum message_type type, const uint8_t *key, uint32_t devAdd
     uint8_t b[16];
     struct lora_aes_ctx aes_ctx;
     struct lora_cmac_ctx ctx;
+    uint32_t retval;
 
     b[0] = 0x49U;
     b[1] = 0x00U;
@@ -295,7 +317,9 @@ static uint32_t cmac(enum message_type type, const uint8_t *key, uint32_t devAdd
     LoraCMAC_init(&ctx, &aes_ctx);
     LoraCMAC_update(&ctx, b, (uint16_t)sizeof(b));
     LoraCMAC_update(&ctx, msg, len);
-    return LoraCMAC_finish(&ctx);
+    LoraCMAC_finish(&ctx, &retval, sizeof(retval));
+    
+    return retval;
 }
 
 static void xor128(uint8_t *acc, const uint8_t *op)

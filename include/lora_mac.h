@@ -1,3 +1,24 @@
+/* Copyright (c) 2017 Cameron Harper
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * */
+
 #ifndef LORA_MAC_H
 #define LORA_MAC_H
 
@@ -15,6 +36,18 @@ struct lora_mac;
 #define INTERVAL_RX1    1000
 #define INTERVAL_RX2    1000
 
+enum mac_cmd_type {
+    LINK_CHECK,
+    LINK_ADR,
+    DUTY_CYCLE,
+    RX_PARAM_SETUP,
+    DEV_STATUS,
+    NEW_CHANNEL,
+    RX_TIMING_SETUP,
+    TX_PARAM_SETUP,
+    DL_CHANNEL
+};
+
 enum lora_tx_status {
     LORA_TX_COMPLETE,           ///< non-confirmed upstream tx operation is complete
     LORA_TX_CONFIRMED,          ///< tx operation complete and confirmation received
@@ -23,25 +56,23 @@ enum lora_tx_status {
 
 /** Transmit Complete Notification
  * 
- * @param[in] self user receiver
- * @param[in] mac
+ * @param[in] receiver
  * @param[in] status
  * 
  * */
-typedef void (*txCompleteCB)(void *receiver, struct lora_mac *mac, enum lora_tx_status status);
+typedef void (*txCompleteCB)(void *receiver, enum lora_tx_status status);
 
 /** Receive Complete Notification
  * 
  * - receive must make a copy data or else it will be lost
  * 
- * @param[in] self user receiver
- * @param[in] mac 
- * @param[in] port LoRaWAN port
+ * @param[in] receiver
+ * @param[in] port
  * @param[in] data
  * @param[in] len byte length of data
  * 
  * */
-typedef void (*rxCompleteCB)(void *receiver, struct lora_mac *mac, uint8_t port, const void *data, uint8_t len);
+typedef void (*rxCompleteCB)(void *receiver, uint8_t port, const void *data, uint8_t len);
 
 enum states {
 
@@ -81,11 +112,12 @@ struct lora_mac {
     
     uint8_t nbTrans;    /**< number of transmissions for each uplink message */
     
+    bool joined;
+    bool personalised;
+    bool joinPending;
+    
     uint32_t rx1_interval;
     uint32_t rx2_interval;
-    
-    uint8_t macAns[16U];
-    uint8_t macAnsLen;
     
     #define RX_WDT_INTERVAL 60000
     
@@ -93,46 +125,11 @@ struct lora_mac {
     struct lora_radio *radio;
     struct lora_event *events;
     
+    /* these are references to events that we may want to cancel */
     void *rxReady;
     void *rxTimeout;
     void *txComplete;
     void *resetRadio;
-    
-    struct {
-        
-        uint32_t time;
-        uint8_t gateway_count;
-        uint8_t margin;                
-    
-    }lastLinkCheck;
-    
-    
-    
-    
-    struct {
-        
-        bool LinkADRAns_pending;
-        uint8_t LinkADRAns[1];
-        
-        bool DutyCycleAns_pending;
-        
-        bool RXParamSetupAns_pending;
-        uint8_t RXParamSetupAns[1];
-        
-        bool DevStatusAns_pending;
-        uint8_t DevStatusAns[2];
-        
-        bool NewChannelAns_pending;
-        uint8_t NewChannelAns[1];
-        
-        bool RXTimingSetupAns_pending;
-        
-        bool TXParamSetupAns_pending;
-        
-        bool DlChannelAns_pending;
-        uint8_t DlChannelAns[1]; 
-        
-    } cmd;
     
     rxCompleteCB rxCompleteHandler;
     void *rxCompleteReceiver;
@@ -149,15 +146,7 @@ void LoraMAC_removeChannel(struct lora_mac *self, uint8_t chIndex);
 bool LoraMAC_maskChannel(struct lora_mac *self, uint8_t chIndex);
 void LoraMAC_unmaskChannel(struct lora_mac *self, uint8_t chIndex);
 bool LoraMAC_setRateAndPower(struct lora_mac *self, uint8_t rate, uint8_t power);
-
-/** propagate tx complete event */
-void LoraMAC_eventTXComplete(struct lora_mac *self, uint32_t time);
-
-/** propagate rx ready event */
-void LoraMAC_eventRXReady(struct lora_mac *self, uint32_t time);
-
-/** propagate rx timeout event */
-void LoraMAC_eventRXTimeout(struct lora_mac *self, uint32_t time);
+bool LoraMAC_setNbTrans(struct lora_mac *self, uint8_t nbTrans);
 
 /** Send a message upstream
  * 
@@ -185,16 +174,6 @@ void LoraMAC_eventRXTimeout(struct lora_mac *self, uint32_t time);
  * 
  * */
 bool LoraMAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *data, uint8_t len, void *receiver, txCompleteCB cb);
- 
-
-/**
- * A MAC will handle one upstream request at a time
- * 
- * @param[in] self 
- * @return true if mac is handling a upstream request 
- * 
- * */
-bool LoraMAC_sendIsPending(struct lora_mac *self);
 
 /** 
  * MAC will call this handler when a message is received downstream
@@ -206,6 +185,9 @@ bool LoraMAC_sendIsPending(struct lora_mac *self);
  * */
 void LoraMAC_setReceiveHandler(struct lora_mac *self, void *receiver, rxCompleteCB cb);
 
-bool LoraMAC_setNbTrans(struct lora_mac *self, uint8_t nbTrans);
+
+typedef void (*joinConfirmation)(void *receiver, uint32_t time);
+bool LoraMAC_requestJoin(struct lora_mac *self, void *receiver, joinConfirmation cb);
+
 
 #endif
