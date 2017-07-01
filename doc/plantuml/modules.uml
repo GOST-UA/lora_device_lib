@@ -1,0 +1,101 @@
+@startuml
+
+LoraDeviceLib *-- Mac
+
+Mac *-- ChannelList
+Mac *-- EventManager
+Mac *-- PersistentStore
+Mac *-- FrameCodec
+Mac *-- Radio
+Mac -- RegionDatabase
+
+ChannelList -- RegionDatabase
+
+FrameCodec -- AES
+FrameCodec -- CMAC
+
+CMAC *-- AES
+
+Radio <|-- SX1272
+
+Radio *-- Board
+
+
+class LoraDeviceLib {
+
+}
+
+class Mac {
+
+    regionID
+
+    sendUpstream()
+    registerDownstreamHandler()
+}
+
+class ChannelList {
+
+    channel list
+    band list
+
+    addChannel()
+    removeChannel()
+    maskChannel()
+    unmaskChannel()
+    timeToWait()
+    getSettings()
+    registerTX()
+}
+
+class EventManager {
+
+    tick()
+    onEvent(handler)
+    onTimeout(handler)
+    cancelHandler()
+}
+
+class PersistentStore {
+
+    appKey
+    appSKey
+    nwkSKey
+    frameCounter
+}
+
+class FrameCodec {
+
+    decode()
+    encode()
+}
+
+class Radio {
+
+    tx()
+    rx()
+}
+
+class SX1272 {
+
+    
+}
+
+class Board {
+
+    select()
+    reset()
+    read()
+    write()
+}
+
+class AES {
+
+    encrypt()
+}
+
+class CMAC {
+
+    cmac()
+}
+
+@enduml
