@@ -1,0 +1,43 @@
+@startuml
+
+participant App
+participant Mainloop
+participant Mac
+participant EventManager
+participant ISR
+
+Mainloop -> Mac: notify App when a message arrives downstream
+Mainloop <[#blue]-- Mac
+
+...
+
+Mainloop -> EventManager: tick()
+Mainloop <[#blue]-- EventManager
+
+...
+
+group interrupt level IO event
+
+
+    ISR -> EventManager: set IO event flag    
+
+
+end
+
+...
+
+Mainloop -> EventManager: tick()
+
+EventManager -> Mac: ready to receive
+
+note over Mac: do receive
+
+Mac -> App: receive notification (with message)
+Mac <[#blue]-- App
+
+EventManager <[#blue]-- Mac
+
+Mainloop <[#blue]-- EventManager
+
+
+@enduml

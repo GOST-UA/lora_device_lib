@@ -1,7 +1,7 @@
 LoraDeviceLib
 =============
 
-A LoRaWAN device implementation
+A LoRaWAN device implementation still in an early stage of development.
 
 [![Build Status](https://travis-ci.org/cjhdev/lora_device_lib.svg?branch=master)](https://travis-ci.org/cjhdev/lora_device_lib)
 
@@ -15,8 +15,48 @@ A LoRaWAN device implementation
     - Round-Robin channel hopping (managed per band)
     - Channel masking
     - Duty cycle limiter
-- Frame encode/decode functions with integrated cryptography
-- Tests
+    - Default channels loaded from region database on initialisation
+- Frame codec
+    - data
+    - join request
+    - join accept
+    - suitable for device or gateway
+- AES and CMAC implementation
+- Build-time Porting features
+    - Replace AES and CMAC implementations
+    - Replace logging and assert functions
+    - Optimise chanel capacity / memory usage
+- Tests (and testable architecture) utilising the Cmocka framework
+
+## High Level Architecture
+
+LDL uses an OO approach to (try to) separate concerns into modules. Modules are 
+as follows:
+
+![image missing](doc/plantuml/modules.png "LoraDeviceLib Modules")
+
+LDL is called from two different tasks - a 'mainloop' level task and an 'interrupt' level task.
+
+The interrupt level task interacts with the EventManager to signal that an IO event has occured. This task will
+never block.
+
+The mainloop level task drives all other functionility by calling EventManager.tick():
+
+![image missing](doc/plantuml/event_tick.png "EventManger Tick")
+
+The handlers call out to Mac which may in turn call out to other modules, including back to EventManager
+to set handlers for new events or to cancel existing handlers.
+
+It is important to realise that EventManager.tick() drives _all_ functionality. And below a simplified sequence 
+of an upstream data frame being sent:
+
+![image missing](doc/plantuml/tick_upstream.png "Upstream")
+
+And below a simplified sequence of a downstream data frame being received:
+
+![image missing](doc/plantuml/tick_downstream.png "Downstream")
+
+More to follow.
 
 ## Porting Guide
 
@@ -25,7 +65,7 @@ A LoRaWAN device implementation
 Define `LORA_ERROR(...)` to be a function that takes a printf style variadic argument.
 
 LoraDeviceLib will print messages to explain why certain functions fail. The
-default behaviour is to remove these messages from the build.
+default configuration is to remove these messages from the build.
 
 ### Define a Platform Specific Assert Handler
 
