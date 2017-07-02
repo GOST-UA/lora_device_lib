@@ -149,47 +149,54 @@ bool LoraMAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const voi
         /* user port must be greater than 0 */
         if(port > 0U){
 
-            if(ChannelList_upstreamSetting(self->channels, &settings)){
-                
-                if(settings.maxPayload >= bufferMax){ 
+            if(port <= 223U){
 
-                    struct lora_frame f = {
+                if(ChannelList_upstreamSetting(self->channels, &settings)){
+                    
+                    if(settings.maxPayload >= bufferMax){ 
 
-                        .type = FRAME_TYPE_DATA_UNCONFIRMED_UP,
-                        .devAddr = self->devAddr,
-                        .counter = upCount(self),
-                        .ack = false,
-                        .adr = false,
-                        .adrAckReq = false,
-                        .pending = false,
-                        .opts = NULL,
-                        .optsLen = 0U,
-                        .port = port,
-                        .data = ((len > 0U) ? (const uint8_t *)data : NULL),
-                        .dataLen = len
-                    };
+                        struct lora_frame f = {
 
-                    self->bufferLen = LoraFrame_encode(self->appSKey, &f, self->buffer, sizeof(self->buffer));
-                    
-                    //wait = ChanneList_waitTime(self->channels, timeNow);
-                    
-                    //check if beacon interval
-                    
-                    (void)Event_onTimeout(self->events, ChanneList_waitTime(self->channels, timeNow), self, tx);
-                    
-                    self->state = WAIT_TX;
-                    
-                    retval = true;
-                    
+                            .type = FRAME_TYPE_DATA_UNCONFIRMED_UP,
+                            .devAddr = self->devAddr,
+                            .counter = upCount(self),
+                            .ack = false,
+                            .adr = false,
+                            .adrAckReq = false,
+                            .pending = false,
+                            .opts = NULL,
+                            .optsLen = 0U,
+                            .port = port,
+                            .data = ((len > 0U) ? (const uint8_t *)data : NULL),
+                            .dataLen = len
+                        };
+
+                        self->bufferLen = LoraFrame_encode(self->appSKey, &f, self->buffer, sizeof(self->buffer));
+                        
+                        //wait = ChanneList_waitTime(self->channels, timeNow);
+                        
+                        //check if beacon interval
+                        
+                        (void)Event_onTimeout(self->events, ChanneList_waitTime(self->channels, timeNow), self, tx);
+                        
+                        self->state = WAIT_TX;
+                        
+                        retval = true;
+                        
+                    }
+                    else{
+                        
+                        LORA_ERROR("payload too large")
+                    }
                 }
                 else{
                     
-                    LORA_ERROR("payload too large")
+                    LORA_ERROR("no channels")
                 }
             }
             else{
                 
-                LORA_ERROR("no channels")
+                LORA_ERROR("application port must be in range 1..223")
             }
         }
         else{
@@ -473,52 +480,7 @@ static void collect(struct lora_mac *self)
         
             if(self->joinPending){
                 
-                if(result.dataLen >= 12U){
-                    
-                    uint8_t appNonce[3];
-                    uint8_t netID[3];
-                    uint8_t devAddr[4];
-                    uint8_t dlSettings;
-                    uint8_t rxDelay;
-                    uint8_t hdr;
-                    
-                    (void)memcpy(appNonce, &in[0], sizeof(appNonce));
-                    pos += sizeof(appNonce);
-                    (void)memcpy(netID, &in[pos], sizeof(netID));
-                    pos += sizeof(netID);
-                    (void)memcpy(devAddr, &in[pos], sizeof(devAddr));
-                    pos += sizeof(devAddr);
-                    dlSettings = in[pos];
-                    pos += sizeof(dlSettings);
-                    (void)memcpy(rxDelay, &in[pos], sizeof(rxDelay));
-                    pos += sizeof(rxDelay);
-                    
-                    struct lora_aes_ctx aes;
-                    struct lora_cmac_ctx aes;
-                    
-                    LoraAES_init(&aes, self->appKey);
-                    
-                    hdr = 1U;
-                    LoraCMAC_init(&cmac, &aes);
-                    LoraCMAC_update(&cmac, &hdr, sizeof(hdr));
-                    LoraCMAC_update(&cmac, appNonce, sizeof(appNonce));
-                    LoraCMAC_update(&cmac, netID, sizeof(netID));
-                    LoraCMAC_update(&cmac, self->devNonce, sizeof(self->devNonce));
-                    
-                    LoraCMAC_finish(&cmac, self->nwkSKey, sizeof(self->nwkSKey));
-                    
-                    hdr = 2U;
-                    LoraCMAC_init(&cmac, &aes);
-                    LoraCMAC_update(&cmac, &hdr, sizeof(hdr));
-                    LoraCMAC_update(&cmac, appNonce, sizeof(appNonce));
-                    LoraCMAC_update(&cmac, netID, sizeof(netID));
-                    LoraCMAC_update(&cmac, self->devNonce, sizeof(self->devNonce));
-                    
-                    LoraCMAC_finish(&cmac, self->appSKey, sizeof(self->nwkSKey));                    
-                    
-                    self->personalised = true;
-                    self->joined = true;
-                }
+                
             }
             break
         
@@ -527,17 +489,17 @@ static void collect(struct lora_mac *self)
             
             if(self->personalised){
             
-                if(self->devAddr == result.devAddr){
+                if(self->devAddr == result.fields.data.devAddr){
                 
                     //check counter
                 
-                    if(result.optsLen > 0U){
+                    if(result.fields.data.optsLen > 0U){
                         
                         //process mac layer
                         //LoraMAC_processCommands(self, result.opts, result.optsLen);
                     }
                     
-                    if(result.port == 0U){
+                    if(result.fields.data.port == 0U){
                                     
                         //LoraMAC_processCommands(self, result.data, result.dataLen);
                     }
@@ -545,7 +507,7 @@ static void collect(struct lora_mac *self)
                         
                         if(self->rxCompleteHandler){
                             
-                            self->rxCompleteHandler(self->rxCompleteReceiver, self, result.port, result.data, result.dataLen);
+                            self->rxCompleteHandler(self->rxCompleteReceiver, self, result.fields.data.port, result.fields.data.data, result.fields.data.dataLen);
                         }
                     }
                 }
