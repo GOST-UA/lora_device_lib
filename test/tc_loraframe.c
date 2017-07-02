@@ -18,6 +18,10 @@ void LoraAES_encrypt(const struct lora_aes_ctx *ctx, uint8_t *s)
 {
 }
 
+void LoraAES_decrypt(const struct lora_aes_ctx *ctx, uint8_t *s)
+{
+}
+
 void LoraCMAC_init(struct lora_cmac_ctx *ctx, const struct lora_aes_ctx *aes_ctx)
 {
 }
@@ -26,12 +30,12 @@ void LoraCMAC_update(struct lora_cmac_ctx *ctx, const void *data, uint8_t len)
 {
 }
 
-uint32_t LoraCMAC_finish(struct lora_cmac_ctx *ctx)
+void LoraCMAC_finish(struct lora_cmac_ctx *ctx, void *out, size_t outMax)
 {
-    return 0;
+    memset(out, 0, outMax);
 }
 
-static void test_LoraFrame_encode_empty(void **user)
+static void test_LoraFrame_data_encode_empty(void **user)
 {
     const uint8_t expected[] = "\x02\x00\x02\x00\x00\x00\x00\x01\x00\x00\x00\x00";
     const uint8_t dummyKey[] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
@@ -41,8 +45,8 @@ static void test_LoraFrame_encode_empty(void **user)
     uint8_t out[UINT8_MAX];
 
     input.type = FRAME_TYPE_DATA_UNCONFIRMED_UP;
-    input.counter = 256;
-    input.devAddr = 512;
+    input.fields.data.counter = 256;
+    input.fields.data.devAddr = 512;
 
     outLen = LoraFrame_encode(dummyKey, &input, out, sizeof(out));
     
@@ -50,7 +54,7 @@ static void test_LoraFrame_encode_empty(void **user)
     assert_memory_equal(expected, out, sizeof(expected)-1U);
 }
 
-static void test_LoraFrame_decode_empty(void **user)
+static void test_LoraFrame_data_decode_empty(void **user)
 {
     uint8_t input[] = "\x02\x00\x02\x00\x00\x00\x00\x01\x00\x00\x00\x00";
     const uint8_t dummyKey[] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
@@ -61,10 +65,10 @@ static void test_LoraFrame_decode_empty(void **user)
 
     (void)memset(&expected, 0, sizeof(expected));
     expected.type = FRAME_TYPE_DATA_UNCONFIRMED_UP;
-    expected.counter = 256;
-    expected.devAddr = 512;
+    expected.fields.data.counter = 256;
+    expected.fields.data.devAddr = 512;
 
-    result = LoraFrame_decode(dummyKey, dummyKey, input, sizeof(input)-1U, &output);
+    result = LoraFrame_decode(dummyKey, dummyKey, dummyKey, input, sizeof(input)-1U, &output);
 
     assert_int_equal(expectedResult, result);
     assert_memory_equal(&expected, &output, sizeof(expected));
@@ -73,8 +77,8 @@ static void test_LoraFrame_decode_empty(void **user)
 int main(void)
 {
     const struct CMUnitTest tests[] = {
-        cmocka_unit_test(test_LoraFrame_encode_empty),        
-        cmocka_unit_test(test_LoraFrame_decode_empty),        
+        cmocka_unit_test(test_LoraFrame_data_encode_empty),        
+        cmocka_unit_test(test_LoraFrame_data_decode_empty),        
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);

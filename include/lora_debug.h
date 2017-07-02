@@ -22,6 +22,10 @@
 #ifndef LORA_DEBUG_H
 #define LORA_DEBUG_H
 
+#ifdef LORA_DEBUG_INCLUDE
+#include LORA_DEBUG_INCLUDE
+#endif
+
 #ifndef LORA_ERROR
     #define LORA_ERROR(X)
 #endif

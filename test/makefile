@@ -10,15 +10,16 @@ VPATH += $(DIR_CMOCKA)/src
 
 INCLUDES += -I$(DIR_ROOT)/include
 INCLUDES += -I$(DIR_CMOCKA)/include
+INCLUDES += -I.
 
 CMOCKA_DEFINES += -DHAVE_STRINGS_H
 CMOCKA_DEFINES += -DHAVE_SIGNAL_H
 CMOCKA_DEFINES += -DHAVE_INTTYPES_H
 CMOCKA_DEFINES += -DHAVE_MALLOC_H
 
-DEBUG_DEFINES += -D'LORA_ERROR(...)=do{printf(__VA_ARGS__);printf("\n");}while(0)'
+DEBUG_DEFINES += -D'LORA_DEBUG_INCLUDE="debug_include.h"'
 
-CFLAGS := -Wall -Werror -g -fprofile-arcs -ftest-coverage $(INCLUDES) $(CMOCKA_DEFINES) #{DEBUG_DEFINES}
+CFLAGS := -Wall -Werror -g -fprofile-arcs -ftest-coverage $(INCLUDES) $(CMOCKA_DEFINES) $(DEBUG_DEFINES)
 LDFLAGS := -fprofile-arcs -g
 
 SRC := $(notdir $(wildcard $(DIR_ROOT)/src/*.c))
@@ -45,7 +46,7 @@ build_and_run:
 
 $(DIR_BUILD)/%.o: %.c
 	@ echo building $@
-	@ $(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
 coverage:
 	@ echo $(LINE)

@@ -45,19 +45,49 @@ enum message_type {
 struct lora_frame {
 
     enum message_type type;
-    uint32_t devAddr;
-    uint32_t counter;
-    bool ack;
-    bool adr;
-    bool adrAckReq;
-    bool pending;
+    
+    union {
+        
+        struct {
+    
+            uint32_t devAddr;
+            uint32_t counter;
+            bool ack;
+            bool adr;
+            bool adrAckReq;
+            bool pending;
 
-    const uint8_t *opts;
-    uint8_t optsLen;
+            const uint8_t *opts;
+            uint8_t optsLen;
 
-    uint8_t port;
-    const uint8_t *data;
-    uint8_t dataLen;
+            uint8_t port;
+            const uint8_t *data;
+            uint8_t dataLen;
+        
+        } data;
+        
+        struct {
+
+            uint8_t appNonce[3];
+            uint8_t netID[3];
+            uint32_t devAddr;
+            uint8_t rx1DataRateOffset;
+            uint8_t rx2DataRate;
+            uint8_t rxDelay;
+            uint8_t cfList[16];
+            bool cfListPresent;
+            
+        } joinAccept; 
+        
+        struct {
+            
+            uint8_t appEUI[8];
+            uint8_t devEUI[8];
+            uint16_t devNonce;
+            
+        } joinRequest;
+        
+    } fields;
     
 };
 
@@ -90,8 +120,9 @@ uint8_t LoraFrame_encode(const uint8_t *key, const struct lora_frame *f, uint8_t
 
 /** decode a frame
  *
- * @param[in] netKey    network key (16 byte field)
  * @param[in] appKey    application key (16 byte field)
+ * @param[in] netSKey   network session key (16 byte field)
+ * @param[in] appSKey   application session key (16 byte field)
  * @param[in] in        frame buffer (decrypt will be done in-place)
  * @param[in] len       byte length of `in`
  * @param[out] f        decoded frame structure
@@ -103,7 +134,7 @@ uint8_t LoraFrame_encode(const uint8_t *key, const struct lora_frame *f, uint8_t
  * @retval LORA_FRAME_MIC   frame format OK but MIC check failed
  *
  * */
-enum lora_frame_result LoraFrame_decode(const uint8_t *netKey, const uint8_t *appKey, uint8_t *in, uint8_t len, struct lora_frame *f);
+enum lora_frame_result LoraFrame_decode(const uint8_t *appKey, const uint8_t *netSKey, const uint8_t *appSKey, uint8_t *in, uint8_t len, struct lora_frame *f);
 
 /** calculate size of the PhyPayload
  *

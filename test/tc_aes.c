@@ -32,11 +32,28 @@ static void test_LoraAES_encrypt(void **user)
     assert_memory_equal(ct, out, sizeof(ct));
 }
 
+static void test_LoraAES_decrypt(void **user)
+{
+    static const uint8_t key[] = {0x10,0xa5,0x88,0x69,0xd7,0x4b,0xe5,0xa3,0x74,0xcf,0x86,0x7c,0xfb,0x47,0x38,0x59};
+    static const uint8_t pt[] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+    static const uint8_t ct[] = {0x6d,0x25,0x1e,0x69,0x44,0xb0,0x51,0xe0,0x4e,0xaa,0x6f,0xb4,0xdb,0xf7,0x84,0x65};
+
+    struct lora_aes_ctx aes;
+    uint8_t out[AES_BLOCK_SIZE];
+
+    memcpy(out, ct, sizeof(out));
+    LoraAES_init(&aes, key);
+    LoraAES_decrypt(&aes, out);
+
+    assert_memory_equal(pt, out, sizeof(pt));
+}
+
 int main(void)
 {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(test_LoraAES_init),
         cmocka_unit_test(test_LoraAES_encrypt),        
+        cmocka_unit_test(test_LoraAES_decrypt),        
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);

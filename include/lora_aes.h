@@ -75,6 +75,15 @@ void LoraAES_init(struct lora_aes_ctx *ctx, const uint8_t *key);
  * */
 void LoraAES_encrypt(const struct lora_aes_ctx *ctx, uint8_t *s);
 
+/**
+ * Decrypt a block of memory called state
+ * 
+ * @param[in] ctx
+ * @param[in] s pointer to 16 bytes of state (any alignment)
+ * 
+ * */
+void LoraAES_decrypt(const struct lora_aes_ctx *ctx, uint8_t *s);
+
 #ifdef __cplusplus
 }
 #endif
