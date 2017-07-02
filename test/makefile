@@ -46,7 +46,7 @@ build_and_run:
 
 $(DIR_BUILD)/%.o: %.c
 	@ echo building $@
-	$(CC) $(CFLAGS) -c $< -o $@
+	@ $(CC) $(CFLAGS) -c $< -o $@
 
 coverage:
 	@ echo $(LINE)
