@@ -77,13 +77,21 @@ typedef void (*rxCompleteCB)(void *receiver, uint8_t port, const void *data, uin
 enum states {
 
     IDLE,
+    
     WAIT_TX,
     TX,         // radio is TX
     WAIT_RX1,   // waiting for first RX window
     RX1,        // first RX window
     WAIT_RX2,   // waiting for second RX window
     RX2,        // second RX window
-    BEACON_RX,  // beacon window        
+    
+    JOIN_WAIT_TX,
+    JOIN_TX,
+    JOIN_WAIT_RX1,
+    JOIN_RX1,
+    JOIN_WAIT_RX2,
+    JOIN_RX2,
+    
     ERROR
 };
 
@@ -115,6 +123,8 @@ struct lora_mac {
     bool joined;
     bool personalised;
     bool joinPending;
+    
+    uint16_t devNonce;
     
     uint32_t rx1_interval;
     uint32_t rx2_interval;

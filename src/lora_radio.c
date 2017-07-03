@@ -41,6 +41,13 @@ void LoraRadio_init(struct lora_radio *self, enum lora_radio_type type, const st
     }
 }
 
+void LoraRadio_reset(struct lora_radio *self)
+{
+    self->board.reset(true);
+    self->board.reset_wait();
+    self->board.reset(false);
+}
+
 void LoraRadio_transmit(struct lora_radio *self, const void *data, uint8_t len)
 {   
     LoraRadio_if[self->type]->transmit(self, data, len);

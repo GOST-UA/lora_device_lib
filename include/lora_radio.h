@@ -70,9 +70,8 @@ struct lora_radio_if {
     void (*raiseInterrupt)(struct lora_radio *self, uint8_t n);
 };
 
-
-
 void LoraRadio_init(struct lora_radio *self, enum lora_radio_type type, const struct lora_board *board);
+void LoraRadio_reset(struct lora_radio *self);
 void LoraRadio_transmit(struct lora_radio *self, const void *data, uint8_t len);
 void LoraRadio_receive(struct lora_radio *self);
 uint8_t LoraRadio_collect(struct lora_radio *self, void *data, uint8_t max);
