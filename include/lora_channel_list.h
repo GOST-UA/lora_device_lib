@@ -45,7 +45,7 @@ struct lora_channel {
 };
 
 struct lora_band {
-    uint32_t timeReady;     ///< system time (at or after) this band will be available
+    uint64_t timeReady;     ///< system time (at or after) this band will be available
     int channel;            ///< channels are cycled round robin per band so we need a reference to channel
     int numUnmasked;        ///< number of channels in this band
 };
@@ -95,11 +95,11 @@ void ChannelList_unmask(struct lora_channel_list *self, uint8_t chIndex);
 
 bool ChannelList_setRateAndPower(struct lora_channel_list *self, uint8_t rate, uint8_t power);
 
-uint32_t ChannelList_waitTime(const struct lora_channel_list *self, uint32_t timeNow);
+uint32_t ChannelList_waitTime(const struct lora_channel_list *self, uint64_t timeNow);
 
 struct lora_adr_ans ChannelList_adrRequest(struct lora_channel_list *self, uint8_t rate, uint8_t power, uint16_t mask, uint8_t maskControl);
 
-void ChannelList_registerTransmission(struct lora_channel_list *self, uint32_t timeNow, uint8_t payloadLen);
+void ChannelList_registerTransmission(struct lora_channel_list *self, uint64_t time, uint8_t payloadLen);
 
 size_t ChannelList_capacity(const struct lora_channel_list *self);
 
@@ -117,7 +117,6 @@ struct lora_channel_setting {
 bool ChannelList_upstreamSetting(const struct lora_channel_list *self, struct lora_channel_setting *setting);
 bool ChannelList_rx1Setting(const struct lora_channel_list *self, struct lora_channel_setting *setting);
 bool ChannelList_rx2Setting(const struct lora_channel_list *self, struct lora_channel_setting *setting);
-bool ChannelList_beaconSetting(const struct lora_channel_list *self, struct lora_channel_setting *setting);
 
 enum lora_region_id ChannelList_region(const struct lora_channel_list *self);
 

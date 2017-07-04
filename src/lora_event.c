@@ -42,7 +42,7 @@ void Event_init(struct lora_event *self)
     }
 }
 
-void Event_receive(struct lora_event *self, enum on_input_types type, uint32_t time)
+void Event_receive(struct lora_event *self, enum on_input_types type, uint64_t time)
 {
     if(!self->onInput[type].state){
     
@@ -94,13 +94,13 @@ void Event_tick(struct lora_event *self)
     }
 }
 
-void *Event_onTimeout(struct lora_event *self, uint32_t timeout, void *receiver, event_handler_t handler)
+void *Event_onTimeout(struct lora_event *self, uint64_t interval, void *receiver, event_handler_t handler)
 {
     void *retval = NULL;
     
-    uint32_t time = getTime();
+    uint64_t time = getTime();
     
-    if((time + timeout) >= time){
+    if((time + interval) >= time){
     
         if(self->free != NULL){
 
@@ -109,7 +109,7 @@ void *Event_onTimeout(struct lora_event *self, uint32_t timeout, void *receiver,
             struct on_timeout *prev = NULL;
             self->free = self->free->next;
             
-            to->time = time + timeout;
+            to->time = time + interval;
             to->handler = handler;
             to->receiver = receiver;
             to->next = NULL;

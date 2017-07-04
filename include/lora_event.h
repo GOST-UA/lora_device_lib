@@ -47,7 +47,7 @@ struct on_input {
     
     event_handler_t handler;
     bool state;
-    uint32_t time;
+    uint64_t time;    
     void *receiver;
 };
 
@@ -57,7 +57,7 @@ struct on_timeout {
     struct on_timeout *next;
         
     event_handler_t handler;
-    uint32_t time;
+    uint64_t time;
     void *receiver;
 };
 
@@ -85,7 +85,7 @@ void Event_init(struct lora_event *self);
  * @param[in] type event source 
  * 
  * */
-void Event_receive(struct lora_event *self, enum on_input_types type, uint32_t time);
+void Event_receive(struct lora_event *self, enum on_input_types type, uint64_t usec);
 
 /** Execute synchronous event loop from mainloop
  * 
@@ -115,7 +115,7 @@ void *Event_onInput(struct lora_event *self, enum on_input_types event, void *re
 /** Schedule a timer event from mainloop
  * 
  * @param[in] self
- * @param[in] timeout system time that event will occur
+ * @param[in] interval time in usec until timeout
  * @param[in] receiver callback receiver
  * @param[in] handler callback handler
  * 
@@ -124,7 +124,7 @@ void *Event_onInput(struct lora_event *self, enum on_input_types event, void *re
  * @retval NULL event could not be scheduled
  * 
  * */
-void *Event_onTimeout(struct lora_event *self, uint32_t timeout, void *receiver, event_handler_t handler);
+void *Event_onTimeout(struct lora_event *self, uint64_t interval, void *receiver, event_handler_t handler);
 
 /** Cancel an event handler (and clear the reference) from mainloop
  * 

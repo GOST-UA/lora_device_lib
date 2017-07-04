@@ -26,10 +26,6 @@
 
 /* static prototypes **************************************************/
 
-#if 0
-static int findChannelByFrequency(const struct lora_channel_list *self, uint32_t freq);
-#endif
-
 static uint32_t calculateOnAirTime(const struct lora_channel_list *self, uint8_t payloadLen);
 static void cycleChannel(struct lora_channel_list *self);
 
@@ -188,14 +184,7 @@ bool ChannelList_setRateAndPower(struct lora_channel_list *self, uint8_t rate, u
     return retval;
 }
 
-#if 0
-uint32_t ChannelList_frequency(const struct lora_channel_list *self)
-{
-    return (self->nextChannel == -1) ? 0U : self->channels[self->nextChannel].freq;
-}
-#endif
-
-uint32_t ChannelList_waitTime(const struct lora_channel_list *self, uint32_t timeNow)
+uint32_t ChannelList_waitTime(const struct lora_channel_list *self, uint64_t timeNow)
 {
     uint32_t retval;
     
@@ -222,14 +211,7 @@ struct lora_adr_ans ChannelList_adrRequest(struct lora_channel_list *self, uint8
     return retval;
 }
 
-#if 0
-uint8_t ChannelList_maxPayload(const struct lora_channel_list *self)
-{
-    return (self->rateParameters != NULL) ? self->rateParameters->payload : 0U;
-}
-#endif
-
-void ChannelList_registerTransmission(struct lora_channel_list *self, uint32_t timeNow, uint8_t payloadLen)
+void ChannelList_registerTransmission(struct lora_channel_list *self, uint64_t time, uint8_t payloadLen)
 {
     if(self->nextBand != -1){
 
@@ -240,38 +222,10 @@ void ChannelList_registerTransmission(struct lora_channel_list *self, uint32_t t
     
         uint64_t offTime_us = (uint64_t)onTime_us * (uint64_t)offTimeFactor;
 
-        self->bands[self->nextBand].timeReady = timeNow + (offTime_us / 1000U) + ((offTime_us % 1000U) ? 1U : 0U);
+        self->bands[self->nextBand].timeReady = time + offTime_us;
         cycleChannel(self);
     }
 }
-
-#if 0
-enum spreading_factor ChannelList_sf(const struct lora_channel_list *self)
-{
-    return (self->rateParameters != NULL) ? self->rateParameters->sf : SF_10;    
-}
-#endif
-
-#if 0
-enum signal_bandwidth ChannelList_bw(const struct lora_channel_list *self)
-{
-    return (self->rateParameters != NULL) ? self->rateParameters->bw : BW_125;    
-}
-#endif
-
-#if 0
-enum erp_setting ChannelList_erp(const struct lora_channel_list *self)
-{
-    return self->erp;
-}
-#endif
-
-#if 0
-enum coding_rate ChannelList_cr(const struct lora_channel_list *self)
-{
-    return CR_5;
-}
-#endif
 
 size_t ChannelList_capacity(const struct lora_channel_list *self)
 {
@@ -322,10 +276,6 @@ bool ChannelList_rx2Setting(const struct lora_channel_list *self, struct lora_ch
     return retval;
 }
 
-bool ChannelList_beaconSetting(const struct lora_channel_list *self, struct lora_channel_setting *setting)
-{
-    return false;
-}
 
 enum lora_region_id ChannelList_region(const struct lora_channel_list *self)
 {
@@ -333,28 +283,6 @@ enum lora_region_id ChannelList_region(const struct lora_channel_list *self)
 }
 
 /* static functions ***************************************************/
-
-#if 0
-static int findChannelByFrequency(const struct lora_channel_list *self, uint32_t freq)
-{
-    int retval = -1;
-    size_t i;
-
-    if(freq > 0U){
-
-        for(i=0U; i < sizeof(self->channels)/sizeof(*self->channels); i++){
-
-            if(self->channels[i].freq == freq){
-
-                retval = (int)i;
-                break;
-            }
-        }   
-    }
-
-    return retval;
-}
-#endif
 
 static uint32_t calculateOnAirTime(const struct lora_channel_list *self, uint8_t payloadLen)
 {

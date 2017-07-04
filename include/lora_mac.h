@@ -95,6 +95,8 @@ enum states {
     ERROR
 };
 
+#define MAX_FCNT_GAP 16384U
+
 struct lora_mac {
 
     enum states state;
@@ -111,8 +113,16 @@ struct lora_mac {
     uint8_t appSKey[16U];
 
     uint16_t rwindow;
-    uint32_t upCounter;
-
+    uint16_t upCounter;
+    uint16_t downCounter;
+    uint16_t maxFrameCounterGap;
+    uint8_t joinAcceptDelay1;   // fixed depending on region
+    uint8_t joinAcceptDelay2;
+    uint8_t receiveDelay1;      // adjustable by mac command
+    uint8_t receiveDelay2;
+    
+    uint64_t txCompleteTime;
+    
     uint8_t buffer[UINT8_MAX];
     uint8_t bufferLen;
 
@@ -125,9 +135,6 @@ struct lora_mac {
     bool joinPending;
     
     uint16_t devNonce;
-    
-    uint32_t rx1_interval;
-    uint32_t rx2_interval;
     
     #define RX_WDT_INTERVAL 60000
     
@@ -162,7 +169,7 @@ bool LoraMAC_setNbTrans(struct lora_mac *self, uint8_t nbTrans);
  * 
  * Call may be rejected for the following reasons:
  * 
- * - MAC is already sending (LoraMAC_txPending() returns true)
+ * - MAC is already sending
  * - Message is too large
  * 
  * If the call is accepted it may be some time before it completes. The callback
