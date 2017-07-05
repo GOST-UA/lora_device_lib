@@ -53,7 +53,7 @@ void Event_receive(struct lora_event *self, enum on_input_types type, uint64_t t
 
 void Event_tick(struct lora_event *self)
 {
-    uint32_t time = getTime();
+    uint64_t time = getTime();
     size_t i;
     
     for(i=0U; i < sizeof(self->onInput)/sizeof(*self->onInput); i++){
@@ -65,7 +65,7 @@ void Event_tick(struct lora_event *self)
             event_handler_t handler = self->onInput[i].handler;
             self->onInput[i].handler = NULL;
             
-            handler(self->onInput[i].receiver, time - self->onInput[i].time);       
+            handler(self->onInput[i].receiver, self->onInput[i].time);       
         }
     }
     
@@ -94,68 +94,60 @@ void Event_tick(struct lora_event *self)
     }
 }
 
-void *Event_onTimeout(struct lora_event *self, uint64_t interval, void *receiver, event_handler_t handler)
+void *Event_onTimeout(struct lora_event *self, uint64_t timeout, void *receiver, event_handler_t handler)
 {
     void *retval = NULL;
-    
-    uint64_t time = getTime();
-    
-    if((time + interval) >= time){
-    
-        if(self->free != NULL){
+        
+    if(self->free != NULL){
 
-            struct on_timeout *to = self->free;
-            struct on_timeout *ptr = self->head;
-            struct on_timeout *prev = NULL;
-            self->free = self->free->next;
-            
-            to->time = time + interval;
-            to->handler = handler;
-            to->receiver = receiver;
-            to->next = NULL;
-            
-            if(ptr == NULL){
+        struct on_timeout *to = self->free;
+        struct on_timeout *ptr = self->head;
+        struct on_timeout *prev = NULL;
+        self->free = self->free->next;
+        
+        to->time = timeout;
+        to->handler = handler;
+        to->receiver = receiver;
+        to->next = NULL;
+        
+        if(ptr == NULL){
 
-                self->head = to;
-            }
-            else{
-
-                while(ptr != NULL){
-
-                    if(to->time < ptr->time){
-                        
-                        if(prev == NULL){
-                            
-                            self->head = to;
-                        }
-                        else{
-                            
-                            prev->next = to;                                                        
-                        }
-                        
-                        to->next = ptr;
-
-                        break;
-                    }
-                    else{
-
-                        prev = ptr;
-                        ptr = ptr->next;
-                    }
-                }
-            }
-
-            retval = (void *)to;
+            self->head = to;
         }
         else{
-            
-            LORA_ERROR("timer pool exhausted")
+
+            while(ptr != NULL){
+
+                if(to->time < ptr->time){
+                    
+                    if(prev == NULL){
+                        
+                        self->head = to;
+                    }
+                    else{
+                        
+                        prev->next = to;                                                        
+                    }
+                    
+                    to->next = ptr;
+
+                    break;
+                }
+                else{
+
+                    prev = ptr;
+                    ptr = ptr->next;
+                }
+            }
         }
+
+        retval = (void *)to;
     }
     else{
         
-        LORA_ERROR("time wrap")
+        LORA_ERROR("timer pool exhausted")
     }
+    
 
     return retval;
 }

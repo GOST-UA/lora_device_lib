@@ -44,7 +44,7 @@ enum lora_radio_event {
     LORA_RADIO_RX_TIMEOUT
 };
 
-typedef void (*radioEventCB)(void *receiver, enum lora_radio_event event, uint32_t time);
+typedef void (*radioEventCB)(void *receiver, enum lora_radio_event event, uint64_t time);
 
 struct lora_radio {
     enum lora_radio_type {

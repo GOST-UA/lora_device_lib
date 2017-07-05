@@ -48,6 +48,15 @@ void ChannelList_registerTransmission(struct lora_channel_list *self, uint32_t t
 {
 }
 
+uint64_t getTime(void)
+{
+    return 0U;
+}
+
+uint32_t ChannelList_waitTime(const struct lora_channel_list *self, uint64_t timeNow)
+{
+    return 0U;
+}
 
 
 static int setup_LoraMAC(void **user)

@@ -133,6 +133,8 @@ struct lora_mac {
     bool joined;
     bool personalised;
     bool joinPending;
+    bool confirmPending;
+    bool confirmed;
     
     uint16_t devNonce;
     
@@ -157,12 +159,25 @@ struct lora_mac {
 
 void LoraMAC_init(struct lora_mac *self, struct lora_channel_list *channels, struct lora_radio *radio, struct lora_event *events);
 
-void LoraMAC_setSession(struct lora_mac *self, uint32_t devAddr, const void *nwkSKey, const void *appSKey);
-bool LoraMAC_addChannel(struct lora_mac *self, uint8_t chIndex, uint32_t freq);
-void LoraMAC_removeChannel(struct lora_mac *self, uint8_t chIndex);
-bool LoraMAC_maskChannel(struct lora_mac *self, uint8_t chIndex);
-void LoraMAC_unmaskChannel(struct lora_mac *self, uint8_t chIndex);
-bool LoraMAC_setRateAndPower(struct lora_mac *self, uint8_t rate, uint8_t power);
+/** Set join parameters locally
+ * 
+ * @param[in] self
+ * @param[in] devAddr device address
+ * @param[in] nwkSKey network session key
+ * @param[in] appSKey application session key
+ * 
+ * @return true if personalization could be performed
+ * 
+ * */
+bool LoraMAC_personalize(struct lora_mac *self, uint32_t devAddr, const void *nwkSKey, const void *appSKey);
+
+/** Set the number of times an upstream data frame will be sent (for redundancy)
+ * 
+ * (i.e. user asks to send a data frame, the stack may send it nbTrans times for redundancy)
+ * 
+ * 
+ * 
+ * */
 bool LoraMAC_setNbTrans(struct lora_mac *self, uint8_t nbTrans);
 
 /** Send a message upstream
@@ -172,25 +187,23 @@ bool LoraMAC_setNbTrans(struct lora_mac *self, uint8_t nbTrans);
  * - MAC is already sending
  * - Message is too large
  * 
- * If the call is accepted it may be some time before it completes. The callback
- * confirmation is provided for the purpose of synchronisation. Sources of
- * delay include:
+ * If the call is accepted it may be some time before it completes. The
+ * application will be notified of completion (and final status) via
+ * the txCompleteHandler callback.
  * 
  * - Duty cycle limits on available channels
  * - Retransmission depending on MAC setting
  * 
  * @param[in] self
- * @param[in] confirmed true if this send shoudl be confirmed
+ * @param[in] confirmed true if this send should be confirmed
  * @param[in] port 
  * @param[in] data pointer to message to send (will be cached by MAC)
  * @param[in] len byte length of data
- * @param[in] user tx complate notification receiver
- * @param[in] cb tx complete notification method
  * 
  * @retval true unconfirmed up is possible and now pending
  * 
  * */
-bool LoraMAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *data, uint8_t len, void *receiver, txCompleteCB cb);
+bool LoraMAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *data, uint8_t len);
 
 /** 
  * MAC will call this handler when a message is received downstream
@@ -202,6 +215,15 @@ bool LoraMAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const voi
  * */
 void LoraMAC_setReceiveHandler(struct lora_mac *self, void *receiver, rxCompleteCB cb);
 
+/** 
+ * MAC will call this handler when a send operation completes
+ * 
+ * @param[in] self
+ * @param[in] user callback receiver
+ * @param[in] cb handler
+ * 
+ * */
+void LoraMAC_setTransmitHandler(struct lora_mac *self, void *receiver, txCompleteCB cb);
 
 typedef void (*joinConfirmation)(void *receiver, uint32_t time);
 bool LoraMAC_requestJoin(struct lora_mac *self, void *receiver, joinConfirmation cb);

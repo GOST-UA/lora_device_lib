@@ -28,10 +28,10 @@
 /** An event callback
  * 
  * @param[in] receiver
- * @param[in] delay delay measured between the event and callback called
+ * @param[in] time system time of event (us)
  * 
  * */
-typedef void (*event_handler_t)(void *receiver, uint32_t delay);
+typedef void (*event_handler_t)(void *receiver, uint64_t time);
 
 /** radio IO event source */
 enum on_input_types {
@@ -83,9 +83,10 @@ void Event_init(struct lora_event *self);
  * 
  * @param[in] self
  * @param[in] type event source 
+ * @param[in] time system time (us)
  * 
  * */
-void Event_receive(struct lora_event *self, enum on_input_types type, uint64_t usec);
+void Event_receive(struct lora_event *self, enum on_input_types type, uint64_t time);
 
 /** Execute synchronous event loop from mainloop
  * 
@@ -115,7 +116,7 @@ void *Event_onInput(struct lora_event *self, enum on_input_types event, void *re
 /** Schedule a timer event from mainloop
  * 
  * @param[in] self
- * @param[in] interval time in usec until timeout
+ * @param[in] timeout system time (us) that timeout will occur
  * @param[in] receiver callback receiver
  * @param[in] handler callback handler
  * 
@@ -124,7 +125,7 @@ void *Event_onInput(struct lora_event *self, enum on_input_types event, void *re
  * @retval NULL event could not be scheduled
  * 
  * */
-void *Event_onTimeout(struct lora_event *self, uint64_t interval, void *receiver, event_handler_t handler);
+void *Event_onTimeout(struct lora_event *self, uint64_t timeout, void *receiver, event_handler_t handler);
 
 /** Cancel an event handler (and clear the reference) from mainloop
  * 

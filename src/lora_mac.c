@@ -27,6 +27,7 @@
 #include "lora_debug.h"
 #include "lora_aes.h"
 #include "lora_cmac.h"
+#include "lora_time.h"
 
 #include <string.h>
 
@@ -38,16 +39,18 @@
 static uint16_t getUpCount(struct lora_mac *self);
 static bool validateDownCount(struct lora_mac *self, uint16_t counter);
 
-static void tx(void *receiver, uint32_t delay);
-static void txComplete(void *receiver, uint32_t delay);
+static void tx(void *receiver, uint64_t time);
+static void txComplete(void *receiver, uint64_t time);
 
-static void rxStart(void *receiver, uint32_t delay);
-static void rxReady(void *receiver, uint32_t delay);
-static void rxTimeout(void *receiver, uint32_t delay);
-static void rxFinish(struct lora_mac *self, uint32_t delay);
+static void rxStart(void *receiver, uint64_t time);
+static void rxReady(void *receiver, uint64_t time);
+static void rxTimeout(void *receiver, uint64_t time);
+static void rxFinish(struct lora_mac *self);
 
-static void resetRadio(void *receiver, uint32_t delay);
+//static void resetRadio(void *receiver, uint64_t time);
 static void collect(struct lora_mac *self);
+
+static void abandonSequence(struct lora_mac *self);
 
 static void radioEvent(void *receiver, enum lora_radio_event event, uint64_t time);
 
@@ -68,23 +71,20 @@ void LoraMAC_init(struct lora_mac *self, struct lora_channel_list *channels, str
     
     const struct region_defaults *defaults = LoraRegion_getDefaultSettings(ChannelList_region(self->channels));
     
-    self->rx1_interval = defaults->receive_delay1 * 1000U;
-    self->rx2_interval = defaults->receive_delay2 * 1000U;
-    
     LoraRadio_setEventHandler(self->radio, self, radioEvent);
     
     self->maxFrameCounterGap = defaults->max_fcnt_gap;    
-    self->joinAcceptDelay1 = defaults->join_accept_delay1;
-    self->joinAcceptDelay2 = defaults->join_accept_delay2;    
+    self->joinAcceptDelay1 = defaults->join_accept_delay1 * 1000U;
+    self->joinAcceptDelay2 = defaults->join_accept_delay2 * 1000U;    
     self->receiveDelay1 = defaults->receive_delay1;
     self->receiveDelay2 = defaults->receive_delay2;    
-    self->adrAckDelay = defaults->adr_ack_delay;
-    self->adrAckLimit = defaults->adr_ack_limit;
-    self->ackTimeout = defaults->ack_timeout;
-    self->ackDither = defautls->ack_dither;
+    //self->adrAckDelay = defaults->adr_ack_delay;
+    //self->adrAckLimit = defaults->adr_ack_limit;
+    //self->ackTimeout = defaults->ack_timeout;
+    //self->ackDither = defautls->ack_dither;
 }
 
-bool LoraMAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *data, uint8_t len, void *receiver, txCompleteCB cb)
+bool LoraMAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *data, uint8_t len)
 {
     LORA_ASSERT(self != NULL)
     LORA_ASSERT((len == 0) || (data != NULL))
@@ -97,7 +97,6 @@ bool LoraMAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const voi
     /* stack must be idle (i.e. not sending) */
     if(self->state == IDLE){
     
-        /* user port must be greater than 0 */
         if((port > 0U) && (port <= 223U)){
 
             if(ChannelList_upstreamSetting(self->channels, &settings)){
@@ -122,12 +121,16 @@ bool LoraMAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const voi
 
                     self->bufferLen = LoraFrame_encode(self->appSKey, &f, self->buffer, sizeof(self->buffer));
                     
-                    (void)Event_onTimeout(self->events, ChanneList_waitTime(self->channels, getTime()), self, tx);
+                    uint64_t timeNow = getTime();
+                    
+                    (void)Event_onTimeout(self->events, timeNow + ChannelList_waitTime(self->channels, timeNow), self, tx);
                     
                     self->state = WAIT_TX;
                     
-                    retval = true;
+                    self->confirmPending = true;
+                    self->confirmed = false;
                     
+                    retval = true;                    
                 }
                 else{
                     
@@ -158,6 +161,12 @@ void LoraMAC_setReceiveHandler(struct lora_mac *self, void *receiver, rxComplete
     self->rxCompleteReceiver = receiver;
 }
 
+void LoraMAC_setTransmitHandler(struct lora_mac *self, void *receiver, txCompleteCB cb)
+{
+    self->txCompleteHandler = cb;
+    self->txCompleteReceiver = receiver;
+}
+
 bool LoraMAC_setNbTrans(struct lora_mac *self, uint8_t nbTrans)
 {
     bool retval = false;
@@ -174,7 +183,7 @@ bool LoraMAC_setNbTrans(struct lora_mac *self, uint8_t nbTrans)
     return retval;
 }
 
-bool LoraMAC_join(struct lora_mac *self, void *receiver, joinConfirmation cb)
+bool LoraMAC_join(struct lora_mac *self)
 {
     bool retval;
     
@@ -190,10 +199,12 @@ bool LoraMAC_join(struct lora_mac *self, void *receiver, joinConfirmation cb)
 
         self->bufferLen = LoraFrame_encode(self->appKey, &f, self->buffer, sizeof(self->buffer));
         
-        (void)Event_onTimeout(self->events, ChanneList_waitTime(self->channels, getTime()), self, tx);
+        uint64_t timeNow = getTime();
+        
+        (void)Event_onTimeout(self->events, timeNow + ChannelList_waitTime(self->channels, timeNow), self, tx);
         
         self->state = JOIN_WAIT_TX;
-        self->joinPending;
+        self->joinPending = true;
         
         retval = true;        
     }
@@ -228,10 +239,14 @@ static void resetCounters(struct lora_mac *self)
     self->downCounter = 0U;
 }
 
-static void tx(void *receiver, uint32_t delay)
+static void tx(void *receiver, uint64_t time)
 {
+    LORA_ASSERT(receiver != NULL)
+    
     struct lora_mac *self = (struct lora_mac *)receiver;    
     struct lora_channel_setting settings;
+    
+    LORA_ASSERT((self->state == JOIN_WAIT_TX) || (self->state == WAIT_TX))
     
     if(ChannelList_upstreamSetting(self->channels, &settings)){
     
@@ -241,173 +256,192 @@ static void tx(void *receiver, uint32_t delay)
             
             self->txComplete = Event_onInput(self->events, EVENT_TX_COMPLETE, self, txComplete);
         
-            self->resetRadio = NULL;    //todo
+            self->resetRadio = NULL;    //todo: add a watchdog to catch situation where IO lines don't work as expected
             
             LoraRadio_transmit(self->radio, self->buffer, self->bufferLen);
         }
         else{
             
-            //handle parameter rejection
+            LORA_ERROR("radio reject parameters")            
+            abandonSequence(self);
         }
     }
     else{
         
-        // abort somehow
+        LORA_ERROR("no upstream radio parameters available")
+        abandonSequence(self);
     }
 }
 
-static void txComplete(void *receiver, uint32_t delay)
+static void txComplete(void *receiver, uint64_t time)
 {
-    struct lora_mac *self = (struct lora_mac *)receiver;        
-    uint32_t rxDelay = (uint32_t)self->receiveDelay1 * 1000000U
+    LORA_ASSERT(receiver != NULL)
     
-    self->txCompleteTime = getTime() - delay;
-    
-    if(delay < rxDelay){
-        
-        uint32_t interval = rxDelay - delay;
-        
-        self->state = (self->state == JOIN_TX) ? JOIN_WAIT_RX1 : WAIT_RX1;
-
-        (void)Event_onTimeout(self->events, interval, self, rxStart);    
-    }
-    else{
-        
-        self->state = IDLE;
-    }    
-}
-
-static void rxStart(void *receiver, uint32_t delay)
-{
-    struct lora_mac *self = (struct lora_mac *)receiver;    
-    struct lora_channel_setting settings;
-    
-    switch(self->state){
-    case JOIN_WAIT_RX1:
-    case WAIT_RX1:
-    case JOIN_WAIT_RX2:    
-    case WAIT_RX2:
-    
-        switch(self->state){
-        default:
-        case JOIN_WAIT_RX1:
-        
-            (void)ChannelList_rx1Setting(self->channels, &settings);
-            self->state = RX1;                
-            break;
-        
-        case WAIT_RX1:
-        
-            (void)ChannelList_rx1Setting(self->channels, &settings);
-            self->state = JOIN_RX1;                
-            break;
-        
-        case JOIN_WAIT_RX2:    
-        
-            (void)ChannelList_rx2Setting(self->channels, &settings);
-            self->state = RX2;                
-            break;        
-        
-        case WAIT_RX2:
-        
-            (void)ChannelList_rx2Setting(self->channels, &settings);
-            self->state = JOIN_RX2;                
-            break;                    
-        }
-        
-        self->rxReady = Event_onInput(self->events, EVENT_RX_READY, self, rxReady);
-        self->rxTimeout = Event_onInput(self->events, EVENT_RX_TIMEOUT, self, rxTimeout);
-        LoraRadio_receive(self->radio);                                
-        break;
-        
-    default:
-        break
-    }    
-}
-
-static void rxReady(void *receiver, uint32_t delay)
-{
-    struct lora_mac *self = (struct lora_mac *)receiver;    
-    Event_cancel(self->events, &self->rxTimeout);    
-    collect(self);            
-    rxFinish(self, delay);
-}
-
-static void rxTimeout(void *receiver, uint32_t delay)
-{
-    struct lora_mac *self = (struct lora_mac *)receiver;    
-    Event_cancel(self->events, &self->rxReady);    
-    rxFinish(self, delay);
-}
-
-static void rxFinish(struct lora_mac *self, uint32_t delay)
-{
+    struct lora_mac *self = (struct lora_mac *)receiver;            
     uint64_t timeNow = getTime();
+    uint64_t futureTime;
+        
+    LORA_ASSERT((self->state == JOIN_TX) || (self->state == TX))
     
-    uint32_t rxDelay = (uint32_t)(self->receiveDelay2 + self->receiveDelay1) * 1000000U
+    self->txCompleteTime = time;
+        
+    futureTime = self->txCompleteTime + ((self->state == TX) ? self->receiveDelay1 : self->joinAcceptDelay1);
     
-    switch(self->state){
-    case RX1:
-    case JOIN_RX1:        
-    case RX2:
-    case JOIN_RX2:
+    self->state = (self->state == TX) ? WAIT_RX1 : JOIN_WAIT_RX1;                
+
+    if(futureTime > timeNow){
+
+        (void)Event_onTimeout(self->events, futureTime, self, rxStart);
+    }
+    else{
+        
+        LORA_ERROR("missed RX slot")
         
         switch(self->state){
         case RX1:
-        
-            ChannelList_registerTransmission(self->channels, self->txCompleteTime, self->bufferLen);
-            self->state = WAIT_RX2;    
-            (void)Event_onTimeout(self->events, self->receiveDelay2, self, rxStart);
-            break;
-        
         case JOIN_RX1:
-            
-            ChannelList_registerTransmission(self->channels, timeNow, self->bufferLen);
-            self->state = JOIN_WAIT_RX2;    
-            (void)Event_onTimeout(self->events, self->joinAcceptDelay2, self, rxStart);
-            break;
-            
-        case RX2:
-        case JOIN_RX2:
-            
-            Event_cancel(self->events, &self->resetRadio);
-            
-            if(self->confirmed && (self->txCount < MAX_RETRIES)){
-                            
-                self->txCount++;
-                self->state = WAIT_TX;
-                (void)Event_onTimeout(self->events, ChannelList_waitTime(self->channels, timeNow), self, tx);
-            }
-            else if(!self->confirmed && (self->txCount < self->nbTrans)){
-                    
-                self->txCount++;
-                self->state = WAIT_TX;
-                (void)Event_onTimeout(self->events, ChannelList_waitTime(self->channels, timeNow), self, tx);
-            } 
-            else{
-                            
-                self->state = IDLE;
-            }    
-            break;
-            
+            ChannelList_registerTransmission(self->channels, self->txCompleteTime, self->bufferLen);
+            break;    
         default:
             break;
         }
+        
+        rxFinish(self);
+    }         
+}
+
+static void rxStart(void *receiver, uint64_t time)
+{
+    LORA_ASSERT(receiver != NULL)
     
+    struct lora_mac *self = (struct lora_mac *)receiver;    
+    struct lora_channel_setting settings;
         
+    LORA_ASSERT((self->state == WAIT_RX1) || (self->state == WAIT_RX2) || (self->state == JOIN_WAIT_RX1) || (self->state == JOIN_WAIT_RX2))
+        
+    switch(self->state){
+    default:
+    case JOIN_WAIT_RX1:
+    
+        (void)ChannelList_rx1Setting(self->channels, &settings);
+        self->state = RX1;                
         break;
+    
+    case WAIT_RX1:
+    
+        (void)ChannelList_rx1Setting(self->channels, &settings);
+        self->state = JOIN_RX1;                
+        break;
+    
+    case JOIN_WAIT_RX2:    
+    
+        (void)ChannelList_rx2Setting(self->channels, &settings);
+        self->state = RX2;                
+        break;        
+    
+    case WAIT_RX2:
+    
+        (void)ChannelList_rx2Setting(self->channels, &settings);
+        self->state = JOIN_RX2;                
+        break;                    
+    }
+    
+    if(LoraRadio_setParameters(self->radio, settings.freq, settings.bw, settings.sf)){
+     
+        self->rxReady = Event_onInput(self->events, EVENT_RX_READY, self, rxReady);
+        self->rxTimeout = Event_onInput(self->events, EVENT_RX_TIMEOUT, self, rxTimeout);
         
+        LoraRadio_receive(self->radio);                                
+    }
+    else{
+        
+        LORA_ERROR("could not apply radio settings")
+        abandonSequence(self);
+    }
+}
+
+static void rxReady(void *receiver, uint64_t time)
+{
+    LORA_ASSERT(receiver != NULL)
+        
+    struct lora_mac *self = (struct lora_mac *)receiver;    
+    Event_cancel(self->events, &self->rxTimeout);    
+    
+    LORA_ASSERT((self->state == RX1) || (self->state == RX2) || (self->state == JOIN_RX1) || (self->state == JOIN_RX2))
+    
+    switch(self->state){
+    case RX1:
+    case JOIN_RX1:
+        ChannelList_registerTransmission(self->channels, self->txCompleteTime, self->bufferLen);
+        break;    
     default:
         break;
     }
     
-    
-    
+    collect(self);            
+    rxFinish(self);
 }
 
-static void resetRadio(void *receiver, uint32_t time)
+static void rxTimeout(void *receiver, uint64_t time)
 {
+    LORA_ASSERT(receiver != NULL)
+    
     struct lora_mac *self = (struct lora_mac *)receiver;    
+    Event_cancel(self->events, &self->rxReady);    
+    
+    LORA_ASSERT((self->state == RX1) || (self->state == RX2) || (self->state == JOIN_RX1) || (self->state == JOIN_RX2))
+    
+    switch(self->state){
+    case RX1:
+    case JOIN_RX1:
+        ChannelList_registerTransmission(self->channels, self->txCompleteTime, self->bufferLen);
+        break;    
+    default:
+        break;
+    }
+    
+    rxFinish(self);
+}
+
+static void rxFinish(struct lora_mac *self)
+{    
+    LORA_ASSERT(self != NULL)
+    
+    switch(self->state){
+    default:
+    case RX1:        
+        self->state = WAIT_RX2;    
+        (void)Event_onTimeout(self->events, self->txCompleteTime + self->receiveDelay2, self, rxStart);
+        break;
+    
+    case JOIN_RX1:        
+        self->state = JOIN_WAIT_RX2;    
+        (void)Event_onTimeout(self->events, self->txCompleteTime + self->joinAcceptDelay2, self, rxStart);
+        break;
+        
+    case RX2:        
+        //todo retries
+        //todo retransmissions
+        self->state = IDLE;            
+        break;
+    
+    case JOIN_RX2:   
+        //todo retries
+        self->state = IDLE;            
+        break;
+    }        
+}
+
+#if 0
+static void resetRadio(void *receiver, uint64_t time)
+{
+    LORA_ASSERT(receiver != NULL)
+    
+    struct lora_mac *self = (struct lora_mac *)receiver;    
+    
+    LoraRadio_reset(self->radio);
+    
+    LORA_MSG("radio has been reset")
     
     Event_cancel(self->events, &self->rxReady);
     self->rxReady = NULL;
@@ -418,12 +452,9 @@ static void resetRadio(void *receiver, uint32_t time)
     Event_cancel(self->events, &self->txComplete);
     self->txComplete = NULL;    
     
-    LoraRadio_reset(self->radio);
-    
-    self->state = IDLE;
-    
-    LORA_MSG("radio has been reset")
+    abandonSequence(self);
 }
+#endif
     
 static void collect(struct lora_mac *self)
 {
@@ -509,6 +540,26 @@ static void collect(struct lora_mac *self)
             break;
         }
     }
+}
+
+static void abandonSequence(struct lora_mac *self)
+{
+    switch(self->state){
+    case WAIT_TX:
+    case TX:
+    case WAIT_RX1:
+    case WAIT_RX2:
+        break;
+    case JOIN_WAIT_TX:
+    case JOIN_TX:
+    case JOIN_WAIT_RX1:
+    case JOIN_WAIT_RX2:
+        break;
+    default:
+        break;
+    }
+    
+    self->state = IDLE;
 }
 
 static void radioEvent(void *receiver, enum lora_radio_event event, uint64_t time)
