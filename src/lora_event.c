@@ -53,25 +53,13 @@ void Event_receive(struct lora_event *self, enum on_input_types type, uint64_t t
 
 void Event_tick(struct lora_event *self)
 {
-    uint64_t time = getTime();
+    uint64_t time;
     size_t i;
-    
-    for(i=0U; i < sizeof(self->onInput)/sizeof(*self->onInput); i++){
-        
-        if((self->onInput[i].handler != NULL) && self->onInput[i].state){
-            
-            LORA_ASSERT(time >= self->onInput[i].time)
-            
-            event_handler_t handler = self->onInput[i].handler;
-            self->onInput[i].handler = NULL;
-            
-            handler(self->onInput[i].receiver, self->onInput[i].time);       
-        }
-    }
-    
     struct on_timeout to;
     struct on_timeout *ptr = self->head;
     struct on_timeout *prev = NULL;
+    
+    time = getTime();
     
     while((ptr != NULL) && (time >= ptr->time)){
         
@@ -90,7 +78,20 @@ void Event_tick(struct lora_event *self)
         self->free = ptr;         
         ptr = to.next;
             
-        to.handler(to.receiver, time - to.time);        
+        to.handler(to.receiver, to.time);        
+    }
+    
+    for(i=0U; i < sizeof(self->onInput)/sizeof(*self->onInput); i++){
+        
+        if((self->onInput[i].handler != NULL) && self->onInput[i].state){
+            
+            LORA_ASSERT(time >= self->onInput[i].time)
+            
+            event_handler_t handler = self->onInput[i].handler;
+            self->onInput[i].handler = NULL;
+            
+            handler(self->onInput[i].receiver, self->onInput[i].time);       
+        }
     }
 }
 

@@ -74,6 +74,8 @@ typedef void (*txCompleteCB)(void *receiver, enum lora_tx_status status);
  * */
 typedef void (*rxCompleteCB)(void *receiver, uint8_t port, const void *data, uint8_t len);
 
+typedef void (*joinCB)(void *receiver, bool noResponse);
+
 enum states {
 
     IDLE,
@@ -102,7 +104,6 @@ struct lora_mac {
     enum states state;
     
     uint8_t txCount;
-    bool confirmed;
 
     uint8_t devEUI[8U];
     uint8_t appEUI[8U];
@@ -155,6 +156,9 @@ struct lora_mac {
     
     txCompleteCB txCompleteHandler;
     void *txCompleteReceiver;
+    
+    joinCB joinHandler;
+    void *joinReceiver;
 };
 
 void LoraMAC_init(struct lora_mac *self, struct lora_channel_list *channels, struct lora_radio *radio, struct lora_event *events);
@@ -225,8 +229,9 @@ void LoraMAC_setReceiveHandler(struct lora_mac *self, void *receiver, rxComplete
  * */
 void LoraMAC_setTransmitHandler(struct lora_mac *self, void *receiver, txCompleteCB cb);
 
-typedef void (*joinConfirmation)(void *receiver, uint32_t time);
-bool LoraMAC_requestJoin(struct lora_mac *self, void *receiver, joinConfirmation cb);
 
+void LoraMAC_setJoinHandler(struct lora_mac *self, void *receiver, joinCB cb);
+
+bool LoraMAC_join(struct lora_mac *self);
 
 #endif

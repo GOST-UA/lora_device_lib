@@ -13,11 +13,11 @@ uint32_t getTime(void)
     return mock_type(uint32_t);
 }
 
-void dummy_handler(void *receiver, uint32_t delay)
+void dummy_handler(void *receiver, uint64_t time)
 {    
     function_called();
     check_expected_ptr(receiver);
-    check_expected(delay);
+    check_expected(time);
 }
 
 static void test_Event_init(void **user)
@@ -56,7 +56,7 @@ static void test_Event_onInput_tx_complete(void **user)
     /* if we tick 30 units later delay will be 29 */
     will_return(getTime, 30);
     expect_value(dummy_handler, receiver, (void *)&dummy_receiver);     
-    expect_value(dummy_handler, delay, 29);                             
+    expect_value(dummy_handler, time, 0);                             
     
     Event_tick(state);
     
@@ -114,7 +114,7 @@ static void test_Event_onTimeout(void **user)
     /* if we tick 30 units later delay will be 4 */
     will_return(getTime, 30);
     expect_value(dummy_handler, receiver, (void *)&dummy_receiver);     
-    expect_value(dummy_handler, delay, 4);                                 
+    expect_value(dummy_handler, time, 25);                                 
     Event_tick(state);
     
     /* tick again without advancing time...dummy_handler should not be called */

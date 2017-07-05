@@ -21,15 +21,74 @@
 
 #include "lora_device_lib.h"
 
-void LoraDeviceLib_init(struct lora_device_library *self, enum lora_region_id region, enum lora_radio_type radioType, const struct lora_board *board)
+struct ldl ldl_new(enum lora_region_id region, enum lora_radio_type radioType, const struct lora_board *board)
 {
-    LORA_ASSERT(self != NULL)
-    LORA_ASSERT(param != NULL)
+    struct ldl self;
+    
+    (void)memset(self, 0, sizeof(self));
 
-    (void)memset(self, 0, sizeof(*self));
+    ChannelList_init(&self.channels, region);
+    ChannelSchedule_init(&self.events);
+    LoraRadio_init(&self.radio, board, radioType);
+    LoraMAC_init(&self.mac, &self.channels, &self.radio, self.region, &self.events);
+}
 
-    ChannelList_init(&self->channels, region);
-    ChannelSchedule_init(&self->schedule);
-    LoraRadio_init(&self->radio, board, radioType);
-    LoraMAC_init(&self->mac, &self->channels, &self->radio, self->region, &self->schedule);
+bool ldl_personalize(struct ldl *self, uint32_t devAddr, const void *nwkSKey, const void *appSKey)
+{
+    return LoraMAC_personalize(&self->mac, devAddr, nwkSKey, appSKey);
+}
+
+bool ldl_addChannel(struct ldl *self, uint32_t freq, uint8_t chIndex)
+{
+    return ChannelList_add(&self->channels, freq, chIndex);
+}
+
+void ldl_removeChannel(struct ldl *self, uint8_t chIndex)
+{
+    ChannelList_remove(&self->channels, chIndex);
+}
+
+bool ldl_maskChannel(struct ldl *self, uint8_t chIndex)
+{
+    return ChannelList_mask(&self->channels, chIndex);
+}
+
+void ldl_unmaskChannel(struct ldl *self, uint8_t chIndex)
+{
+    ChannelList_unmask(&self->channels, chIndex);
+}
+
+bool ldl_setRateAndPower(struct ldl *self, uint8_t rate, uint8_t power)
+{
+    return ChannelList_mask(&self->channels, rate, power);
+}
+
+void ldl_setReceiveHandler(struct ldl *self, void *receiver, rxCompleteCB cb)
+{
+    LoraMAC_setReceiveHandler(&self->mac, receiver, cb);
+}
+
+void ldl_setTransmitHandler(struct ldl *self, void *receiver, txCompleteCB cb)
+{
+    LoraMAC_setTransmitHandler(&self->mac, receiver, cb);
+}
+
+void ldl_setJoinHandler(struct ldl *self, void *receiver, txCompleteCB cb)
+{
+    LoraMAC_setJoinHandler(&self->mac, receiver, cb);
+}
+
+bool ldl_join(struct ldl *self, void *receiver, joinConfirmation cb);
+{
+    return LoraMAC_join(&self->mac);
+}
+
+bool ldl_send(struct ldl *self, bool confirmed, uint8_t port, const void *data, uint8_t len)
+{
+    return LoraMAC_send(&self->mac, confirmed, port, data, len);
+}
+
+void ldl_tick(struct ldl *self);
+{
+    LoraEvent_tick(&self->events);
 }

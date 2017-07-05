@@ -27,24 +27,32 @@
 #include "lora_channel_list.h"
 #include "lora_radio.h"
 
-struct lora_device_library {
+struct ldl {
     
     struct lora_mac mac;
     struct lora_channel_list channels;
-    struct lora_schedule schedule;
     struct lora_radio radio;    
+    struct lora_event events;    
 };
 
-struct lora_mac_init {
 
-    enum lora_region_id region;
-    enum lora_radio_type radioType;
-    struct lora_radio radio;
-    struct lora_schedule schedule;
-    struct lora_channel_list channels;
-    const struct lora_board *board;
-};
+struct ldl ldl_new(enum lora_region_id region, enum lora_radio_type radioType, const struct lora_board *board);
 
-void LoraDeviceLib_init(struct lora_device_library *self, enum lora_region_id region, enum lora_radio_type radioType, const struct lora_board *board);
+bool ldl_personalize(struct ldl *self, uint32_t devAddr, const void *nwkSKey, const void *appSKey);
+
+bool ldl_addChannel(struct ldl *self, uint32_t freq, uint8_t chIndex);
+void ldl_removeChannel(struct ldl *self, uint8_t chIndex);
+bool ldl_maskChannel(struct ldl *self, uint8_t chIndex);
+void ldl_unmaskChannel(struct ldl *self, uint8_t chIndex);
+
+bool ldl_setRateAndPower(struct ldl *self, uint8_t rate, uint8_t power);
+
+void ldl_setReceiveHandler(struct ldl *self, void *receiver, rxCompleteCB cb);
+void ldl_setTransmitHandler(struct ldl *self, void *receiver, txCompleteCB cb);
+
+bool ldl_join(struct ldl *self, void *receiver, joinConfirmation cb);
+bool ldl_send(struct ldl *self, bool confirmed, uint8_t port, const void *data, uint8_t len);
+
+void ldl_tick(struct ldl *self);
 
 #endif

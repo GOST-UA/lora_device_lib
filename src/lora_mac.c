@@ -94,66 +94,110 @@ bool LoraMAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const voi
     
     struct lora_channel_setting settings;
     
-    /* stack must be idle (i.e. not sending) */
-    if(self->state == IDLE){
+    if(self->personalised || self->joined){
     
-        if((port > 0U) && (port <= 223U)){
+        /* stack must be idle (i.e. not sending) */
+        if(self->state == IDLE){
+        
+            if((port > 0U) && (port <= 223U)){
 
-            if(ChannelList_upstreamSetting(self->channels, &settings)){
-                
-                if(settings.maxPayload >= bufferMax){ 
+                if(ChannelList_upstreamSetting(self->channels, &settings)){
+                    
+                    if(settings.maxPayload >= bufferMax){ 
 
-                    struct lora_frame f = {
+                        struct lora_frame f = {
 
-                        .type = FRAME_TYPE_DATA_UNCONFIRMED_UP,
-                        .fields.data.devAddr = self->devAddr,
-                        .fields.data.counter = (uint32_t)getUpCount(self),
-                        .fields.data.ack = false,
-                        .fields.data.adr = false,
-                        .fields.data.adrAckReq = false,
-                        .fields.data.pending = false,
-                        .fields.data.opts = NULL,
-                        .fields.data.optsLen = 0U,
-                        .fields.data.port = port,
-                        .fields.data.data = ((len > 0U) ? (const uint8_t *)data : NULL),
-                        .fields.data.dataLen = len
-                    };
+                            .type = FRAME_TYPE_DATA_UNCONFIRMED_UP,
+                            .fields.data.devAddr = self->devAddr,
+                            .fields.data.counter = (uint32_t)getUpCount(self),
+                            .fields.data.ack = false,
+                            .fields.data.adr = false,
+                            .fields.data.adrAckReq = false,
+                            .fields.data.pending = false,
+                            .fields.data.opts = NULL,
+                            .fields.data.optsLen = 0U,
+                            .fields.data.port = port,
+                            .fields.data.data = ((len > 0U) ? (const uint8_t *)data : NULL),
+                            .fields.data.dataLen = len
+                        };
 
-                    self->bufferLen = LoraFrame_encode(self->appSKey, &f, self->buffer, sizeof(self->buffer));
-                    
-                    uint64_t timeNow = getTime();
-                    
-                    (void)Event_onTimeout(self->events, timeNow + ChannelList_waitTime(self->channels, timeNow), self, tx);
-                    
-                    self->state = WAIT_TX;
-                    
-                    self->confirmPending = true;
-                    self->confirmed = false;
-                    
-                    retval = true;                    
+                        self->bufferLen = LoraFrame_encode(self->appSKey, &f, self->buffer, sizeof(self->buffer));
+                        
+                        uint64_t timeNow = getTime();
+                        
+                        (void)Event_onTimeout(self->events, timeNow + ChannelList_waitTime(self->channels, timeNow), self, tx);
+                        
+                        self->state = WAIT_TX;
+                        
+                        self->confirmPending = true;
+                        self->confirmed = false;
+                        
+                        retval = true;                    
+                    }
+                    else{
+                        
+                        LORA_ERROR("payload too large")
+                    }
                 }
                 else{
                     
-                    LORA_ERROR("payload too large")
+                    LORA_ERROR("no channels")
                 }
             }
             else{
                 
-                LORA_ERROR("no channels")
+                LORA_ERROR("application port must be in range 1..223")
             }
         }
         else{
             
-            LORA_ERROR("application port must be in range 1..223")
+            LORA_ERROR("MAC is busy")
         }
     }
     else{
         
-        LORA_ERROR("MAC is busy")
+        LORA_ERROR("stack must be personalised or joined before sending data")
     }
     
     return retval;
 }
+
+bool LoraMAC_join(struct lora_mac *self)
+{
+    bool retval;
+
+    if(!self->personalised){
+    
+        if(self->state == IDLE){
+
+            struct lora_frame f;
+            
+            f.type = FRAME_TYPE_JOIN_REQ;
+            
+            (void)memcpy(f.fields.joinRequest.appEUI, self->appEUI, sizeof(f.fields.joinRequest.appEUI));
+            (void)memcpy(f.fields.joinRequest.appEUI, self->devEUI, sizeof(f.fields.joinRequest.devEUI));
+            f.fields.joinRequest.devNonce = 0U;
+
+            self->bufferLen = LoraFrame_encode(self->appKey, &f, self->buffer, sizeof(self->buffer));
+            
+            uint64_t timeNow = getTime();
+            
+            (void)Event_onTimeout(self->events, timeNow + ChannelList_waitTime(self->channels, timeNow), self, tx);
+            
+            self->state = JOIN_WAIT_TX;
+            self->joinPending = true;
+            
+            retval = true;        
+        }
+    }
+    else{
+        
+        LORA_ERROR("stack has been personalised - join is not possible")
+    }   
+    
+    return retval;
+}
+
 
 void LoraMAC_setReceiveHandler(struct lora_mac *self, void *receiver, rxCompleteCB cb)
 {
@@ -167,6 +211,12 @@ void LoraMAC_setTransmitHandler(struct lora_mac *self, void *receiver, txComplet
     self->txCompleteReceiver = receiver;
 }
 
+void LoraMAC_setJoinHandler(struct lora_mac *self, void *receiver, joinCB cb)
+{
+    self->joinHandler = cb;
+    self->joinReceiver = receiver;
+}
+
 bool LoraMAC_setNbTrans(struct lora_mac *self, uint8_t nbTrans)
 {
     bool retval = false;
@@ -178,35 +228,6 @@ bool LoraMAC_setNbTrans(struct lora_mac *self, uint8_t nbTrans)
             self->nbTrans = nbTrans;
             retval = true;
         }        
-    }
-    
-    return retval;
-}
-
-bool LoraMAC_join(struct lora_mac *self)
-{
-    bool retval;
-    
-    if(self->state == IDLE){
-
-        struct lora_frame f;
-        
-        f.type = FRAME_TYPE_JOIN_REQ;
-        
-        (void)memcpy(f.fields.joinRequest.appEUI, self->appEUI, sizeof(f.fields.joinRequest.appEUI));
-        (void)memcpy(f.fields.joinRequest.appEUI, self->devEUI, sizeof(f.fields.joinRequest.devEUI));
-        f.fields.joinRequest.devNonce = 0U;
-
-        self->bufferLen = LoraFrame_encode(self->appKey, &f, self->buffer, sizeof(self->buffer));
-        
-        uint64_t timeNow = getTime();
-        
-        (void)Event_onTimeout(self->events, timeNow + ChannelList_waitTime(self->channels, timeNow), self, tx);
-        
-        self->state = JOIN_WAIT_TX;
-        self->joinPending = true;
-        
-        retval = true;        
     }
     
     return retval;
