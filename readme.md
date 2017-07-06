@@ -7,40 +7,41 @@ A LoRaWAN device implementation still in an early stage of development.
 
 ## Highlights
 
-- Region database with optional support for multiple regions at run-time
-    - EU_868
-- Channel list
-    - Statically allocated band and channel structures
-    - Power and rate assignment per list
-    - Round-Robin channel hopping (managed per band)
-    - Channel masking
-    - Duty cycle limiter
-    - Default channels loaded from region database on initialisation
-- Frame codec
-    - data
-    - join request
-    - join accept
-    - suitable for device or gateway
-- AES and CMAC implementation
+- Event driven style
+- Modular implementation with separation of concerns:
+    - Chanel List
+    - MAC
+    - MAC Commands
+    - Event Manager
+    - Region Database
+    - Radio
+    - Radio Subclass(es)
+    - Frame Codec
+    - AES and CMAC implementation
 - Build-time Porting features
     - Replace AES and CMAC implementations
     - Replace logging and assert functions
     - Optimise chanel capacity / memory usage
-- Tests (and testable architecture) utilising the Cmocka framework
+- Tests utilising the Cmocka framework
+- Ruby bindings
 
 ## High Level Architecture
 
-LDL uses an OO approach to (try to) separate concerns into modules. Modules are 
-as follows:
+LDL tries to separate concerns into standalone modules. Individual modules are not useful
+on their own but this approach reduces unit testing effort since dependency modules can be
+mocked out without special linker commands.
+
+An overview of the modules:
 
 ![image missing](doc/plantuml/modules.png "LoraDeviceLib Modules")
 
-LDL is called from two different tasks - a 'mainloop' level task and an 'interrupt' level task.
+LDL is intended to be driven from two tasks - a 'mainloop' level task and an 'interrupt' level task.
 
 The interrupt level task interacts with the EventManager to signal that an IO event has occured. This task will
-never block.
+never block. On simple systems the interrupt level task may be an ISR, on more complicated systems it may be a task with a higher priority
+than the 'mainloop' task.
 
-The mainloop level task drives all other functionility by calling EventManager.tick():
+The mainloop level task drives all other functionility by via calls made to EventManager.tick():
 
 ![image missing](doc/plantuml/event_tick.png "EventManger Tick")
 

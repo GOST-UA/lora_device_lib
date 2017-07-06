@@ -103,9 +103,9 @@ static void initRadio(struct lora_radio *self, enum lora_radio_type type, const 
     
     self->type = LORA_RADIO_SX1272;
 
-    self->board.reset(true);
-    self->board.reset_wait();
-    self->board.reset(false);
+    self->board.reset(self->board.receiver, true);
+    self->board.reset_wait(self->board.receiver);
+    self->board.reset(self->board.receiver, false);
 
     writeReg(self, REG_LR_OPMODE, 0U);            // sleep mode (since POR default is STDBY)
     writeReg(self, REG_LR_OPMODE, 0x80U);         // enable longRangeMode
@@ -229,16 +229,16 @@ static void write(struct lora_radio *self, uint8_t reg, const uint8_t *data, uin
 
     if(len > 0){
 
-        self->board.select(true);
+        self->board.select(self->board.receiver, true);
 
-        self->board.write(reg | 0x80U);
+        self->board.write(self->board.receiver, reg | 0x80U);
 
         for(i=0; i < len; i++){
 
-            self->board.write(data[i]);
+            self->board.write(self->board.receiver, data[i]);
         }
 
-        self->board.select(false);
+        self->board.select(self->board.receiver, false);
     }
 }
 
@@ -248,16 +248,16 @@ static void read(struct lora_radio *self, uint8_t reg, uint8_t *data, uint8_t le
 
     if(len > 0){
 
-        self->board.select(true);
+        self->board.select(self->board.receiver, true);
 
-        self->board.write(reg & 0x7fU);
+        self->board.write(self->board.receiver, reg & 0x7fU);
 
         for(i=0; i < len; i++){
 
-            data[i] = self->board.read();
+            data[i] = self->board.read(self->board.receiver);
         }
 
-        self->board.select(false);
+        self->board.select(self->board.receiver, false);
     }
 }
 

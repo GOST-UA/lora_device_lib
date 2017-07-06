@@ -23,7 +23,7 @@
 #define LORA_DEVICE_LIB_H
 
 #include "lora_mac.h"
-#include "lora_schedule.h"
+#include "lora_event.h"
 #include "lora_channel_list.h"
 #include "lora_radio.h"
 
@@ -49,8 +49,9 @@ bool ldl_setRateAndPower(struct ldl *self, uint8_t rate, uint8_t power);
 
 void ldl_setReceiveHandler(struct ldl *self, void *receiver, rxCompleteCB cb);
 void ldl_setTransmitHandler(struct ldl *self, void *receiver, txCompleteCB cb);
+void ldl_setJoinHandler(struct ldl *self, void *receiver, joinCB cb);
 
-bool ldl_join(struct ldl *self, void *receiver, joinConfirmation cb);
+bool ldl_join(struct ldl *self);
 bool ldl_send(struct ldl *self, bool confirmed, uint8_t port, const void *data, uint8_t len);
 
 void ldl_tick(struct ldl *self);

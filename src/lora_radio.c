@@ -43,9 +43,9 @@ void LoraRadio_init(struct lora_radio *self, enum lora_radio_type type, const st
 
 void LoraRadio_reset(struct lora_radio *self)
 {
-    self->board.reset(true);
-    self->board.reset_wait();
-    self->board.reset(false);
+    self->board.reset(self->board.receiver, true);
+    self->board.reset_wait(self->board.receiver);
+    self->board.reset(self->board.receiver, false);
 }
 
 void LoraRadio_transmit(struct lora_radio *self, const void *data, uint8_t len)

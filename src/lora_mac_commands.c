@@ -19,6 +19,8 @@
  *
  * */
 
+#if 0
+
 #include "lora_mac.h"
 
     struct lora_link_check_ans {
@@ -276,3 +278,5 @@ void LoraMAC_processCommands(struct lora_mac *self, const uint8_t *data, uint8_t
         }
     }    
 }
+
+#endif

@@ -30,11 +30,12 @@ struct lora_mac;
 
 struct lora_board {
 
-    void (*select)(bool state);     /**< select the chip (this should also 'take' the resource if it's shared) */
-    void (*reset)(bool state);      /**< true will hold the device in reset */
-    void (*reset_wait)(void);       /**< block for an appropriate amount of time for reset to take effect */
-    void (*write)(uint8_t data);    /**< write a byte */
-    uint8_t (*read)(void);          /**< read a byte */
+    void *receiver;
+    void (*select)(void *receiver, bool state);     /**< select the chip (this should also 'take' the resource if it's shared) */
+    void (*reset)(void *receiver, bool state);      /**< true will hold the device in reset */
+    void (*reset_wait)(void *receiver);             /**< block for an appropriate amount of time for reset to take effect */
+    void (*write)(void *receiver, uint8_t data);    /**< write a byte */
+    uint8_t (*read)(void *receiver);                /**< read a byte */
 };
 
 enum lora_radio_event {
