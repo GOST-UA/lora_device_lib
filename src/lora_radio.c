@@ -34,11 +34,9 @@ void LoraRadio_init(struct lora_radio *self, enum lora_radio_type type, const st
 {
     LORA_ASSERT(self != NULL)
     LORA_ASSERT(board != NULL)
+    LORA_ASSERT(type < sizeof(LoraRadio_if)/sizeof(*LoraRadio_if))
     
-    if(type < sizeof(LoraRadio_if)/sizeof(*LoraRadio_if)){
-
-        LoraRadio_if[type]->init(self, type, board);
-    }
+    LoraRadio_if[type]->init(self, type, board);    
 }
 
 void LoraRadio_reset(struct lora_radio *self)
@@ -63,9 +61,9 @@ bool LoraRadio_setParameters(struct lora_radio *self, uint32_t freq, enum signal
     return LoraRadio_if[self->type]->setParameters(self, freq, bw, sf);
 }
 
-void LoraRadio_raiseInterrupt(struct lora_radio *self, uint8_t n)
+void LoraRadio_interrupt(struct lora_radio *self, uint8_t n, uint64_t time)
 {
-    LoraRadio_if[self->type]->raiseInterrupt(self, n);
+    LoraRadio_if[self->type]->raiseInterrupt(self, n, time);
 }
 
 void LoraRadio_setEventHandler(struct lora_radio *self, void *receiver, radioEventCB cb)

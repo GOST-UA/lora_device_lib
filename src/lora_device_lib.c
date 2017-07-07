@@ -96,3 +96,8 @@ void ldl_tick(struct ldl *self)
 {
     Event_tick(&self->events);
 }
+
+void idl_interrupt(struct ldl *self, uint8_t n, uint64_t time)
+{
+    LoraRadio_interrupt(&self->radio, n, time);
+}

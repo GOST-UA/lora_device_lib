@@ -84,7 +84,7 @@ static void initRadio(struct lora_radio *self, enum lora_radio_type type, const 
 static void transmit(struct lora_radio *self, const void *data, uint8_t len);
 static uint8_t collect(struct lora_radio *self, void *data, uint8_t max);
 static bool setParameters(struct lora_radio *self, uint32_t freq, enum signal_bandwidth bw, enum spreading_factor sf);
-static void raiseInterrupt(struct lora_radio *self, uint8_t n);
+static void raiseInterrupt(struct lora_radio *self, uint8_t n, uint64_t time);
 
 const struct lora_radio_if LoraRadio_if_sx1272 = {
     .init = initRadio,
@@ -195,13 +195,13 @@ static bool setParameters(struct lora_radio *self, uint32_t freq, enum signal_ba
     return retval;
 }
 
-static void raiseInterrupt(struct lora_radio *self, uint8_t n)
+static void raiseInterrupt(struct lora_radio *self, uint8_t n, uint64_t time)
 {    
     switch(n){
     case 0U:
         if(self->eventHandler != NULL){
             
-            self->eventHandler(self->eventReceiver, LORA_RADIO_TX_COMPLETE, 0U);
+            self->eventHandler(self->eventReceiver, LORA_RADIO_TX_COMPLETE, time);
         }
         break;
     case 1U:

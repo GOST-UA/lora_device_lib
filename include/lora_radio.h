@@ -68,7 +68,7 @@ struct lora_radio_if {
     void (*transmit)(struct lora_radio *self, const void *data, uint8_t len);
     uint8_t (*collect)(struct lora_radio *self, void *data, uint8_t max);
     bool (*setParameters)(struct lora_radio *self, uint32_t freq, enum signal_bandwidth bw, enum spreading_factor sf);
-    void (*raiseInterrupt)(struct lora_radio *self, uint8_t n);
+    void (*raiseInterrupt)(struct lora_radio *self, uint8_t n, uint64_t time);
 };
 
 void LoraRadio_init(struct lora_radio *self, enum lora_radio_type type, const struct lora_board *board);
@@ -77,7 +77,7 @@ void LoraRadio_transmit(struct lora_radio *self, const void *data, uint8_t len);
 void LoraRadio_receive(struct lora_radio *self);
 uint8_t LoraRadio_collect(struct lora_radio *self, void *data, uint8_t max);
 bool LoraRadio_setParameters(struct lora_radio *self, uint32_t freq, enum signal_bandwidth bw, enum spreading_factor sf);
-void LoraRadio_raiseInterrupt(struct lora_radio *self, uint8_t n);
+void LoraRadio_interrupt(struct lora_radio *self, uint8_t n, uint64_t time);
 void LoraRadio_setEventHandler(struct lora_radio *self, void *receiver, radioEventCB cb);
 
 #endif

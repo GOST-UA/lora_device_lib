@@ -55,5 +55,6 @@ bool ldl_join(struct ldl *self);
 bool ldl_send(struct ldl *self, bool confirmed, uint8_t port, const void *data, uint8_t len);
 
 void ldl_tick(struct ldl *self);
+void idl_interrupt(struct ldl *self, uint8_t n, uint64_t time);
 
 #endif
