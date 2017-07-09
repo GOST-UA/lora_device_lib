@@ -31,9 +31,9 @@
 static VALUE cLDL;
 static VALUE cLoraDeviceLib;
 
-static VALUE ldl_initialize(VALUE self, VALUE radio);
-static VALUE ldl_initialize_copy(VALUE copy, VALUE orig);
-static VALUE ldl_alloc(VALUE klass);
+static VALUE _ldl_initialize(int argc, VALUE *argv, VALUE self);
+static VALUE _ldl_initialize_copy(VALUE copy, VALUE orig);
+static VALUE _ldl_alloc(VALUE klass);
 
 static VALUE _ldl_personalize(VALUE self, VALUE devAddr, VALUE nwkSKey, VALUE appSKey);
 static VALUE _ldl_tick(VALUE self);
@@ -46,6 +46,9 @@ static VALUE _ldl_join(VALUE self);
 static VALUE _ldl_send_unconfirmed(int argc, VALUE *argv, VALUE self);
 static VALUE _ldl_send_confirmed(int argc, VALUE *argv, VALUE self);
 static VALUE _ldl_interrupt(VALUE self, VALUE n, VALUE time);
+
+static VALUE log_error(VALUE self, VALUE msg);
+static VALUE log_info(VALUE self, VALUE msg);
 
 static void _txComplete(void *receiver, enum lora_tx_status status);
 static void _rxComplete(void *receiver, uint8_t port, const void *data, uint8_t len);
@@ -61,10 +64,10 @@ void Init_ext_lora_device_lib(void)
 {
     cLoraDeviceLib = rb_define_module("LoraDeviceLib");
     cLDL = rb_define_class_under(cLoraDeviceLib, "LDL", rb_cObject);
-    rb_define_alloc_func(cLDL, ldl_alloc);
+    rb_define_alloc_func(cLDL, _ldl_alloc);
     
-    rb_define_method(cLDL, "initialize", ldl_initialize, 1);
-    rb_define_method(cLDL, "initialize_copy", ldl_initialize_copy, 1);
+    rb_define_method(cLDL, "initialize", _ldl_initialize, 1);
+    rb_define_method(cLDL, "initialize_copy", _ldl_initialize_copy, 1);
     
     rb_define_method(cLDL, "personalize", _ldl_personalize, 3);
     rb_define_method(cLDL, "tick", _ldl_tick, 0);
@@ -76,26 +79,21 @@ void Init_ext_lora_device_lib(void)
     rb_define_method(cLDL, "join", _ldl_join, -1);
     rb_define_method(cLDL, "send_unconfirmed", _ldl_send_unconfirmed, -1);
     rb_define_method(cLDL, "send_confirmed", _ldl_send_confirmed, -1);
+    
+    rb_define_private_method(cLDL, "log_error", log_error, 1);
+    rb_define_private_method(cLDL, "log_info", log_info, 1);
+    
+    rb_require("logger");
+    rb_require("queue");
 }
-
 
 static VALUE _ldl_initialize(int argc, VALUE *argv, VALUE self)
 {
+    VALUE board;
     struct ldl *this;    
     Data_Get_Struct(self, struct ldl, this);
     
-    VALUE port;
-    VALUE data;
-    VALUE handler;
-    
-    (void)rb_scan_args(argc, argv, "20&", &port, &data, &handler);
-}
-
-static VALUE ldl_initialize(VALUE self, VALUE board)
-{
-    struct ldl *this;
-    
-    Data_Get_Struct(self, struct ldl, this);
+    (void)rb_scan_args(argc, argv, "10", &board);
     
     ldl_setReceiveHandler(this, (void *)self, _rxComplete);  
     ldl_setTransmitHandler(this, (void *)self, _txComplete);  
@@ -116,14 +114,14 @@ static VALUE ldl_initialize(VALUE self, VALUE board)
     rb_iv_set(self, "@tx_handler", Qnil);
     rb_iv_set(self, "@rx_handler", Qnil);
     rb_iv_set(self, "@join_handler", Qnil);
+    rb_iv_set(self, "@rx_queue", rb_funcall(rb_const_get(rb_cObject, rb_intern("Queue")), rb_intern("new"), 0));
     
-    // instance of a queue
-    //rb_iv_set(self, "@rx_queue", );
+    rb_iv_set(cLDL, "@logger", rb_funcall(rb_const_get(rb_cObject, rb_intern("Logger")), rb_intern("new"), 1, rb_str_new_cstr("LDL")));
     
     return self;
 }
 
-static VALUE ldl_initialize_copy(VALUE copy, VALUE orig)
+static VALUE _ldl_initialize_copy(VALUE copy, VALUE orig)
 {
     struct ldl *orig_ldl;
     struct ldl *copy_ldl;
@@ -145,7 +143,7 @@ static VALUE ldl_initialize_copy(VALUE copy, VALUE orig)
     return copy;
 }
 
-static VALUE ldl_alloc(VALUE klass)
+static VALUE _ldl_alloc(VALUE klass)
 {
     return Data_Wrap_Struct(klass, NULL, free, calloc(1, sizeof(struct ldl)));
 }
@@ -213,6 +211,13 @@ static VALUE _ldl_setRateAndPower(VALUE self, VALUE rate, VALUE power)
 {
     struct ldl *this;    
     Data_Get_Struct(self, struct ldl, this);
+    
+    if(!ldl_setRateAndPower(this, (uint8_t)NUM2UINT(rate), (uint8_t)NUM2UINT(power))){
+        
+        rb_raise(rb_eException, "fixme");
+    }
+    
+    return self;
 }
 
 // want to pass a block for the callback
@@ -287,6 +292,22 @@ static VALUE _ldl_interrupt(VALUE self, VALUE n, VALUE time)
     Data_Get_Struct(self, struct ldl, this);
     
     idl_interrupt(this, NUM2UINT(n), NUM2UINT(time));    
+    
+    return self;
+}
+
+static VALUE log_info(VALUE self, VALUE msg)
+{
+    rb_funcall(rb_iv_get(self, "@logger"), rb_intern("info"), 1, msg);
+    
+    return self;
+}
+
+static VALUE log_error(VALUE self, VALUE msg)
+{
+    rb_funcall(rb_iv_get(self, "@logger"), rb_intern("error"), 1, msg);
+    
+    return self;
 }
 
 static void _txComplete(void *receiver, enum lora_tx_status status)
@@ -294,8 +315,6 @@ static void _txComplete(void *receiver, enum lora_tx_status status)
     VALUE self = (VALUE)receiver;
     
     VALUE handler = rb_iv_get(self, "@tx_handler");    
-    VALUE status_sym;
-    
     VALUE status_to_sym[] = {
         ID2SYM(rb_intern("tx_complete")),
         ID2SYM(rb_intern("tx_confirmed")),
@@ -308,6 +327,21 @@ static void _txComplete(void *receiver, enum lora_tx_status status)
 static void _rxComplete(void *receiver, uint8_t port, const void *data, uint8_t len)
 {
     VALUE self = (VALUE)receiver;    
+    
+    VALUE rx_queue = rb_iv_get(self, "@rx_queue");
+    
+    VALUE hash = rb_hash_new();
+    rb_hash_aset(hash, ID2SYM(rb_intern("port")), UINT2NUM(port));
+    rb_hash_aset(hash, ID2SYM(rb_intern("msg")), rb_str_new(data, len));
+    
+    rb_funcall(rx_queue, rb_intern("push"), 1, hash);
+    
+    VALUE rx_handler = rb_iv_get(self, "@rx_handler");
+    
+    if(rx_handler != Qnil){
+        
+        rb_funcall(rx_handler, rb_intern("call"), 0);        
+    }
 }
 
 static void _joinComplete(void *receiver, bool noResponse)

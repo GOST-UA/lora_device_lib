@@ -111,15 +111,15 @@ module LoraDeviceLib
                     puts "========================"
                     
                     
-                    if @reg
+                    if @reg and @mode == :write
                     
+                        
                     
+                        
                         
                     
                     
                     end
-                    
-                    
                     
                     @opcode = nil
                     

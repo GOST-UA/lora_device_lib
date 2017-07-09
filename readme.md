@@ -16,6 +16,7 @@ A LoRaWAN device implementation still in an early stage of development.
     - Region Database
     - Radio
     - Radio Subclass(es)
+        - SX1272
     - Frame Codec
     - AES and CMAC implementation
 - Build-time Porting features

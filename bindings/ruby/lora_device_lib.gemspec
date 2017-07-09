@@ -4,7 +4,7 @@ Gem::Specification.new do |s|
     s.name    = "lora_device_lib"
     s.version = LDL::VERSION
     s.date = Date.today.to_s
-    s.summary = "A wrapper"
+    s.summary = "A wrapper around lora_device_lib"
     s.author  = "Cameron Harper"
     s.email = "contact@cjh.id.au"
     s.homepage = "https://github.com/cjhdev/lora_device_lib"
