@@ -21,10 +21,7 @@
  * */
 
 #include <ruby.h>
-#include <stdint.h>
-#include <stdbool.h>
 #include <stddef.h>
-#include <assert.h>
 
 #include "lora_device_lib.h"
 
@@ -155,7 +152,7 @@ static VALUE _ldl_personalize(VALUE self, VALUE devAddr, VALUE nwkSKey, VALUE ap
     
     if(!ldl_personalize(this, (uint32_t)NUM2UINT(devAddr), RSTRING_PTR(nwkSKey), RSTRING_PTR(appSKey))){
         
-        rb_raise(rb_eException, "personalise failed");
+        rb_raise(rb_const_get(cLoraDeviceLib, rb_intern("LoraError")), "ldl_personalize() failed");
     }
     
     return self;
@@ -168,7 +165,7 @@ static VALUE _ldl_addChannel(VALUE self, VALUE freq, VALUE chIndex)
     
     if(!ldl_addChannel(this, (uint32_t)NUM2UINT(freq), (uint8_t)NUM2UINT(chIndex))){
         
-        rb_raise(rb_eException, "addChannel failed");
+        rb_raise(rb_const_get(cLoraDeviceLib, rb_intern("LoraError")), "ldl_addChannel() failed");    
     }
     
     return self;
@@ -191,7 +188,7 @@ static VALUE _ldl_maskChannel(VALUE self, VALUE chIndex)
     
     if(!ldl_maskChannel(this, (uint8_t)NUM2UINT(chIndex))){
         
-        rb_raise(rb_eException, "maskChannel failed");
+        rb_raise(rb_const_get(cLoraDeviceLib, rb_intern("LoraError")), "ldl_maskChannel() failed");
     }
     
     return self;
@@ -214,7 +211,7 @@ static VALUE _ldl_setRateAndPower(VALUE self, VALUE rate, VALUE power)
     
     if(!ldl_setRateAndPower(this, (uint8_t)NUM2UINT(rate), (uint8_t)NUM2UINT(power))){
         
-        rb_raise(rb_eException, "fixme");
+        rb_raise(rb_const_get(cLoraDeviceLib, rb_intern("LoraError")), "ldl_setRateAndPower() failed");
     }
     
     return self;
@@ -228,7 +225,7 @@ static VALUE _ldl_join(VALUE self)
     
     if(!ldl_join(this)){
         
-        rb_raise(rb_eException, "ldl_send()");
+        rb_raise(rb_const_get(cLoraDeviceLib, rb_intern("LoraError")), "ldl_join() failed");
     }
     
     return self;
@@ -247,7 +244,7 @@ static VALUE _ldl_send_unconfirmed(int argc, VALUE *argv, VALUE self)
     
     if(!ldl_send(this, false, NUM2UINT(port), RSTRING_PTR(data), RSTRING_LEN(data))){
         
-        rb_raise(rb_eException, "ldl_send()");
+        rb_raise(rb_const_get(cLoraDeviceLib, rb_intern("LoraError")), "ldl_send() failed");
     }
     
     rb_iv_set(self, "@tx_handler", handler);
@@ -268,7 +265,7 @@ static VALUE _ldl_send_confirmed(int argc, VALUE *argv, VALUE self)
     
     if(ldl_send(this, true, NUM2UINT(port), RSTRING_PTR(data), RSTRING_LEN(data))){
     
-        rb_raise(rb_eException, "ldl_send()");
+        rb_raise(rb_const_get(cLoraDeviceLib, rb_intern("LoraError")), "ldl_send() failed");
     }
     
     rb_iv_set(self, "@tx_handler", handler);

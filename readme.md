@@ -24,7 +24,7 @@ A LoRaWAN device implementation still in an early stage of development.
     - Replace logging and assert functions
     - Optimise chanel capacity / memory usage
 - Tests utilising the Cmocka framework
-- Ruby bindings
+- Ruby binding for accelerated integration testing and simulation
 
 ## High Level Architecture
 
