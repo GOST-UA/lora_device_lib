@@ -8,6 +8,7 @@ script:
     - make build_and_run
     - make coverage
     - cd ../bindings/ruby
+    - bundle install
     - rake compile
     - rake
 

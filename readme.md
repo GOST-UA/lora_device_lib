@@ -14,6 +14,7 @@ A LoRaWAN device implementation still in an early stage of development.
     - MAC Commands
     - Event Manager
     - Region Database
+        - EU_863_870
     - Radio
     - Radio Subclass(es)
         - SX1272
