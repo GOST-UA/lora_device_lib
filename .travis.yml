@@ -1,6 +1,8 @@
 notifications:
     email: false
-language: C
+language: Ruby
+rvm:
+  - 2.4.0
 script:
     - cd test
     - make build_and_run
