@@ -44,9 +44,6 @@ static VALUE _ldl_send_unconfirmed(int argc, VALUE *argv, VALUE self);
 static VALUE _ldl_send_confirmed(int argc, VALUE *argv, VALUE self);
 static VALUE _ldl_interrupt(VALUE self, VALUE n, VALUE time);
 
-static VALUE log_error(VALUE self, VALUE msg);
-static VALUE log_info(VALUE self, VALUE msg);
-
 static void _txComplete(void *receiver, enum lora_tx_status status);
 static void _rxComplete(void *receiver, uint8_t port, const void *data, uint8_t len);
 static void _joinComplete(void *receiver, bool noResponse);
@@ -77,10 +74,6 @@ void Init_ext_lora_device_lib(void)
     rb_define_method(cLDL, "send_unconfirmed", _ldl_send_unconfirmed, -1);
     rb_define_method(cLDL, "send_confirmed", _ldl_send_confirmed, -1);
     
-    rb_define_private_method(cLDL, "log_error", log_error, 1);
-    rb_define_private_method(cLDL, "log_info", log_info, 1);
-    
-    rb_require("logger");
     rb_require("queue");
 }
 
@@ -289,20 +282,6 @@ static VALUE _ldl_interrupt(VALUE self, VALUE n, VALUE time)
     Data_Get_Struct(self, struct ldl, this);
     
     idl_interrupt(this, NUM2UINT(n), NUM2UINT(time));    
-    
-    return self;
-}
-
-static VALUE log_info(VALUE self, VALUE msg)
-{
-    rb_funcall(rb_iv_get(self, "@logger"), rb_intern("info"), 1, msg);
-    
-    return self;
-}
-
-static VALUE log_error(VALUE self, VALUE msg)
-{
-    rb_funcall(rb_iv_get(self, "@logger"), rb_intern("error"), 1, msg);
     
     return self;
 }

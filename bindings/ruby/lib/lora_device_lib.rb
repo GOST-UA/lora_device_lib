@@ -1,5 +1,6 @@
 require 'lora_device_lib/version'
 
+require 'lora_device_lib/logger'
 require 'lora_device_lib/lora_assert'
 require 'lora_device_lib/lora_error'
 require 'lora_device_lib/board'
