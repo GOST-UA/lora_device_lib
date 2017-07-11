@@ -3,6 +3,6 @@
 
 #include <stdint.h>
 
-uint64_t getTime(void);
+uint64_t Time_getTime(void);
 
 #endif

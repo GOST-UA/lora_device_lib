@@ -48,33 +48,27 @@ enum mac_cmd_type {
     DL_CHANNEL
 };
 
-enum lora_tx_status {
-    LORA_TX_COMPLETE,           ///< non-confirmed upstream tx operation is complete
-    LORA_TX_CONFIRMED,          ///< tx operation complete and confirmation received
-    LORA_TX_CONFIRM_TIMEOUT     ///< tx operation complete but confirmation never received
+enum lora_mac_response_type {
+    LORA_MAC_TX_COMPLETE,
+    LORA_MAC_TX_CONFIRMED,
+    LORA_MAC_TX_TIMEOUT,
+    LORA_MAC_RX,
+    LORA_MAC_JOIN_SUCCESS,
+    LORA_MAC_JOIN_TIMEOUT    
 };
 
-/** Transmit Complete Notification
- * 
- * @param[in] receiver
- * @param[in] status
- * 
- * */
-typedef void (*txCompleteCB)(void *receiver, enum lora_tx_status status);
+union lora_mac_response_arg {
+    
+    struct {
+        
+        uint8_t port;
+        const uint8_t *data;
+        uint8_t len;
+        
+    } rx;    
+};
 
-/** Receive Complete Notification
- * 
- * - receive must make a copy data or else it will be lost
- * 
- * @param[in] receiver
- * @param[in] port
- * @param[in] data
- * @param[in] len byte length of data
- * 
- * */
-typedef void (*rxCompleteCB)(void *receiver, uint8_t port, const void *data, uint8_t len);
-
-typedef void (*joinCB)(void *receiver, bool noResponse);
+typedef void (*lora_mac_response_fn)(void *receiver, enum lora_mac_response_type type, const union lora_mac_response_arg *arg);
 
 enum states {
 
@@ -150,15 +144,9 @@ struct lora_mac {
     void *rxTimeout;
     void *txComplete;
     void *resetRadio;
-    
-    rxCompleteCB rxCompleteHandler;
-    void *rxCompleteReceiver;
-    
-    txCompleteCB txCompleteHandler;
-    void *txCompleteReceiver;
-    
-    joinCB joinHandler;
-    void *joinReceiver;
+
+    lora_mac_response_fn responseHandler;
+    void *responseReceiver;
 };
 
 void LoraMAC_init(struct lora_mac *self, struct lora_channel_list *channels, struct lora_radio *radio, struct lora_event *events);
@@ -209,28 +197,8 @@ bool LoraMAC_setNbTrans(struct lora_mac *self, uint8_t nbTrans);
  * */
 bool LoraMAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *data, uint8_t len);
 
-/** 
- * MAC will call this handler when a message is received downstream
- * 
- * @param[in] self
- * @param[in] user callback receiver
- * @param[in] cb handler
- * 
- * */
-void LoraMAC_setReceiveHandler(struct lora_mac *self, void *receiver, rxCompleteCB cb);
 
-/** 
- * MAC will call this handler when a send operation completes
- * 
- * @param[in] self
- * @param[in] user callback receiver
- * @param[in] cb handler
- * 
- * */
-void LoraMAC_setTransmitHandler(struct lora_mac *self, void *receiver, txCompleteCB cb);
-
-
-void LoraMAC_setJoinHandler(struct lora_mac *self, void *receiver, joinCB cb);
+void LoraMAC_setResponseHandler(struct lora_mac *self, void *receiver, lora_mac_response_fn cb);
 
 bool LoraMAC_join(struct lora_mac *self);
 

@@ -137,7 +137,7 @@ void LoraMAC_processCommands(struct lora_mac *self, const uint8_t *data, uint8_t
 
                     self->lastLinkCheck.margin = margin;
                     self->lastLinkCheck.gatewayCount = gatewayCount;
-                    self->lastLinkCheck.time = getTime();
+                    self->lastLinkCheck.time = Time_getTime();
                 }
                     break;
                     

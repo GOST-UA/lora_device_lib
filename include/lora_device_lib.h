@@ -47,9 +47,7 @@ void ldl_unmaskChannel(struct ldl *self, uint8_t chIndex);
 
 bool ldl_setRateAndPower(struct ldl *self, uint8_t rate, uint8_t power);
 
-void ldl_setReceiveHandler(struct ldl *self, void *receiver, rxCompleteCB cb);
-void ldl_setTransmitHandler(struct ldl *self, void *receiver, txCompleteCB cb);
-void ldl_setJoinHandler(struct ldl *self, void *receiver, joinCB cb);
+void ldl_setResponseHandler(struct ldl *self, void *receiver, lora_mac_response_fn cb);
 
 bool ldl_join(struct ldl *self);
 bool ldl_send(struct ldl *self, bool confirmed, uint8_t port, const void *data, uint8_t len);

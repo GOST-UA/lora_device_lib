@@ -67,19 +67,9 @@ bool ldl_setRateAndPower(struct ldl *self, uint8_t rate, uint8_t power)
     return ChannelList_setRateAndPower(&self->channels, rate, power);
 }
 
-void ldl_setReceiveHandler(struct ldl *self, void *receiver, rxCompleteCB cb)
+void ldl_setResponseHandler(struct ldl *self, void *receiver, lora_mac_response_fn cb)
 {
-    LoraMAC_setReceiveHandler(&self->mac, receiver, cb);
-}
-
-void ldl_setTransmitHandler(struct ldl *self, void *receiver, txCompleteCB cb)
-{
-    LoraMAC_setTransmitHandler(&self->mac, receiver, cb);
-}
-
-void ldl_setJoinHandler(struct ldl *self, void *receiver, joinCB cb)
-{
-    LoraMAC_setJoinHandler(&self->mac, receiver, cb);
+    LoraMAC_setResponseHandler(&self->mac, receiver, cb);
 }
 
 bool ldl_join(struct ldl *self)

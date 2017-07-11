@@ -123,7 +123,7 @@ bool LoraMAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const voi
 
                         self->bufferLen = LoraFrame_encode(self->appSKey, &f, self->buffer, sizeof(self->buffer));
                         
-                        uint64_t timeNow = getTime();
+                        uint64_t timeNow = Time_getTime();
                         
                         (void)Event_onTimeout(self->events, timeNow + ChannelList_waitTime(self->channels, timeNow), self, tx);
                         
@@ -180,7 +180,7 @@ bool LoraMAC_join(struct lora_mac *self)
 
             self->bufferLen = LoraFrame_encode(self->appKey, &f, self->buffer, sizeof(self->buffer));
             
-            uint64_t timeNow = getTime();
+            uint64_t timeNow = Time_getTime();
             
             (void)Event_onTimeout(self->events, timeNow + ChannelList_waitTime(self->channels, timeNow), self, tx);
             
@@ -198,23 +198,10 @@ bool LoraMAC_join(struct lora_mac *self)
     return retval;
 }
 
-
-void LoraMAC_setReceiveHandler(struct lora_mac *self, void *receiver, rxCompleteCB cb)
+void LoraMAC_setResponseHandler(struct lora_mac *self, void *receiver, lora_mac_response_fn cb)
 {
-    self->rxCompleteHandler = cb;
-    self->rxCompleteReceiver = receiver;
-}
-
-void LoraMAC_setTransmitHandler(struct lora_mac *self, void *receiver, txCompleteCB cb)
-{
-    self->txCompleteHandler = cb;
-    self->txCompleteReceiver = receiver;
-}
-
-void LoraMAC_setJoinHandler(struct lora_mac *self, void *receiver, joinCB cb)
-{
-    self->joinHandler = cb;
-    self->joinReceiver = receiver;
+    self->responseHandler = cb;
+    self->responseReceiver = receiver;
 }
 
 bool LoraMAC_setNbTrans(struct lora_mac *self, uint8_t nbTrans)
@@ -299,7 +286,7 @@ static void txComplete(void *receiver, uint64_t time)
     LORA_ASSERT(receiver != NULL)
     
     struct lora_mac *self = (struct lora_mac *)receiver;            
-    uint64_t timeNow = getTime();
+    uint64_t timeNow = Time_getTime();
     uint64_t futureTime;
         
     LORA_ASSERT((self->state == JOIN_TX) || (self->state == TX))
@@ -543,9 +530,15 @@ static void collect(struct lora_mac *self)
                         }
                         else{
                             
-                            if(self->rxCompleteHandler){
+                            if(self->responseHandler != NULL){
                                 
-                                self->rxCompleteHandler(self->rxCompleteReceiver, result.fields.data.port, result.fields.data.data, result.fields.data.dataLen);
+                                union lora_mac_response_arg arg;
+                                
+                                arg.rx.data = result.fields.data.data;
+                                arg.rx.len = result.fields.data.dataLen;
+                                arg.rx.port = result.fields.data.port;
+                                
+                                self->responseHandler(self->responseReceiver, LORA_MAC_RX, &arg);
                             }
                         }
                     }

@@ -39,14 +39,12 @@ static VALUE _ldl_removeChannel(VALUE self, VALUE chIndex);
 static VALUE _ldl_maskChannel(VALUE self, VALUE chIndex);
 static VALUE _ldl_unmaskChannel(VALUE self, VALUE chIndex);
 static VALUE _ldl_setRateAndPower(VALUE self, VALUE rate, VALUE power);
-static VALUE _ldl_join(VALUE self);
+static VALUE _ldl_join(int argc, VALUE *argv, VALUE self);
 static VALUE _ldl_send_unconfirmed(int argc, VALUE *argv, VALUE self);
 static VALUE _ldl_send_confirmed(int argc, VALUE *argv, VALUE self);
 static VALUE _ldl_interrupt(VALUE self, VALUE n, VALUE time);
 
-static void _txComplete(void *receiver, enum lora_tx_status status);
-static void _rxComplete(void *receiver, uint8_t port, const void *data, uint8_t len);
-static void _joinComplete(void *receiver, bool noResponse);
+static void _response(void *receiver, enum lora_mac_response_type type, const union lora_mac_response_arg *arg);
 
 static void board_select(void *receiver, bool state);
 static void board_reset(void *receiver, bool state);
@@ -54,12 +52,20 @@ static void board_reset_wait(void *receiver);
 static void board_write(void *receiver, uint8_t data);
 static uint8_t board_read(void *receiver);
 
+uint64_t Time_getTime(void)
+{
+    return NUM2ULL(rb_funcall(rb_const_get(cLoraDeviceLib, rb_intern("SystemTime")), rb_intern("time"), 0));
+}
+
 void Init_ext_lora_device_lib(void)
 {
+    rb_require("queue");
+    
     cLoraDeviceLib = rb_define_module("LoraDeviceLib");
+    
     cLDL = rb_define_class_under(cLoraDeviceLib, "LDL", rb_cObject);
     rb_define_alloc_func(cLDL, _ldl_alloc);
-    
+        
     rb_define_method(cLDL, "initialize", _ldl_initialize, 1);
     rb_define_method(cLDL, "initialize_copy", _ldl_initialize_copy, 1);
     
@@ -72,9 +78,7 @@ void Init_ext_lora_device_lib(void)
     rb_define_method(cLDL, "setRateAndPower", _ldl_setRateAndPower, 2);
     rb_define_method(cLDL, "join", _ldl_join, -1);
     rb_define_method(cLDL, "send_unconfirmed", _ldl_send_unconfirmed, -1);
-    rb_define_method(cLDL, "send_confirmed", _ldl_send_confirmed, -1);
-    
-    rb_require("queue");
+    rb_define_method(cLDL, "send_confirmed", _ldl_send_confirmed, -1);    
 }
 
 static VALUE _ldl_initialize(int argc, VALUE *argv, VALUE self)
@@ -85,9 +89,7 @@ static VALUE _ldl_initialize(int argc, VALUE *argv, VALUE self)
     
     (void)rb_scan_args(argc, argv, "10", &board);
     
-    ldl_setReceiveHandler(this, (void *)self, _rxComplete);  
-    ldl_setTransmitHandler(this, (void *)self, _txComplete);  
-    ldl_setJoinHandler(this, (void *)self, _joinComplete);  
+    ldl_setResponseHandler(this, (void *)self, _response);  
     
     struct lora_board boardAdapter = {
         .receiver = (void *)board,
@@ -211,15 +213,21 @@ static VALUE _ldl_setRateAndPower(VALUE self, VALUE rate, VALUE power)
 }
 
 // want to pass a block for the callback
-static VALUE _ldl_join(VALUE self)
+static VALUE _ldl_join(int argc, VALUE *argv, VALUE self)
 {
     struct ldl *this;    
     Data_Get_Struct(self, struct ldl, this);    
+    
+    VALUE handler;  
+    
+    (void)rb_scan_args(argc, argv, "00&", &handler);
     
     if(!ldl_join(this)){
         
         rb_raise(rb_const_get(cLoraDeviceLib, rb_intern("LoraError")), "ldl_join() failed");
     }
+    
+    rb_iv_set(self, "@join_handler", handler);
     
     return self;
 }
@@ -286,43 +294,52 @@ static VALUE _ldl_interrupt(VALUE self, VALUE n, VALUE time)
     return self;
 }
 
-static void _txComplete(void *receiver, enum lora_tx_status status)
+static void _response(void *receiver, enum lora_mac_response_type type, const union lora_mac_response_arg *arg)
 {
     VALUE self = (VALUE)receiver;
     
-    VALUE handler = rb_iv_get(self, "@tx_handler");    
-    VALUE status_to_sym[] = {
+    VALUE handler;
+    
+    VALUE type_to_sym[] = {
         ID2SYM(rb_intern("tx_complete")),
         ID2SYM(rb_intern("tx_confirmed")),
-        ID2SYM(rb_intern("tx_timeout"))
+        ID2SYM(rb_intern("tx_timeout")),
+        ID2SYM(rb_intern("rx")),
+        ID2SYM(rb_intern("join_success")),
+        ID2SYM(rb_intern("join_timeout"))
     };
-    
-    rb_funcall(handler, rb_intern("call"), 1, status_to_sym[status]);
-}
 
-static void _rxComplete(void *receiver, uint8_t port, const void *data, uint8_t len)
-{
-    VALUE self = (VALUE)receiver;    
-    
-    VALUE rx_queue = rb_iv_get(self, "@rx_queue");
-    
-    VALUE hash = rb_hash_new();
-    rb_hash_aset(hash, ID2SYM(rb_intern("port")), UINT2NUM(port));
-    rb_hash_aset(hash, ID2SYM(rb_intern("msg")), rb_str_new(data, len));
-    
-    rb_funcall(rx_queue, rb_intern("push"), 1, hash);
-    
-    VALUE rx_handler = rb_iv_get(self, "@rx_handler");
-    
-    if(rx_handler != Qnil){
+    switch(type){
+    default:
+    case LORA_MAC_TX_COMPLETE:
+    case LORA_MAC_TX_CONFIRMED:
+    case LORA_MAC_TX_TIMEOUT:
+        handler = rb_iv_get(self, "@tx_handler");                        
+        rb_funcall(handler, rb_intern("call"), 1, type_to_sym[type]);
+        break;
+    case LORA_MAC_RX:
+    {
+        VALUE rx_queue = rb_iv_get(self, "@rx_queue");
+        VALUE hash = rb_hash_new();
+        rb_hash_aset(hash, ID2SYM(rb_intern("port")), UINT2NUM(arg->rx.port));
+        rb_hash_aset(hash, ID2SYM(rb_intern("msg")), rb_str_new(arg->rx.data, arg->rx.len));
         
-        rb_funcall(rx_handler, rb_intern("call"), 0);        
+        rb_funcall(rx_queue, rb_intern("push"), 1, hash);
+    
+        handler = rb_iv_get(self, "@rx_handler");    
+        
+        if(handler != Qnil){
+        
+            rb_funcall(handler, rb_intern("call"), 0);
+        }
     }
-}
-
-static void _joinComplete(void *receiver, bool noResponse)
-{
-    VALUE self = (VALUE)receiver;    
+        break;
+    case LORA_MAC_JOIN_SUCCESS:
+    case LORA_MAC_JOIN_TIMEOUT:
+        handler = rb_iv_get(self, "@join_handler");    
+        rb_funcall(handler, rb_intern("call"), 1, type_to_sym[type]);
+        break;
+    }   
 }
 
 static void board_select(void *receiver, bool state)
