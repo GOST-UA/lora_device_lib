@@ -11,6 +11,10 @@ const struct data_rate *LoraRegion_getDataRateParameters(enum lora_region_id reg
     return mock_ptr_type(struct data_rate *);
 }
 
+void LoraRegion_getDefaultChannels(enum lora_region_id region, void *receiver, void (*handler)(void *reciever, uint8_t chIndex, uint32_t freq))
+{
+}
+
 bool LoraRegion_validateFrequency(enum lora_region_id region, uint32_t frequency, uint8_t *band)
 {
     bool retval = false;
@@ -32,7 +36,7 @@ bool LoraRegion_getOffTimeFactor(enum lora_region_id region, uint8_t band, uint1
 static int setup_emptyChannelList(void **user)
 {
     static struct lora_channel_list self;
-    ChannelList_init(&self, US_902_928);    // the US will not add default channels
+    ChannelList_init(&self, EU_863_870);
     *user = (void *)&self;
     return 0;
 }

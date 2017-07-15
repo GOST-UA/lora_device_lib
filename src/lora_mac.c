@@ -220,6 +220,11 @@ bool LoraMAC_setNbTrans(struct lora_mac *self, uint8_t nbTrans)
     return retval;
 }
 
+bool LoraMAC_personalize(struct lora_mac *self, uint32_t devAddr, const void *nwkSKey, const void *appSKey)
+{
+    return false;
+}
+
 /* static functions ***************************************************/
 
 static uint16_t getUpCount(struct lora_mac *self)

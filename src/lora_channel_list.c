@@ -28,6 +28,7 @@
 
 static uint32_t calculateOnAirTime(const struct lora_channel_list *self, uint8_t payloadLen);
 static void cycleChannel(struct lora_channel_list *self);
+static void addDefaultChannel(void *receiver, uint8_t chIndex, uint32_t freq);
 
 /* functions **********************************************************/
 
@@ -48,28 +49,11 @@ void ChannelList_init(struct lora_channel_list *self, enum lora_region_id region
     self->numUnmasked = 0;
     self->rateParameters = NULL;
 
-    switch(region){
-    case EU_863_870:
-
-        /* add the mandatory channels */
-        (void)ChannelList_add(self, 0, 868100000U);
-        (void)ChannelList_add(self, 1, 868300000U);
-        (void)ChannelList_add(self, 2, 868500000U);
-
-        /* choose a default rate and power (DR3, 14dBm) */
-        (void)ChannelList_setRateAndPower(self, 3U, 1U);
-        break;
+    LoraRegion_getDefaultChannels(region, self, addDefaultChannel);
     
-    case US_902_928:        
-    case CN_779_787:
-    case EU_433:
-    case AUSTRALIA_915_928:
-    case CN_470_510:
-    case AS_923:
-    case KR_920_923:
-    default:
-        break;
-    }
+    /* choose a default rate and power (DR3, 14dBm) */
+    (void)ChannelList_setRateAndPower(self, 3U, 1U);
+
 }
 
 bool ChannelList_add(struct lora_channel_list *self, uint8_t chIndex, uint32_t freq)
@@ -400,5 +384,14 @@ static void cycleChannel(struct lora_channel_list *self)
 
         self->nextBand = -1;
         self->nextChannel = -1;
+    }
+}
+
+static void addDefaultChannel(void *receiver, uint8_t chIndex, uint32_t freq)
+{
+    struct lora_channel_list *self = (struct lora_channel_list *)receiver;    
+    if(!ChannelList_add(self, chIndex, freq)){
+        
+        LORA_ERROR("could not add default channel")
     }
 }

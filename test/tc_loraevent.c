@@ -8,7 +8,7 @@
 
 #include <string.h>
 
-uint32_t getTime(void)
+uint32_t Time_getTime(void)
 {
     return mock_type(uint32_t);
 }
@@ -54,7 +54,7 @@ static void test_Event_onInput_tx_complete(void **user)
     Event_receive(state, EVENT_TX_COMPLETE, 1);
     
     /* if we tick 30 units later delay will be 29 */
-    will_return(getTime, 30);
+    will_return(Time_getTime, 30);
     expect_value(dummy_handler, receiver, (void *)&dummy_receiver);     
     expect_value(dummy_handler, time, 0);                             
     
@@ -64,7 +64,7 @@ static void test_Event_onInput_tx_complete(void **user)
     Event_receive(state, EVENT_TX_COMPLETE, 40);
     
     /* tick again at 60 - no event will be fired */
-    will_return(getTime, 60);
+    will_return(Time_getTime, 60);
     Event_tick(state);    
 }
 
@@ -91,7 +91,7 @@ static void test_Event_onInput_tx_complete_cancel(void **user)
     Event_receive(state, EVENT_TX_COMPLETE, 1);
     
     /* if we tick 30 units later delay will be 29 */
-    will_return(getTime, 30);
+    will_return(Time_getTime, 30);
 
     Event_tick(state);
 }
@@ -105,20 +105,20 @@ static void test_Event_onTimeout(void **user)
     
     /* register the event to timeout in 25 units from now (1) */    
     int dummy_receiver = 42;    
-    will_return(getTime, 1);
+    will_return(Time_getTime, 1);
     void *event_ptr = Event_onTimeout(state, 25, &dummy_receiver, dummy_handler);
     
     /* should get a reference back */
     assert_non_null(event_ptr);
     
     /* if we tick 30 units later delay will be 4 */
-    will_return(getTime, 30);
+    will_return(Time_getTime, 30);
     expect_value(dummy_handler, receiver, (void *)&dummy_receiver);     
     expect_value(dummy_handler, time, 25);                                 
     Event_tick(state);
     
     /* tick again without advancing time...dummy_handler should not be called */
-    will_return(getTime, 30);
+    will_return(Time_getTime, 30);
     Event_tick(state);
 }
 
@@ -131,7 +131,7 @@ static void test_Event_onTimeout_cancel(void **user)
     
     /* register the event to timeout in 25 units from now (1) */    
     int dummy_receiver = 42;    
-    will_return(getTime, 1);
+    will_return(Time_getTime, 1);
     
     void *event_ptr = Event_onTimeout(state, 25, &dummy_receiver, dummy_handler);
     
@@ -144,7 +144,7 @@ static void test_Event_onTimeout_cancel(void **user)
     assert_null(event_ptr);
     
     /* if we tick 30 units later delay will be 4 ... but the event will not be handled since it cancelled */
-    will_return(getTime, 30);
+    will_return(Time_getTime, 30);
     Event_tick(state);
 }
 

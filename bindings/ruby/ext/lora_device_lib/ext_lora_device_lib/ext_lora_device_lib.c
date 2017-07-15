@@ -59,7 +59,7 @@ uint64_t Time_getTime(void)
 
 void Init_ext_lora_device_lib(void)
 {
-    rb_require("queue");
+    
     
     cLoraDeviceLib = rb_define_module("LoraDeviceLib");
     
@@ -345,13 +345,13 @@ static void _response(void *receiver, enum lora_mac_response_type type, const un
 static void board_select(void *receiver, bool state)
 {
     VALUE self = (VALUE)receiver;    
-    (void)rb_funcall(self, rb_intern("select"), 1, (state) ? Qtrue : Qfalse);
+    (void)rb_funcall(self, rb_intern(state ? "select_on" : "select_off"), 0);
 }
 
 static void board_reset(void *receiver, bool state)
 {
     VALUE self = (VALUE)receiver;
-    (void)rb_funcall(self, rb_intern("reset"), 1, (state) ? Qtrue : Qfalse);
+    (void)rb_funcall(self, rb_intern(state ? "reset_on" : "reset_off"), 0);
 }
 
 static void board_reset_wait(void *receiver)

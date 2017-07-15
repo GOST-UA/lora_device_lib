@@ -20,6 +20,7 @@
  * */
 
 #include "lora_region.h"
+#include "lora_debug.h"
 
 static const struct data_rate dr0_EU_863_870 = {
     .sf = SF_12,
@@ -149,17 +150,20 @@ static const struct channel_info default_channels_EU_863_870[] = {
     {
         .freq = 868100000U,
         .rates = default_channel_rates_EU_863_870,
-        .num_rates = sizeof(default_channel_rates_EU_863_870)/sizeof(*default_channel_rates_EU_863_870)
+        .num_rates = sizeof(default_channel_rates_EU_863_870)/sizeof(*default_channel_rates_EU_863_870),
+        .chIndex = 0
     },
     {
         .freq = 868300000U,
         .rates = default_channel_rates_EU_863_870,
-        .num_rates = sizeof(default_channel_rates_EU_863_870)/sizeof(*default_channel_rates_EU_863_870)
+        .num_rates = sizeof(default_channel_rates_EU_863_870)/sizeof(*default_channel_rates_EU_863_870),
+        .chIndex = 1
     },
     {
         .freq = 868500000U,
         .rates = default_channel_rates_EU_863_870,
-        .num_rates = sizeof(default_channel_rates_EU_863_870)/sizeof(*default_channel_rates_EU_863_870)
+        .num_rates = sizeof(default_channel_rates_EU_863_870)/sizeof(*default_channel_rates_EU_863_870),
+        .chIndex = 2
     }
 };
 
@@ -297,3 +301,17 @@ const struct region_defaults *LoraRegion_getDefaultSettings(enum lora_region_id 
     return retval;    
 }
 
+void LoraRegion_getDefaultChannels(enum lora_region_id region, void *receiver, void (*handler)(void *reciever, uint8_t chIndex, uint32_t freq))
+{
+    LORA_ASSERT(handler != NULL)
+    
+    size_t i;
+    
+    if(regions[region] != NULL){
+        
+        for(i=0U; i < regions[region]->num_default_channels; i++){
+            
+            handler(receiver, regions[region]->default_channels[i].chIndex, regions[region]->default_channels[i].freq);
+        }
+    }
+}

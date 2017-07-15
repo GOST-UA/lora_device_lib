@@ -56,6 +56,7 @@ struct channel_info {
     uint32_t freq;          // carrier frequency
     const uint8_t *rates;   // permitted data rates
     size_t num_rates;
+    uint8_t chIndex;
 };
 
 struct region_defaults {
@@ -150,6 +151,8 @@ bool LoraRegion_getPowerForChannel(enum lora_region_id region, uint8_t *power, u
 bool LoraRegion_getOffTimeFactor(enum lora_region_id region, uint8_t band, uint16_t *offTimeFactor);
 
 const struct region_defaults *LoraRegion_getDefaultSettings(enum lora_region_id region);
+    
+void LoraRegion_getDefaultChannels(enum lora_region_id region, void *receiver, void (*handler)(void *reciever, uint8_t chIndex, uint32_t freq));
 
 
 #ifdef __cplusplus
