@@ -22,10 +22,15 @@
 #ifndef LORA_DEVICE_LIB_H
 #define LORA_DEVICE_LIB_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "lora_mac.h"
 #include "lora_event.h"
 #include "lora_channel_list.h"
 #include "lora_radio.h"
+#include "lora_region.h"
 
 struct ldl {
     
@@ -36,7 +41,7 @@ struct ldl {
 };
 
 
-struct ldl ldl_new(enum lora_region_id region, enum lora_radio_type radioType, const struct lora_board *board);
+bool ldl_init(struct ldl *self, enum lora_region_id region_id, enum lora_radio_type radioType, const struct lora_board *board);
 
 bool ldl_personalize(struct ldl *self, uint32_t devAddr, const void *nwkSKey, const void *appSKey);
 
@@ -54,5 +59,9 @@ bool ldl_send(struct ldl *self, bool confirmed, uint8_t port, const void *data, 
 
 void ldl_tick(struct ldl *self);
 void idl_interrupt(struct ldl *self, uint8_t n, uint64_t time);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

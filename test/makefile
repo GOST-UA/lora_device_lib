@@ -95,6 +95,10 @@ $(DIR_BIN)/tc_mac: $(addprefix $(DIR_BUILD)/, tc_mac.o lora_mac.o $(OBJ_CMOCKA))
 	@ echo linking $@
 	@ $(CC) $(LDFLAGS) $^ -o $@
 
+$(DIR_BIN)/tc_region: $(addprefix $(DIR_BUILD)/, tc_region.o lora_region.o $(OBJ_CMOCKA))
+	@ echo linking $@
+	@ $(CC) $(LDFLAGS) $^ -o $@
+
 
 
 

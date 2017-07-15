@@ -110,11 +110,21 @@ struct lora_mac {
     uint16_t rwindow;
     uint16_t upCounter;
     uint16_t downCounter;
+    
     uint16_t maxFrameCounterGap;
-    uint8_t joinAcceptDelay1;   // fixed depending on region
-    uint8_t joinAcceptDelay2;
-    uint8_t receiveDelay1;      // adjustable by mac command
-    uint8_t receiveDelay2;
+    
+    uint16_t max_fcnt_gap;  /**< maximum frame counter gap */
+    
+    uint8_t rx1_delay;      /**< rx1 delay (seconds) */
+    uint8_t rx2_delay;      /**< rx2 delay (seconds) */
+    
+    uint8_t ja1_delay;      /**< join accept 1 delay (seconds) */
+    uint8_t ja2_delay;      /**< join accept 2 delay (seconds) */
+    
+    uint8_t adr_ack_limit;  
+    uint8_t adr_ack_delay;  
+    uint8_t adr_ack_timeout;    
+    uint8_t adr_ack_dither;     
     
     uint64_t txCompleteTime;
     

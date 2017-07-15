@@ -253,15 +253,6 @@ static const struct lora_region info_EU_863_870 = {
     .num_off_time_factors = sizeof(off_time_factors_EU_863_870) / sizeof(*off_time_factors_EU_863_870),    
 };
 
-
-/**********************************************************************/
-/* AUSTRALIA_915_928: */
-
-
-
-
-
-
 /**********************************************************************/
 
 static const struct lora_region *regions[] = {

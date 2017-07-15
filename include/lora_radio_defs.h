@@ -25,7 +25,7 @@
 /** Spreading Factor (aka symbol rate)     
  *
  * */
-enum spreading_factor {
+enum lora_spreading_factor {
     SF_6 = 6,   /**< 64 chips/symbol */
     SF_7,       /**< 128 chips/symbol */
     SF_8,       /**< 256 chips/symbol */
@@ -37,21 +37,21 @@ enum spreading_factor {
 };
 
 /** signal bandwidth */
-enum signal_bandwidth {
+enum lora_signal_bandwidth {
     BW_125 = 125000, /**< 125 KHz */
     BW_250 = 250000, /**< 250 KHz */
     BW_500 = 500000, /**< 500 KHz */
     BW_FSK
 };
 
-enum coding_rate {
+enum lora_coding_rate {
     CR_5 = 5,   /**< 4/5 */
     CR_6,       /**< 4/6 */
     CR_7,       /**< 4/7 */
     CR_8,       /**< 4/8 */
 };
 
-enum erp_setting {
+enum lora_erp_setting {
     DBM_30,
     DBM_28,
     DBM_26,

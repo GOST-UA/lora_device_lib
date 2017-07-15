@@ -22,7 +22,11 @@
 #ifndef LORA_CHANNEL_LIST_H
 #define LORA_CHANNEL_LIST_H
 
-#include "lora_region.h"
+#include "lora_radio_defs.h"
+
+#include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
 
 #ifndef LORA_NUM_CHANNELS
     #define LORA_NUM_CHANNELS    16U
@@ -55,10 +59,10 @@ struct lora_channel_list {
     struct lora_channel channels[LORA_NUM_CHANNELS];
     struct lora_band bands[LORA_NUM_BANDS];
 
-    enum lora_region_id region;
-    const struct data_rate *rateParameters;
-    enum erp_setting erp;
+    const struct lora_region *region;
     
+    uint32_t rx2_freq;
+    uint8_t  rx2_rate;
     uint8_t rate;
     uint8_t power;
     
@@ -68,7 +72,7 @@ struct lora_channel_list {
     int numUnmasked;    ///< total number of unmasked channels
 };
 
-void ChannelList_init(struct lora_channel_list *self, enum lora_region_id region);
+void ChannelList_init(struct lora_channel_list *self, const struct lora_region *region);
 
 /** Add a (transmission) channel
  * 
@@ -106,10 +110,10 @@ size_t ChannelList_capacity(const struct lora_channel_list *self);
 struct lora_channel_setting {
   
   uint32_t freq;
-  enum spreading_factor sf;
-  enum signal_bandwidth bw;
-  enum erp_setting erp;
-  enum coding_rate cr;      
+  enum lora_spreading_factor sf;
+  enum lora_signal_bandwidth bw;
+  enum lora_erp_setting erp;
+  enum lora_coding_rate cr;      
   uint8_t maxPayload;
   
 };
@@ -118,6 +122,6 @@ bool ChannelList_upstreamSetting(const struct lora_channel_list *self, struct lo
 bool ChannelList_rx1Setting(const struct lora_channel_list *self, struct lora_channel_setting *setting);
 bool ChannelList_rx2Setting(const struct lora_channel_list *self, struct lora_channel_setting *setting);
 
-enum lora_region_id ChannelList_region(const struct lora_channel_list *self);
+const struct lora_region *ChannelList_region(const struct lora_channel_list *self);
 
 #endif

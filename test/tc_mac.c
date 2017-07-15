@@ -26,7 +26,7 @@ enum lora_region_id ChannelList_region(const struct lora_channeL_list *self)
 }
 
 
-bool LoraRadio_setParameters(struct lora_radio *self, uint32_t freq, enum signal_bandwidth bw, enum spreading_factor sf)
+bool LoraRadio_setParameters(struct lora_radio *self, uint32_t freq, enum lora_signal_bandwidth bw, enum lora_spreading_factor sf)
 {
     return false;
 }

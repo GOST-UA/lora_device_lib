@@ -28,6 +28,7 @@
 #include "lora_aes.h"
 #include "lora_cmac.h"
 #include "lora_time.h"
+#include "lora_region.h"
 
 #include <string.h>
 
@@ -69,7 +70,7 @@ void LoraMAC_init(struct lora_mac *self, struct lora_channel_list *channels, str
     self->radio = radio;    
     self->events = events;
     
-    const struct region_defaults *defaults = LoraRegion_getDefaultSettings(ChannelList_region(self->channels));
+    const struct lora_region_default *defaults = Region_getDefaultSettings(ChannelList_region(self->channels));
     
     LoraRadio_setEventHandler(self->radio, self, radioEvent);
     

@@ -20,19 +20,34 @@
  * */
 
 #include "lora_device_lib.h"
+#include "lora_debug.h"
 
 #include <string.h>
 
-struct ldl ldl_new(enum lora_region_id region, enum lora_radio_type radioType, const struct lora_board *board)
+bool ldl_init(struct ldl *self, enum lora_region_id region_id, enum lora_radio_type radioType, const struct lora_board *board)
 {
-    struct ldl self;
+    LORA_ASSERT(self != NULL)
     
-    (void)memset(&self, 0, sizeof(self));
+    const struct lora_region *region;
+    bool retval = false;
+    
+    (void)memset(self, 0, sizeof(*self));
 
-    ChannelList_init(&self.channels, region);
-    Event_init(&self.events);
-    LoraRadio_init(&self.radio, radioType, board);
-    LoraMAC_init(&self.mac, &self.channels, &self.radio, &self.events);
+    region =  Region_getRegion(region_id);
+
+    if(region != NULL){
+
+        ChannelList_init(&self->channels, region);
+        Event_init(&self->events);
+        LoraRadio_init(&self->radio, radioType, board);
+        LoraMAC_init(&self->mac, &self->channels, &self->radio, &self->events);
+        
+        retval = true;        
+    }
+    else{
+        
+        LORA_ERROR("region not supported")
+    }
     
     return self;
 }
