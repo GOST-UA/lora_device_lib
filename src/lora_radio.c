@@ -56,7 +56,7 @@ uint8_t LoraRadio_collect(struct lora_radio *self, void *data, uint8_t max)
     return LoraRadio_if[self->type]->collect(self, data, max);
 }
 
-bool LoraRadio_setParameters(struct lora_radio *self, uint32_t freq, enum signal_bandwidth bw, enum spreading_factor sf)
+bool LoraRadio_setParameters(struct lora_radio *self, uint32_t freq, enum lora_signal_bandwidth bw, enum lora_spreading_factor sf)
 {
     return LoraRadio_if[self->type]->setParameters(self, freq, bw, sf);
 }

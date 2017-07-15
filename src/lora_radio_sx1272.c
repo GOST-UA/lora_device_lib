@@ -83,7 +83,7 @@ static void setOpMode(struct lora_radio *self, enum op_mode mode);
 static void initRadio(struct lora_radio *self, enum lora_radio_type type, const struct lora_board *board);
 static void transmit(struct lora_radio *self, const void *data, uint8_t len);
 static uint8_t collect(struct lora_radio *self, void *data, uint8_t max);
-static bool setParameters(struct lora_radio *self, uint32_t freq, enum signal_bandwidth bw, enum spreading_factor sf);
+static bool setParameters(struct lora_radio *self, uint32_t freq, enum lora_signal_bandwidth bw, enum lora_spreading_factor sf);
 static void raiseInterrupt(struct lora_radio *self, uint8_t n, uint64_t time);
 
 const struct lora_radio_if LoraRadio_if_sx1272 = {
@@ -139,7 +139,7 @@ static uint8_t collect(struct lora_radio *self, void *data, uint8_t max)
  * Fstep = Fxosc / 2^19 */
 #define FREQ_STEP                                   61.03515625
 
-static bool setParameters(struct lora_radio *self, uint32_t freq, enum signal_bandwidth bw, enum spreading_factor sf)
+static bool setParameters(struct lora_radio *self, uint32_t freq, enum lora_signal_bandwidth bw, enum lora_spreading_factor sf)
 {
     bool retval = false;
 
@@ -148,7 +148,7 @@ static bool setParameters(struct lora_radio *self, uint32_t freq, enum signal_ba
     bool implicitHeader;
     bool rxPayloadCRCOn = true;
     bool autoGain = true;
-    enum coding_rate cr = CR_5;
+    enum lora_coding_rate cr = CR_5;
     
     if((bw != BW_FSK) && (sf != SF_FSK)){
 

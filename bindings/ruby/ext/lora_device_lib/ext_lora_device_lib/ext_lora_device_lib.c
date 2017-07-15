@@ -100,7 +100,10 @@ static VALUE _ldl_initialize(int argc, VALUE *argv, VALUE self)
         .read = board_read
     };
     
-    *this = ldl_new(EU_863_870, LORA_RADIO_SX1272, &boardAdapter);
+    if(!ldl_init(this, EU_863_870, LORA_RADIO_SX1272, &boardAdapter)){
+        
+        rb_raise(rb_const_get(cLoraDeviceLib, rb_intern("LoraError")), "ldl_init() failed");
+    }
     
     rb_iv_set(self, "@board", board);
     rb_iv_set(self, "@tx_handler", Qnil);

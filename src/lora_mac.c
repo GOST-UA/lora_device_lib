@@ -75,10 +75,10 @@ void LoraMAC_init(struct lora_mac *self, struct lora_channel_list *channels, str
     LoraRadio_setEventHandler(self->radio, self, radioEvent);
     
     self->maxFrameCounterGap = defaults->max_fcnt_gap;    
-    self->joinAcceptDelay1 = defaults->join_accept_delay1 * 1000U;
-    self->joinAcceptDelay2 = defaults->join_accept_delay2 * 1000U;    
-    self->receiveDelay1 = defaults->receive_delay1;
-    self->receiveDelay2 = defaults->receive_delay2;    
+    self->ja1_delay = defaults->ja1_delay * 1000000U;
+    self->ja2_delay = defaults->ja2_delay * 1000000U;    
+    self->rx1_delay = defaults->rx1_delay * 1000000U;
+    self->rx2_delay = defaults->rx2_delay * 1000000U;    
     //self->adrAckDelay = defaults->adr_ack_delay;
     //self->adrAckLimit = defaults->adr_ack_limit;
     //self->ackTimeout = defaults->ack_timeout;
@@ -299,7 +299,7 @@ static void txComplete(void *receiver, uint64_t time)
     
     self->txCompleteTime = time;
         
-    futureTime = self->txCompleteTime + ((self->state == TX) ? self->receiveDelay1 : self->joinAcceptDelay1);
+    futureTime = self->txCompleteTime + ((self->state == TX) ? self->rx1_delay : self->ja1_delay);
     
     self->state = (self->state == TX) ? WAIT_RX1 : JOIN_WAIT_RX1;                
 
@@ -425,12 +425,12 @@ static void rxFinish(struct lora_mac *self)
     default:
     case RX1:        
         self->state = WAIT_RX2;    
-        (void)Event_onTimeout(self->events, self->txCompleteTime + self->receiveDelay2, self, rxStart);
+        (void)Event_onTimeout(self->events, self->txCompleteTime + self->rx2_delay, self, rxStart);
         break;
     
     case JOIN_RX1:        
         self->state = JOIN_WAIT_RX2;    
-        (void)Event_onTimeout(self->events, self->txCompleteTime + self->joinAcceptDelay2, self, rxStart);
+        (void)Event_onTimeout(self->events, self->txCompleteTime + self->ja2_delay, self, rxStart);
         break;
         
     case RX2:        

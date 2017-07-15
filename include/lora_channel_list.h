@@ -61,6 +61,7 @@ struct lora_channel_list {
 
     const struct lora_region *region;
     
+    uint8_t rx1_offset;
     uint32_t rx2_freq;
     uint8_t  rx2_rate;
     uint8_t rate;

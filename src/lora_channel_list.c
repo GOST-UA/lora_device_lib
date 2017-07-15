@@ -247,19 +247,18 @@ bool ChannelList_txSetting(const struct lora_channel_list *self, struct lora_cha
 {
     LORA_ASSERT(self != NULL)
     
-    const struct lora_data_rate *dr;
-    const struct lora_channel_setting *defaults;
+    const struct lora_data_rate *rate;
     bool retval = false;
     
     if(self->nextChannel != -1){
     
-        dr = Region_getDataRateParameters(self->region, self->rate);
+        rate = Region_getDataRateParameters(self->region, self->rate);
         
-        LORA_ASSERT(dr != NULL)
+        LORA_ASSERT(rate != NULL)
         
         setting->freq = self->channels[self->nextChannel].freq;
-        setting->sf = dr->sf;
-        setting->bw = dr->bw;
+        setting->sf = rate->sf;
+        setting->bw = rate->bw;
         setting->cr = CR_5;
         //setting->erp = self->erp;
         
@@ -273,22 +272,24 @@ bool ChannelList_rx1Setting(const struct lora_channel_list *self, struct lora_ch
 {
     LORA_ASSERT(self != NULL)
     
-    const struct lora_data_rate *dr;
-    const struct lora_channel_setting *rsettings;
-    
+    const struct lora_data_rate *rate;
+    uint8_t rx1_rate;    
     bool retval = false;
     
     if(ChannelList_txSetting(self, setting)){
         
         setting->freq = self->channels[self->nextChannel].freq;
         
-        Region_getRX1DataRate(self->region, 
+        (void)Region_getRX1DataRate(self->region, self->rate, self->rx1_offset, &rx1_rate);
         
+        rate = Region_getDataRateParameters(self->region, rx1_rate);
         
-        setting->sf = self->rateParameters->sf;
-        setting->bw = self->rateParameters->bw;
-        setting->erp = self->erp;
+        LORA_ASSERT(rate != NULL)
+        
+        setting->sf = rate->sf;
+        setting->bw = rate->bw;        
         setting->cr = CR_5;
+        //setting->erp = self->erp;
         
         retval = true;
     }
@@ -299,26 +300,26 @@ bool ChannelList_rx1Setting(const struct lora_channel_list *self, struct lora_ch
 bool ChannelList_rx2Setting(const struct lora_channel_list *self, struct lora_channel_setting *setting)
 {
     LORA_ASSERT(self != NULL)
-    
+        
+    const struct lora_data_rate *rate;
+    const struct lora_region_default *defaults;
     bool retval = false;
     
     if(ChannelList_upstreamSetting(self, setting)){
         
-        const struct lora_region_default *defaults = Region_getDefaultSettings(self->region);
-        const struct data_rate *dr;
+        defaults = Region_getDefaultSettings(self->region);
         
         LORA_ASSERT(defaults != NULL)
         
+        rate = Region_getDataRateParameters(self->region, defaults->rx2_rate);
+        
+        LORA_ASSERT(rate != NULL)
+        
         setting->freq = defaults->rx2_freq;
-        
-        dr = Region_getDataRateParameters(self->region, defaults->rx2_rate);
-        
-        LORA_ASSERT(dr != NULL)
-        
-        setting->sf = dr->sf;
-        setting->bw = dr->bw;
-        setting->erp = self->erp;
+        setting->sf = rate->sf;
+        setting->bw = rate->bw;
         setting->cr = CR_5;
+        //setting->erp = self->erp;
         
         retval = true;        
     }
