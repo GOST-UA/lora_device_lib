@@ -1,0 +1,7 @@
+@startuml
+
+TX_END -> RX1_START: RX1_INTERVAL +/- 20us
+TX_END -> RX2_START: RX2_INTERVAL +/- 20us
+
+@enduml
+

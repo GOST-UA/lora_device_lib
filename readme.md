@@ -16,7 +16,6 @@ A LoRaWAN device implementation still in an early stage of development.
     - Region Database
         - EU_863_870
     - Radio
-    - Radio Subclass(es)
         - SX1272
     - Frame Codec
     - AES and CMAC implementation
@@ -59,9 +58,53 @@ And below a simplified sequence of a downstream data frame being received:
 
 ![image missing](doc/plantuml/tick_downstream.png "Downstream")
 
-More to follow.
+### Timing Requirements
 
+LoRaWAN requires that receive windows open at a precise interval measured
+from the end of the TX. This can be challenging to implement on a busy 
+embedded systems that don't use an RTOS since other tasks
+in the mainloop will add jitter to when LDL can open the RX window.
+
+The diagram below illustrates the TX -> RX1 -> RX2 pattern:
+
+![image missing](doc/plantuml/rx_windows.png "RX Timing")
+
+The architecture handles RX windows as follows:
+
+- The end of TX is detected by an IO event sent from the transeiver to the EventManager via an interrupt
+    - The EventManager keeps a microsecond timestamp of when this IO event is received
+- The IO event is handled by EventManager.tick() at any time after TX and before the RX window
+    - This is a one or more second window
+- The IO event handler schedules a timer callback to run at the RX window time
+    - The interval is calculated as `interval = RX_INTERVAL - (time_now - tx_end_time) - spi_delay - typical_jitter`
+    - `spi_delay` is time added to account for communication between LDL and the radio transciever (i.e. over SPI)
+    - `typical_jitter` is time added to account for jitter in handling the timeout event
+        - on a mainloop architecture this 
+- The timeout event handler runs after the aforementioned interval
+    - The handler calculates the current time relative to the RX window
+        - if late, LDL abandons the RX window        
+        - if early, LDL blocks until the start of the RX window
+- This pattern is the same for RX1 and RX2 windows
+    
+In summary:
+
+- In LDL, IO events are lower priority than timeout events, and timeout events work best when jitter is low
+- RX1 and RX2 windows are met on best effort
+    - Timeout events can be set to trigger early to account for worst case jitter
+    - LDL will skip an RX window if the timestamps show that the timeout has been handled too late
+- The effect of jitter on LDL is that:
+    - Clock cycles may be wasted blocking
+    - RX windows may be missed
+    
 ## Porting Guide
+
+### Implement System Time
+
+```
+uint64_t Time_getTIme(void);
+```
+This function must return system time (e.g. time since power up) in microseconds. Granularity is
+whatever your system can manage.
 
 ### Define a Platform Specific Error Message Stream
 
@@ -93,23 +136,6 @@ that this macro is defined at least for debug builds.
 1. Define `LORA_USE_PLATFORM_CMAC`
 2. Define `struct lora_cmac_ctx` to suit the platform implementation
 3. Implement `LoraCMAC_init`, `LoraCMAC_update`, and `LoraCMAC_finish` to wrap platform implementation
-
-## FAQ
-
-### What is the Difference Between a Channel and a Band?
-
-A channel is a carrier frequency that the radio will transmit/receive on.
-
-A band (or sub-band) is a range of frequencies. Channels fall into
-bands depending on region specific rules for how frequency space is
-partitioned. A single (logical) band may in some cases be spread over
-several non-contiguous frequency partitions.
-
-LoraDeviceLib keeps track of channels and which bands they fall into so as to enforce:
-
-- channel separation and hopping rules
-- maximum power rules
-- maximum duty cycle rules
 
 ## License
 
