@@ -61,7 +61,7 @@ And below a simplified sequence of a downstream data frame being received:
 ### Timing Requirements
 
 LoRaWAN requires that receive windows open at a precise interval measured
-from the end of the TX. This can be challenging to implement on a busy 
+from the end of the TX. This can be challenging to implement on busy 
 embedded systems that don't use an RTOS since other tasks
 in the mainloop will add jitter to when LDL can open the RX window.
 
@@ -79,7 +79,6 @@ The architecture handles RX windows as follows:
     - The interval is calculated as `interval = RX_INTERVAL - (time_now - tx_end_time) - spi_delay - typical_jitter`
     - `spi_delay` is time added to account for communication between LDL and the radio transciever (i.e. over SPI)
     - `typical_jitter` is time added to account for jitter in handling the timeout event
-        - on a mainloop architecture this 
 - The timeout event handler runs after the aforementioned interval
     - The handler calculates the current time relative to the RX window
         - if late, LDL abandons the RX window        
