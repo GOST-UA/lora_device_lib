@@ -25,8 +25,6 @@
 struct lora_region_channel {
 
     uint32_t freq;          /**< carrier frequency */
-    const uint8_t *rates;   /**< permitted data rates */
-    size_t num_rates;
     uint8_t chIndex;        
 };
 
@@ -35,6 +33,15 @@ struct lora_region_band {
     uint32_t begin; /**< Hz */
     uint32_t end;   /**< Hz */
     uint8_t id;     /**< several bands may be combined into one by id */
+};
+
+struct lora_region_rate_allocation {
+    
+    uint8_t minChIndex;
+    uint8_t maxChIndex;    
+    
+    const uint8_t *rates;
+    size_t num_rates;
 };
 
 struct lora_region {
@@ -48,6 +55,9 @@ struct lora_region {
     uint8_t rx1_row_size;               /**< `rx1_rate` row size */
     uint8_t rx1_col_size;               /**< 'rx1_rate' column size */
     
+    const struct lora_region_rate_allocation *rate_allocation;
+    size_t num_rate_allocation;
+    
     const struct lora_region_band *bands;   /**< collection of frequency band definitions which map to "duty cycle bands" */
     size_t num_bands;                       /**< number of entries in `bands` */
 
@@ -59,6 +69,7 @@ struct lora_region {
 
     const struct lora_region_default *defaults;     /**< other default settings for this region */
 };
+
 
 /**********************************************************************/
 /* EU_863_870: */
@@ -187,23 +198,26 @@ static const uint8_t rx1_rate_EU_863_870[] = {
     7U, 6U, 5U, 4U, 3U, 2U,   // DR7 upstream 
 };
 
+static const struct lora_region_rate_allocation rate_allocation_EU_863_870[] = {
+    {
+        .minChIndex = 0U,
+        .maxChIndex = 15U,
+        .rates = default_channel_rates_EU_863_870,
+        .num_rates = sizeof(default_channel_rates_EU_863_870)/sizeof(*default_channel_rates_EU_863_870)
+    }    
+};
+
 static const struct lora_region_channel default_channels_EU_863_870[] = {
     {
         .freq = 868100000U,
-        .rates = default_channel_rates_EU_863_870,
-        .num_rates = sizeof(default_channel_rates_EU_863_870)/sizeof(*default_channel_rates_EU_863_870),
         .chIndex = 0U
     },
     {
         .freq = 868300000U,
-        .rates = default_channel_rates_EU_863_870,
-        .num_rates = sizeof(default_channel_rates_EU_863_870)/sizeof(*default_channel_rates_EU_863_870),
         .chIndex = 1U
     },
     {
         .freq = 868500000U,
-        .rates = default_channel_rates_EU_863_870,
-        .num_rates = sizeof(default_channel_rates_EU_863_870)/sizeof(*default_channel_rates_EU_863_870),
         .chIndex = 2U
     }
 };
@@ -251,6 +265,9 @@ static const struct lora_region info_EU_863_870 = {
 
     .off_time_factors = off_time_factors_EU_863_870,
     .num_off_time_factors = sizeof(off_time_factors_EU_863_870) / sizeof(*off_time_factors_EU_863_870),    
+    
+    .rate_allocation = rate_allocation_EU_863_870,
+    .num_rate_allocation = sizeof(rate_allocation_EU_863_870)/sizeof(*rate_allocation_EU_863_870),
 };
 
 /**********************************************************************/
@@ -309,18 +326,50 @@ bool Region_validateFrequency(const struct lora_region *self, uint32_t frequency
     return retval;
 }
 
-bool Region_validateRate(const struct lora_region *self, uint32_t frequency, uint8_t rate)
+bool Region_validateRate(const struct lora_region *self, uint8_t chIndex, uint8_t rate)
 {
     LORA_ASSERT(self != NULL)
     
     bool retval = false;
-    uint8_t band;
+    size_t i;
+    size_t j;
 
-    if(Region_validateFrequency(self, frequency, &band)){
-
-        retval = true;
+    for(i=0U; i < self->num_rate_allocation; i++){
+        
+        if((chIndex >= self->rate_allocation[i].minChIndex) && (chIndex <= self->rate_allocation[i].maxChIndex)){
+            
+            for(j=0U; j < self->rate_allocation[i].num_rates; j++){
+                
+                if(self->rate_allocation[i].rates[j] == rate){
+                    
+                    retval = true;
+                    break;
+                }
+            }
+        }
     }
+    
+    return retval;
+}
 
+uint8_t Region_getTXRates(const struct lora_region *self, uint8_t chIndex, const uint8_t **rates)
+{
+    LORA_ASSERT(self != NULL)
+    LORA_ASSERT(rates != NULL)
+    
+    uint8_t retval = 0U;
+    size_t i;
+    
+    for(i=0U; i < self->num_rate_allocation; i++){
+        
+        if((chIndex >= self->rate_allocation[i].minChIndex) && (chIndex <= self->rate_allocation[i].maxChIndex)){
+            
+            *rates = self->rate_allocation[i].rates;
+            retval = self->rate_allocation[i].num_rates;
+            break;
+        }
+    }
+    
     return retval;
 }
 

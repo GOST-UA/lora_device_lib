@@ -151,6 +151,10 @@ void Region_getDefaultChannels(const struct lora_region *self, void *receiver, v
  * */
 bool Region_getRX1DataRate(const struct lora_region *self, uint8_t tx_rate, uint8_t rx1_offset, uint8_t *rx1_rate);
 
+bool Region_validateRate(const struct lora_region *self, uint8_t chIndex, uint8_t rate);
+
+uint8_t Region_getTXRates(const struct lora_region *self, uint8_t chIndex, const uint8_t **rates);
+
 #ifdef __cplusplus
 }
 #endif

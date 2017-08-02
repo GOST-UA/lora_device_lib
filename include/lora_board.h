@@ -19,46 +19,24 @@
  *
  * */
 
-#ifndef LORA_DEVICE_LIB_H
-#define LORA_DEVICE_LIB_H
+#ifndef LORA_BOARD_H
+#define LORA_BOARD_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "lora_mac.h"
-#include "lora_event.h"
-#include "lora_channel_list.h"
-#include "lora_radio.h"
-#include "lora_region.h"
+#include <stdint.h>
+#include <stdbool.h>
 
-struct ldl {
-    
-    struct lora_mac mac;
-    struct lora_channel_list channels;
-    struct lora_radio radio;    
-    struct lora_event events;    
+struct lora_board {
+
+    void *receiver;
+    void (*select)(void *receiver, bool state);     /**< select the chip (this should also 'take' the resource if it's shared) */
+    void (*reset)(void *receiver, bool state);      /**< true will hold the device in reset */
+    void (*write)(void *receiver, uint8_t data);    /**< write a byte */
+    uint8_t (*read)(void *receiver);                /**< read a byte */
 };
-
-
-bool ldl_init(struct ldl *self, enum lora_region_id region_id, const struct lora_board *board);
-
-bool ldl_personalize(struct ldl *self, uint32_t devAddr, const void *nwkSKey, const void *appSKey);
-
-bool ldl_addChannel(struct ldl *self, uint32_t freq, uint8_t chIndex);
-void ldl_removeChannel(struct ldl *self, uint8_t chIndex);
-bool ldl_maskChannel(struct ldl *self, uint8_t chIndex);
-void ldl_unmaskChannel(struct ldl *self, uint8_t chIndex);
-
-bool ldl_setRateAndPower(struct ldl *self, uint8_t rate, uint8_t power);
-
-void ldl_setResponseHandler(struct ldl *self, void *receiver, lora_mac_response_fn cb);
-
-bool ldl_join(struct ldl *self);
-bool ldl_send(struct ldl *self, bool confirmed, uint8_t port, const void *data, uint8_t len);
-
-void ldl_tick(struct ldl *self);
-void ldl_interrupt(struct ldl *self, uint8_t n, uint64_t time);
 
 #ifdef __cplusplus
 }

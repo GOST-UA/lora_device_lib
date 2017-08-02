@@ -36,16 +36,12 @@
     #define LORA_NUM_BANDS       6U
 #endif
 
-struct lora_adr_ans {
-    bool channelOK;
-    bool rateOK;
-    bool powerOK;        
-};
-
 struct lora_channel {
     uint32_t freq;
     int band;
     bool masked;
+    uint8_t minRate;
+    uint8_t maxRate;    // todo: compact
 };
 
 struct lora_band {
@@ -65,12 +61,30 @@ struct lora_channel_list {
     uint32_t rx2_freq;
     uint8_t  rx2_rate;
     uint8_t rate;
-    uint8_t power;
     
     int nextChannel;
     int nextBand;
 
     int numUnmasked;    ///< total number of unmasked channels
+};
+
+struct lora_channel_setting {
+  
+    uint32_t freq;
+  
+    const uint8_t *rates;
+    uint8_t numRates;
+  
+    uint8_t minRate;  
+    uint8_t maxRate;    
+    
+    uint8_t chIndex;
+};
+
+struct lora_channel_rx_setting {
+  
+    uint32_t freq;
+    uint8_t chIndex;
 };
 
 void ChannelList_init(struct lora_channel_list *self, const struct lora_region *region);
@@ -98,31 +112,17 @@ bool ChannelList_mask(struct lora_channel_list *self, uint8_t chIndex);
 
 void ChannelList_unmask(struct lora_channel_list *self, uint8_t chIndex);
 
-bool ChannelList_setRateAndPower(struct lora_channel_list *self, uint8_t rate, uint8_t power);
+uint64_t ChannelList_waitTime(const struct lora_channel_list *self, uint64_t timeNow);
 
-uint32_t ChannelList_waitTime(const struct lora_channel_list *self, uint64_t timeNow);
-
-struct lora_adr_ans ChannelList_adrRequest(struct lora_channel_list *self, uint8_t rate, uint8_t power, uint16_t mask, uint8_t maskControl);
-
-void ChannelList_registerTransmission(struct lora_channel_list *self, uint64_t time, uint8_t payloadLen);
+void ChannelList_registerTransmission(struct lora_channel_list *self, uint64_t time, uint32_t airTime);
 
 size_t ChannelList_capacity(const struct lora_channel_list *self);
 
-struct lora_channel_setting {
-  
-  uint32_t freq;
-  enum lora_spreading_factor sf;
-  enum lora_signal_bandwidth bw;
-  enum lora_erp_setting erp;
-  enum lora_coding_rate cr;      
-  uint8_t maxPayload;
-  
-};
-
-bool ChannelList_upstreamSetting(const struct lora_channel_list *self, struct lora_channel_setting *setting);
-bool ChannelList_rx1Setting(const struct lora_channel_list *self, struct lora_channel_setting *setting);
-bool ChannelList_rx2Setting(const struct lora_channel_list *self, struct lora_channel_setting *setting);
+bool ChannelList_txSetting(const struct lora_channel_list *self, struct lora_channel_setting *setting);
+void ChannelList_rx2Setting(const struct lora_channel_list *self, uint32_t *freq, uint8_t *rate);
 
 const struct lora_region *ChannelList_region(const struct lora_channel_list *self);
+
+bool ChannelList_constrainRate(struct lora_channel_list *self, uint8_t chIndex, uint8_t minRate, uint8_t maxRate);
 
 #endif

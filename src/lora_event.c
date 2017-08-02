@@ -211,3 +211,7 @@ void Event_cancel(struct lora_event *self, void **event)
     }
 }
 
+uint64_t Event_timeUntilNextEvent(struct lora_event *self)
+{
+    return UINT64_MAX;
+}

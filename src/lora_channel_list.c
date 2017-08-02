@@ -27,7 +27,6 @@
 
 /* static prototypes **************************************************/
 
-static uint32_t calculateOnAirTime(const struct lora_channel_list *self, uint8_t payloadLen);
 static void cycleChannel(struct lora_channel_list *self);
 static void addDefaultChannel(void *receiver, uint8_t chIndex, uint32_t freq);
 
@@ -39,7 +38,6 @@ void ChannelList_init(struct lora_channel_list *self, const struct lora_region *
     LORA_ASSERT(region != NULL)
     
     size_t i;
-    const struct lora_region_default *settings;
     
     (void)memset(self, 0, sizeof(*self));
 
@@ -48,19 +46,13 @@ void ChannelList_init(struct lora_channel_list *self, const struct lora_region *
         self->bands[i].channel = -1;
     }
 
-    Region_getDefaultChannels(region, self, addDefaultChannel);
-    settings = Region_getDefaultSettings(region);
-
     self->region = region;
+    
+    Region_getDefaultChannels(region, self, addDefaultChannel);
     
     self->nextBand = -1;
     self->nextChannel = -1;
     self->numUnmasked = 0;
-
-    self->rx2_rate = settings->rx2_rate;
-    self->rx2_freq = settings->rx2_freq;
-    self->power = settings->init_tx_power;
-    self->rate = settings->init_tx_rate;    
 }
 
 bool ChannelList_add(struct lora_channel_list *self, uint8_t chIndex, uint32_t freq)
@@ -129,6 +121,32 @@ void ChannelList_remove(struct lora_channel_list *self, uint8_t chIndex)
     }
 }
 
+bool ChannelList_constrainRate(struct lora_channel_list *self, uint8_t chIndex, uint8_t minRate, uint8_t maxRate)
+{
+    LORA_ASSERT(self != NULL)
+    
+    bool retval = false;
+    
+    if(chIndex < sizeof(self->channels)/sizeof(*self->channels)){
+        
+        if(self->channels[chIndex].freq > 0U){
+            
+            if(minRate <= maxRate){
+                
+                if(Region_validateRate(self->region, chIndex, minRate) && Region_validateRate(self->region, chIndex, maxRate)){
+
+                    self->channels[chIndex].minRate = minRate;
+                    self->channels[chIndex].maxRate = maxRate;
+                        
+                    retval = true;
+                }
+            }
+        }        
+    }
+    
+    return retval;
+}
+
 bool ChannelList_mask(struct lora_channel_list *self, uint8_t chIndex)
 {
     LORA_ASSERT(self != NULL)
@@ -175,19 +193,7 @@ void ChannelList_unmask(struct lora_channel_list *self, uint8_t chIndex)
     }
 }
 
-bool ChannelList_setRateAndPower(struct lora_channel_list *self, uint8_t rate, uint8_t power)    
-{
-    LORA_ASSERT(self != NULL)
-    
-    bool retval = true;
-    
-    self->rate = rate;
-    self->power = power;
-
-    return retval;
-}
-
-uint32_t ChannelList_waitTime(const struct lora_channel_list *self, uint64_t timeNow)
+uint64_t ChannelList_waitTime(const struct lora_channel_list *self, uint64_t timeNow)
 {
     LORA_ASSERT(self != NULL)
     
@@ -205,20 +211,7 @@ uint32_t ChannelList_waitTime(const struct lora_channel_list *self, uint64_t tim
     return retval;
 }
 
-struct lora_adr_ans ChannelList_adrRequest(struct lora_channel_list *self, uint8_t rate, uint8_t power, uint16_t mask, uint8_t maskControl)
-{
-    LORA_ASSERT(self != NULL)
-    
-    struct lora_adr_ans retval = {
-        .channelOK = false,
-        .rateOK = false,
-        .powerOK = false    
-    };
-
-    return retval;
-}
-
-void ChannelList_registerTransmission(struct lora_channel_list *self, uint64_t time, uint8_t payloadLen)
+void ChannelList_registerTransmission(struct lora_channel_list *self, uint64_t time, uint32_t airTime)
 {
     LORA_ASSERT(self != NULL)
     
@@ -227,9 +220,7 @@ void ChannelList_registerTransmission(struct lora_channel_list *self, uint64_t t
         uint16_t offTimeFactor;
         Region_getOffTimeFactor(self->region, self->nextBand, &offTimeFactor);
 
-        uint32_t onTime_us = calculateOnAirTime(self, payloadLen);
-    
-        uint64_t offTime_us = (uint64_t)onTime_us * (uint64_t)offTimeFactor;
+        uint64_t offTime_us = (uint64_t)airTime * (uint64_t)offTimeFactor;
 
         self->bands[self->nextBand].timeReady = time + offTime_us;
         cycleChannel(self);
@@ -247,20 +238,15 @@ bool ChannelList_txSetting(const struct lora_channel_list *self, struct lora_cha
 {
     LORA_ASSERT(self != NULL)
     
-    const struct lora_data_rate *rate;
     bool retval = false;
     
     if(self->nextChannel != -1){
     
-        rate = Region_getDataRateParameters(self->region, self->rate);
-        
-        LORA_ASSERT(rate != NULL)
-        
         setting->freq = self->channels[self->nextChannel].freq;
-        setting->sf = rate->sf;
-        setting->bw = rate->bw;
-        setting->cr = CR_5;
-        //setting->erp = self->erp;
+        setting->chIndex = self->nextChannel;
+        setting->minRate = self->channels[self->nextChannel].minRate;
+        setting->maxRate = self->channels[self->nextChannel].maxRate;
+        setting->numRates = Region_getTXRates(self->region, setting->chIndex, &setting->rates); 
         
         retval = true;
     }
@@ -268,63 +254,18 @@ bool ChannelList_txSetting(const struct lora_channel_list *self, struct lora_cha
     return retval;
 }
 
-bool ChannelList_rx1Setting(const struct lora_channel_list *self, struct lora_channel_setting *setting)
-{
-    LORA_ASSERT(self != NULL)
-    
-    const struct lora_data_rate *rate;
-    uint8_t rx1_rate;    
-    bool retval = false;
-    
-    if(ChannelList_txSetting(self, setting)){
-        
-        setting->freq = self->channels[self->nextChannel].freq;
-        
-        (void)Region_getRX1DataRate(self->region, self->rate, self->rx1_offset, &rx1_rate);
-        
-        rate = Region_getDataRateParameters(self->region, rx1_rate);
-        
-        LORA_ASSERT(rate != NULL)
-        
-        setting->sf = rate->sf;
-        setting->bw = rate->bw;        
-        setting->cr = CR_5;
-        //setting->erp = self->erp;
-        
-        retval = true;
-    }
-    
-    return retval;
-}
-
-bool ChannelList_rx2Setting(const struct lora_channel_list *self, struct lora_channel_setting *setting)
+void ChannelList_rx2Setting(const struct lora_channel_list *self, uint32_t *freq, uint8_t *rate)
 {
     LORA_ASSERT(self != NULL)
         
-    const struct lora_data_rate *rate;
     const struct lora_region_default *defaults;
-    bool retval = false;
     
-    if(ChannelList_upstreamSetting(self, setting)){
+    defaults = Region_getDefaultSettings(self->region);
         
-        defaults = Region_getDefaultSettings(self->region);
+    LORA_ASSERT(defaults != NULL)
         
-        LORA_ASSERT(defaults != NULL)
-        
-        rate = Region_getDataRateParameters(self->region, defaults->rx2_rate);
-        
-        LORA_ASSERT(rate != NULL)
-        
-        setting->freq = defaults->rx2_freq;
-        setting->sf = rate->sf;
-        setting->bw = rate->bw;
-        setting->cr = CR_5;
-        //setting->erp = self->erp;
-        
-        retval = true;        
-    }
-    
-    return retval;
+    *freq = defaults->rx2_freq;
+    *rate = defaults->rx2_rate;        
 }
 
 const struct lora_region *ChannelList_region(const struct lora_channel_list *self)
@@ -335,64 +276,6 @@ const struct lora_region *ChannelList_region(const struct lora_channel_list *sel
 }
 
 /* static functions ***************************************************/
-
-static uint32_t calculateOnAirTime(const struct lora_channel_list *self, uint8_t payloadLen)
-{
-    /* from 4.1.1.7 of sx1272 datasheet
-     *
-     * Ts (symbol period)
-     * Rs (symbol rate)
-     * PL (payload length)
-     * SF (spreading factor
-     * CRC (presence of trailing CRC)
-     * IH (presence of implicit header)
-     * DE (presence of data rate optimize)
-     * CR (coding rate 1..4)
-     * 
-     *
-     * Ts = 1 / Rs
-     * Tpreamble = ( Npreamble x 4.25 ) x Tsym
-     *
-     * Npayload = 8 + max( ceil[( 8PL - 4SF + 28 + 16CRC + 20IH ) / ( 4(SF - 2DE) )] x (CR + 4), 0 )
-     *
-     * Tpayload = Npayload x Ts
-     *
-     * Tpacket = Tpreamble + Tpayload
-     *
-     * Implementation details:
-     *
-     * - period will be in microseconds so we can use integer operations rather than float
-     * 
-     * */
-
-    uint32_t Tpacket = 0U;
-
-    struct lora_channel_setting settings; 
-
-    (void)ChannelList_txSetting(self, &settings);
-
-    if((settings.bw != BW_FSK) && (settings.sf != SF_FSK)){
-
-        // for now hardcode this according to this recommendation
-        bool lowDataRateOptimize = ((settings.bw == BW_125) && ((settings.sf == SF_11) || (settings.sf == SF_12))) ? true : false;
-        bool crc = true;    // true for uplink, false for downlink
-        bool header = (settings.sf == SF_6) ? false : true; 
-
-        uint32_t Ts = ((1U << settings.sf) * 1000000U) / settings.bw;     //symbol rate (us)
-        uint32_t Tpreamble = (Ts * 12U) +  (Ts / 4U);       //preamble (us)
-
-        uint32_t numerator = (8U * (uint32_t)payloadLen) - (4U * (uint32_t)settings.sf) + 28U + ( crc ? 16U : 0U ) - ( (header) ? 20U : 0U );
-        uint32_t denom = 4U * ((uint32_t)settings.sf - ( lowDataRateOptimize ? 2U : 0U ));
-
-        uint32_t Npayload = 8U + ((numerator / denom) + (((numerator % denom) != 0) ? 1U : 0U)) * ((uint32_t)settings.cr + 4U);
-
-        uint32_t Tpayload = Npayload * Ts;
-
-        Tpacket = Tpreamble + Tpayload;
-    }
-
-    return Tpacket;
-}
 
 static void cycleChannel(struct lora_channel_list *self)
 {

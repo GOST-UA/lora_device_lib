@@ -63,11 +63,11 @@ coverage:
 clean:
 	rm -f $(DIR_BUILD)/*
 
-$(DIR_BIN)/tc_channellist_add: $(addprefix $(DIR_BUILD)/, tc_channellist_add.o lora_channel_list.o $(OBJ_CMOCKA))
+$(DIR_BIN)/tc_channellist_add: $(addprefix $(DIR_BUILD)/, tc_channellist_add.o lora_channel_list.o mock_lora_region.o $(OBJ_CMOCKA))
 	@ echo linking $@
 	@ $(CC) $(LDFLAGS) $^ -o $@
 
-$(DIR_BIN)/tc_channellist_waittime: $(addprefix $(DIR_BUILD)/, tc_channellist_waittime.o lora_channel_list.o $(OBJ_CMOCKA))
+$(DIR_BIN)/tc_channellist_waittime: $(addprefix $(DIR_BUILD)/, tc_channellist_waittime.o lora_channel_list.o mock_lora_region.o $(OBJ_CMOCKA))
 	@ echo linking $@
 	@ $(CC) $(LDFLAGS) $^ -o $@
 
@@ -79,15 +79,15 @@ $(DIR_BIN)/tc_cmac: $(addprefix $(DIR_BUILD)/, tc_cmac.o lora_cmac.o lora_aes.o 
 	@ echo linking $@
 	@ $(CC) $(LDFLAGS) $^ -o $@
 
-$(DIR_BIN)/tc_loraframe: $(addprefix $(DIR_BUILD)/, tc_loraframe.o lora_frame.o $(OBJ_CMOCKA))
+$(DIR_BIN)/tc_frame: $(addprefix $(DIR_BUILD)/, tc_frame.o lora_frame.o $(OBJ_CMOCKA))
 	@ echo linking $@
 	@ $(CC) $(LDFLAGS) $^ -o $@
 
-$(DIR_BIN)/tc_loraradio: $(addprefix $(DIR_BUILD)/, tc_loraradio.o lora_radio.o lora_radio_sx1272.o $(OBJ_CMOCKA))
+$(DIR_BIN)/tc_radio_sx1272: $(addprefix $(DIR_BUILD)/, tc_radio_sx1272.o lora_radio_sx1272.o mock_board.o $(OBJ_CMOCKA))
 	@ echo linking $@
 	@ $(CC) $(LDFLAGS) $^ -o $@
 
-$(DIR_BIN)/tc_loraevent: $(addprefix $(DIR_BUILD)/, tc_loraevent.o lora_event.o $(OBJ_CMOCKA))
+$(DIR_BIN)/tc_event: $(addprefix $(DIR_BUILD)/, tc_event.o lora_event.o $(OBJ_CMOCKA))
 	@ echo linking $@
 	@ $(CC) $(LDFLAGS) $^ -o $@
 

@@ -22,21 +22,15 @@
 #ifndef LORA_RADIO_H
 #define LORA_RADIO_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "lora_radio_defs.h"
 #include <stdint.h>
 #include <stdbool.h>
 
-struct lora_mac;
-
-struct lora_board {
-
-    void *receiver;
-    void (*select)(void *receiver, bool state);     /**< select the chip (this should also 'take' the resource if it's shared) */
-    void (*reset)(void *receiver, bool state);      /**< true will hold the device in reset */
-    void (*reset_wait)(void *receiver);             /**< block for an appropriate amount of time for reset to take effect */
-    void (*write)(void *receiver, uint8_t data);    /**< write a byte */
-    uint8_t (*read)(void *receiver);                /**< read a byte */
-};
+struct lora_board;
 
 enum lora_radio_event {
     
@@ -48,36 +42,113 @@ enum lora_radio_event {
 typedef void (*radioEventCB)(void *receiver, enum lora_radio_event event, uint64_t time);
 
 struct lora_radio {
-    enum lora_radio_type {
-        LORA_RADIO_SX1272
-    }
-    type;
-    struct lora_board board;
+    const struct lora_board *board;
     void *eventReceiver;
     radioEventCB eventHandler;
-    union {
-        struct {
-
-        } sx1272;
-    }
-    state;
 };
 
-struct lora_radio_if {
-    void (*init)(struct lora_radio *self, enum lora_radio_type type, const struct lora_board *board);
-    void (*transmit)(struct lora_radio *self, const void *data, uint8_t len);
-    uint8_t (*collect)(struct lora_radio *self, void *data, uint8_t max);
-    bool (*setParameters)(struct lora_radio *self, uint32_t freq, enum lora_signal_bandwidth bw, enum lora_spreading_factor sf);
-    void (*raiseInterrupt)(struct lora_radio *self, uint8_t n, uint64_t time);
+struct lora_radio_setting {
+    
+    uint32_t freq;
+    enum lora_signal_bandwidth bw;
+    enum lora_spreading_factor sf;
+    enum lora_coding_rate cr;
+    enum lora_erp_setting  erp;    
 };
 
-void LoraRadio_init(struct lora_radio *self, enum lora_radio_type type, const struct lora_board *board);
-void LoraRadio_reset(struct lora_radio *self);
-void LoraRadio_transmit(struct lora_radio *self, const void *data, uint8_t len);
-void LoraRadio_receive(struct lora_radio *self);
-uint8_t LoraRadio_collect(struct lora_radio *self, void *data, uint8_t max);
-bool LoraRadio_setParameters(struct lora_radio *self, uint32_t freq, enum lora_signal_bandwidth bw, enum lora_spreading_factor sf);
-void LoraRadio_interrupt(struct lora_radio *self, uint8_t n, uint64_t time);
-void LoraRadio_setEventHandler(struct lora_radio *self, void *receiver, radioEventCB cb);
+/** Initialise self to default state
+ * 
+ * @warning this should be called once during stack initialisation
+ * @warning this should not be called during operation to perform a device restart
+ * 
+ * @param[in] self
+ * @param[in] board board specific connections
+ * 
+ * */
+void Radio_init(struct lora_radio *self, const struct lora_board *board);
+
+/** Perform a hardware reset to return the transeiver to POR state
+ * 
+ * @warning transeiver will not be fully operational until after the interval returned by this function
+ * 
+ * @param[in] self
+ * @return microseconds until transeiver is full operational
+ * 
+ * */
+uint32_t Radio_resetHardware(struct lora_radio *self);
+
+/** Put transeiver into starting state following a POR
+ * 
+ * @param[in] self
+ * 
+ * */
+void Radio_resetState(struct lora_radio *self);
+
+/** Put transeiver into sleep mode
+ * 
+ * @param[in] self
+ * 
+ * */
+void Radio_sleep(struct lora_radio *self);
+
+/** Setup radio to transmit
+ * 
+ * @param[in] self
+ * @param[in] settings radio settings
+ * @param[in] data buffer to send
+ * @param[in] len byte length of data
+ * 
+ * @return true if transmit was started
+ * 
+ * */
+bool Radio_transmit(struct lora_radio *self, const struct lora_radio_setting *settings, const void *data, uint8_t len);
+
+/** Setup radio to receive
+ * 
+ * @param[in] self
+ * @param[in] continuous if true radio with wait forever until message is received
+ * @param[in] settings radio settings 
+ * 
+ * @return true if receive window was opened
+ * 
+ * */
+bool Radio_receive(struct lora_radio *self, bool continuous, const struct lora_radio_setting *settings);
+
+/** Collect message from radio
+ * 
+ * @param[in] self
+ * @param[in] data buffer to write to
+ * @param[in] max maximum byte length of data
+ * 
+ * @return bytes collected
+ * 
+ * */
+uint8_t Radio_collect(struct lora_radio *self, void *data, uint8_t max);
+
+/** Raise I/O interrupt from radio
+ * 
+ * @note called by ISR
+ * 
+ * @param[in] self
+ * @param[in] n interrupt number
+ * @param[in] time time of interrupt in us
+ * 
+ * */
+void Radio_interrupt(struct lora_radio *self, uint8_t n, uint64_t time);
+
+/** Set event handler 
+ * 
+ * @note called by MAC layer to set callback
+ * 
+ * @param[in] self
+ * @param[in] receiver event receiver
+ * @param[in[ cb handler method
+ * 
+ * */
+void Radio_setEventHandler(struct lora_radio *self, void *receiver, radioEventCB cb);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

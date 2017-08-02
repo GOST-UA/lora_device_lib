@@ -33,7 +33,7 @@ bool ldl_init(struct ldl *self, enum lora_region_id region_id, enum lora_radio_t
     
     (void)memset(self, 0, sizeof(*self));
 
-    region =  Region_getRegion(region_id);
+    region = Region_getRegion(region_id);
 
     if(region != NULL){
 
@@ -49,7 +49,7 @@ bool ldl_init(struct ldl *self, enum lora_region_id region_id, enum lora_radio_t
         LORA_ERROR("region not supported")
     }
     
-    return self;
+    return retval;
 }
 
 bool ldl_personalize(struct ldl *self, uint32_t devAddr, const void *nwkSKey, const void *appSKey)

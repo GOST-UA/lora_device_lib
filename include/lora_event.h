@@ -22,6 +22,10 @@
 #ifndef LORA_EVENT_H
 #define LORA_EVENT_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -134,5 +138,19 @@ void *Event_onTimeout(struct lora_event *self, uint64_t timeout, void *receiver,
  * 
  * */
 void Event_cancel(struct lora_event *self, void **event); 
+
+/** Get interval until next event
+ * 
+ * @param[in] self
+ * 
+ * @return microseconds
+ * @retval UINT64_MAX unknown/io event
+ * 
+ * */
+uint64_t Event_timeUntilNextEvent(struct lora_event *self);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

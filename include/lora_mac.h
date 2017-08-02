@@ -88,6 +88,8 @@ enum states {
     JOIN_WAIT_RX2,
     JOIN_RX2,
     
+    RESET_WAIT, // waiting for reset
+    
     ERROR
 };
 
@@ -96,6 +98,11 @@ enum states {
 struct lora_mac {
 
     enum states state;
+    
+    uint8_t preferredRate;  /**< the rate to try to use */
+    uint8_t previousRate;   /**< the previous rate used */
+    uint32_t previousFreq;
+    uint8_t power;           /**< preferred power setting */
     
     uint8_t txCount;
 
@@ -117,6 +124,8 @@ struct lora_mac {
     
     uint8_t rx1_delay;      /**< rx1 delay (seconds) */
     uint8_t rx2_delay;      /**< rx2 delay (seconds) */
+    uint8_t rx2_rate;
+    uint32_t rx2_freq;
     
     uint8_t ja1_delay;      /**< join accept 1 delay (seconds) */
     uint8_t ja2_delay;      /**< join accept 2 delay (seconds) */
@@ -159,7 +168,7 @@ struct lora_mac {
     void *responseReceiver;
 };
 
-void LoraMAC_init(struct lora_mac *self, struct lora_channel_list *channels, struct lora_radio *radio, struct lora_event *events);
+void MAC_init(struct lora_mac *self, struct lora_channel_list *channels, struct lora_radio *radio, struct lora_event *events);
 
 /** Set join parameters locally
  * 
@@ -171,7 +180,7 @@ void LoraMAC_init(struct lora_mac *self, struct lora_channel_list *channels, str
  * @return true if personalization could be performed
  * 
  * */
-bool LoraMAC_personalize(struct lora_mac *self, uint32_t devAddr, const void *nwkSKey, const void *appSKey);
+bool MAC_personalize(struct lora_mac *self, uint32_t devAddr, const void *nwkSKey, const void *appSKey);
 
 /** Set the number of times an upstream data frame will be sent (for redundancy)
  * 
@@ -180,7 +189,7 @@ bool LoraMAC_personalize(struct lora_mac *self, uint32_t devAddr, const void *nw
  * 
  * 
  * */
-bool LoraMAC_setNbTrans(struct lora_mac *self, uint8_t nbTrans);
+bool MAC_setNbTrans(struct lora_mac *self, uint8_t nbTrans);
 
 /** Send a message upstream
  * 
@@ -205,11 +214,11 @@ bool LoraMAC_setNbTrans(struct lora_mac *self, uint8_t nbTrans);
  * @retval true unconfirmed up is possible and now pending
  * 
  * */
-bool LoraMAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *data, uint8_t len);
+bool MAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *data, uint8_t len);
 
 
-void LoraMAC_setResponseHandler(struct lora_mac *self, void *receiver, lora_mac_response_fn cb);
+void MAC_setResponseHandler(struct lora_mac *self, void *receiver, lora_mac_response_fn cb);
 
-bool LoraMAC_join(struct lora_mac *self);
+bool MAC_join(struct lora_mac *self);
 
 #endif
