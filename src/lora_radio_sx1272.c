@@ -183,7 +183,6 @@ static bool setParameters(struct lora_radio *self, const struct lora_radio_setti
     bool implicitHeader;
     bool rxPayloadCRCOn = true;
     bool autoGain = true;
-    enum lora_coding_rate cr = CR_5;
     
     if((settings->bw != BW_FSK) && (settings->sf != SF_FSK)){
 
@@ -220,7 +219,7 @@ static bool setParameters(struct lora_radio *self, const struct lora_radio_setti
             lowDataRateOptimize = false;
         }
 
-        writeReg(self, REG_LR_MODEMCONFIG1, signalBandwidth[settings->bw] | codingRate[cr] | (implicitHeader ? 0x04U : 0x00U) | (rxPayloadCRCOn ? 0x02U : 0x00U ) | (lowDataRateOptimize ? 0x01U : 0x00U));            
+        writeReg(self, REG_LR_MODEMCONFIG1, signalBandwidth[settings->bw] | codingRate[settings->cr] | (implicitHeader ? 0x04U : 0x00U) | (rxPayloadCRCOn ? 0x02U : 0x00U ) | (lowDataRateOptimize ? 0x01U : 0x00U));            
         writeReg(self, REG_LR_MODEMCONFIG2, spreadingFactor[settings->sf] | (autoGain ? 0x04U : 0x00U) | (((uint8_t)(rxTimeout >> 8)) & 0x3U));
         writeReg(self, REG_LR_SYMBTIMEOUTLSB, (uint8_t)rxTimeout);
 

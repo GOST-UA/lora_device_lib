@@ -99,10 +99,12 @@ struct lora_mac {
 
     enum states state;
     
-    uint8_t preferredRate;  /**< the rate to try to use */
+    
+    uint8_t rate;
+    uint8_t power;
+    
     uint8_t previousRate;   /**< the previous rate used */
     uint32_t previousFreq;
-    uint8_t power;           /**< preferred power setting */
     
     uint8_t txCount;
 
@@ -126,6 +128,7 @@ struct lora_mac {
     uint8_t rx2_delay;      /**< rx2 delay (seconds) */
     uint8_t rx2_rate;
     uint32_t rx2_freq;
+    uint8_t rx1_offset;
     
     uint8_t ja1_delay;      /**< join accept 1 delay (seconds) */
     uint8_t ja2_delay;      /**< join accept 2 delay (seconds) */

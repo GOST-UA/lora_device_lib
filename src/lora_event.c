@@ -21,7 +21,7 @@
 
 #include "lora_event.h"
 #include "lora_debug.h"
-#include "lora_time.h"
+#include "lora_system.h"
 #include <string.h>
 
 
@@ -58,7 +58,7 @@ void Event_tick(struct lora_event *self)
     struct on_timeout *ptr = self->head;
     struct on_timeout *prev = NULL;
     
-    time = Time_getTime();
+    time = System_getTime();
     
     while((ptr != NULL) && (time >= ptr->time)){
         

@@ -27,7 +27,7 @@
 #include "lora_debug.h"
 #include "lora_aes.h"
 #include "lora_cmac.h"
-#include "lora_time.h"
+#include "lora_system.h"
 #include "lora_region.h"
 
 #include <string.h>
@@ -101,6 +101,7 @@ bool MAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *d
     uint16_t bufferMax = LoraFrame_getPhyPayloadSize(0, len);
     
     struct lora_channel_setting settings;
+    const struct lora_data_rate *rate_setting;
     
     if(self->personalised || self->joined){
     
@@ -111,7 +112,11 @@ bool MAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *d
 
                 if(ChannelList_txSetting(self->channels, &settings)){
                     
-                    if(settings.maxPayload >= bufferMax){ 
+                    rate_setting = Region_getDataRateParameters(ChannelList_region(self->channels), self->rate);
+                    
+                    LORA_ASSERT(rate_setting != NULL)
+                    
+                    if(rate_setting->payload >= bufferMax){ 
 
                         struct lora_frame f = {
 
@@ -131,7 +136,7 @@ bool MAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *d
 
                         self->bufferLen = LoraFrame_encode(self->appSKey, &f, self->buffer, sizeof(self->buffer));
                         
-                        uint64_t timeNow = Time_getTime();
+                        uint64_t timeNow = System_getTime();
                         
                         (void)Event_onTimeout(self->events, timeNow + ChannelList_waitTime(self->channels, timeNow), self, tx);
                         
@@ -188,7 +193,7 @@ bool MAC_join(struct lora_mac *self)
 
             self->bufferLen = LoraFrame_encode(self->appKey, &f, self->buffer, sizeof(self->buffer));
             
-            uint64_t timeNow = Time_getTime();
+            uint64_t timeNow = System_getTime();
             
             (void)Event_onTimeout(self->events, timeNow + ChannelList_waitTime(self->channels, timeNow), self, tx);
             
@@ -231,8 +236,8 @@ bool MAC_setNbTrans(struct lora_mac *self, uint8_t nbTrans)
 bool MAC_personalize(struct lora_mac *self, uint32_t devAddr, const void *nwkSKey, const void *appSKey)
 {
     self->devAddr = devAddr;        
-    (void)memcpy(self->nwkSKey, nwkSKey, sizeof(self->nwkSKey);
-    (void)memcpy(self->appSKey, appSKey, sizeof(self->appSKey);    
+    (void)memcpy(self->nwkSKey, nwkSKey, sizeof(self->nwkSKey));
+    (void)memcpy(self->appSKey, appSKey, sizeof(self->appSKey));    
     return true;
 }
 
@@ -277,24 +282,22 @@ static void tx(void *receiver, uint64_t time)
     
     if(ChannelList_txSetting(self->channels, &channel_setting)){
 
-        rate_setting = Region_getDataRateParameters(self->region, rate);
+        rate_setting = Region_getDataRateParameters(ChannelList_region(self->channels), self->rate);
 
-        radio_setting = {
-            .freq = channel_setting.freq,
-            .bw = rate_setting->bw,
-            .sf = rate_setting->sf,
-            .cr = CR5,
-            .erp = power            
-        };
-
+        radio_setting.freq = channel_setting.freq;
+        radio_setting.bw = rate_setting->bw;
+        radio_setting.sf = rate_setting->sf;
+        radio_setting.cr = CR_5;
+        radio_setting.erp = self->power;
+        
         if(Radio_transmit(self->radio, &radio_setting, self->buffer, self->bufferLen)){
     
-            self->previousRate = rate;
+            self->previousRate = self->rate;
             self->previousFreq = channel_setting.freq;
             
-            transmitTime = calculateOnAirTime(self, rate_setting->bw, rate_setting->sf, self->bufferLen)
+            transmitTime = calculateOnAirTime(self, radio_setting.bw, radio_setting.sf, radio_setting.cr, self->bufferLen);
             
-            ChannelList_registerTransmission(self->channels, Time_getTime(), transmitTime);
+            ChannelList_registerTransmission(self->channels, System_getTime(), transmitTime);
             
             self->state = TX;
                 
@@ -320,7 +323,7 @@ static void txComplete(void *receiver, uint64_t time)
     LORA_ASSERT(receiver != NULL)
     
     struct lora_mac *self = (struct lora_mac *)receiver;            
-    uint64_t timeNow = Time_getTime();
+    uint64_t timeNow = System_getTime();
     uint64_t futureTime;
         
     LORA_ASSERT((self->state == JOIN_TX) || (self->state == TX))
@@ -349,12 +352,11 @@ static void rxStart(void *receiver, uint64_t time)
     LORA_ASSERT(receiver != NULL)
     
     struct lora_mac *self = (struct lora_mac *)receiver;    
-    struct lora_channel_setting channel_setting;
     struct lora_radio_setting radio_setting;
     const struct lora_data_rate *rate_setting;
     uint8_t rate;
     uint64_t targetTime;
-    uint64_t timeNow = Time_getTime();
+    uint64_t timeNow = System_getTime();
         
     LORA_ASSERT((self->state == WAIT_RX1) || (self->state == WAIT_RX2) || (self->state == JOIN_WAIT_RX1) || (self->state == JOIN_WAIT_RX2))
     LORA_ASSERT(time <= timeNow)
@@ -374,7 +376,7 @@ static void rxStart(void *receiver, uint64_t time)
         case JOIN_WAIT_RX1:
         case WAIT_RX1:
         
-            if(Region_getRX1DataRate(self->region, self->previousRate, self->rx1_offset, &rate)){
+            if(Region_getRX1DataRate(ChannelList_region(self->channels), self->previousRate, self->rx1_offset, &rate)){
             
                 radio_setting.freq = self->previousFreq;
                 
@@ -391,11 +393,11 @@ static void rxStart(void *receiver, uint64_t time)
             break;        
         }
         
-        rate_setting = Region_getDataRateParameters(self->region, rate);
+        rate_setting = Region_getDataRateParameters(ChannelList_region(self->channels), rate);
         
         radio_setting.bw = rate_setting->bw;
         radio_setting.sf = rate_setting->sf;
-        radio_setting.cr = CR5;
+        radio_setting.cr = CR_5;
         
         if(Radio_receive(self->radio, false, &radio_setting)){
          
