@@ -47,13 +47,24 @@ struct lora_radio {
     radioEventCB eventHandler;
 };
 
-struct lora_radio_setting {
+struct lora_radio_tx_setting {
     
     uint32_t freq;
     enum lora_signal_bandwidth bw;
     enum lora_spreading_factor sf;
     enum lora_coding_rate cr;
+    uint16_t preamble_symbols;
     enum lora_erp_setting  erp;    
+    
+};
+
+struct lora_radio_rx_setting {
+    
+    uint32_t freq;
+    enum lora_signal_bandwidth bw;
+    enum lora_spreading_factor sf;
+    enum lora_coding_rate cr;
+    uint16_t preamble_symbols;
 };
 
 /** Initialise self to default state
@@ -77,13 +88,6 @@ void Radio_init(struct lora_radio *self, const struct lora_board *board);
  * */
 uint32_t Radio_resetHardware(struct lora_radio *self);
 
-/** Put transeiver into starting state following a POR
- * 
- * @param[in] self
- * 
- * */
-void Radio_resetState(struct lora_radio *self);
-
 /** Put transeiver into sleep mode
  * 
  * @param[in] self
@@ -101,18 +105,17 @@ void Radio_sleep(struct lora_radio *self);
  * @return true if transmit was started
  * 
  * */
-bool Radio_transmit(struct lora_radio *self, const struct lora_radio_setting *settings, const void *data, uint8_t len);
+bool Radio_transmit(struct lora_radio *self, const struct lora_radio_tx_setting *settings, const void *data, uint8_t len);
 
 /** Setup radio to receive
  * 
  * @param[in] self
- * @param[in] continuous if true radio with wait forever until message is received
  * @param[in] settings radio settings 
  * 
  * @return true if receive window was opened
  * 
  * */
-bool Radio_receive(struct lora_radio *self, bool continuous, const struct lora_radio_setting *settings);
+bool Radio_receive(struct lora_radio *self, const struct lora_radio_rx_setting *settings);
 
 /** Collect message from radio
  * 

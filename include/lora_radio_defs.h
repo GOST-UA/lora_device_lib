@@ -26,14 +26,13 @@
  *
  * */
 enum lora_spreading_factor {
-    SF_6 = 6,   /**< 64 chips/symbol */
-    SF_7,       /**< 128 chips/symbol */
+    SF_7 = 7,       /**< 128 chips/symbol */
     SF_8,       /**< 256 chips/symbol */
     SF_9,       /**< 512 chips/symbol */
     SF_10,      /**< 1024 chips/symbol */
     SF_11,      /**< 2048 chips/symbol */
     SF_12,      /**< 4096 chips/symbol */
-    SF_FSK
+    SF_FSK      /**< NA */
 };
 
 /** signal bandwidth */

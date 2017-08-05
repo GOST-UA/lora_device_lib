@@ -274,7 +274,7 @@ static void tx(void *receiver, uint64_t time)
     
     struct lora_mac *self = (struct lora_mac *)receiver;    
     struct lora_channel_setting channel_setting;
-    struct lora_radio_setting radio_setting;
+    struct lora_radio_tx_setting radio_setting;
     const struct lora_data_rate *rate_setting;
     uint32_t transmitTime;
     
@@ -352,7 +352,7 @@ static void rxStart(void *receiver, uint64_t time)
     LORA_ASSERT(receiver != NULL)
     
     struct lora_mac *self = (struct lora_mac *)receiver;    
-    struct lora_radio_setting radio_setting;
+    struct lora_radio_rx_setting radio_setting;
     const struct lora_data_rate *rate_setting;
     uint8_t rate;
     uint64_t targetTime;
@@ -398,8 +398,9 @@ static void rxStart(void *receiver, uint64_t time)
         radio_setting.bw = rate_setting->bw;
         radio_setting.sf = rate_setting->sf;
         radio_setting.cr = CR_5;
+        radio_setting.preamble_symbols = 8U;
         
-        if(Radio_receive(self->radio, false, &radio_setting)){
+        if(Radio_receive(self->radio, &radio_setting)){
          
             self->rxReady = Event_onInput(self->events, EVENT_RX_READY, self, rxReady);
             self->rxTimeout = Event_onInput(self->events, EVENT_RX_TIMEOUT, self, rxTimeout);                            
@@ -690,7 +691,7 @@ static uint32_t calculateOnAirTime(const struct lora_mac *self, enum lora_signal
         // for now hardcode this according to this recommendation
         bool lowDataRateOptimize = ((bw == BW_125) && ((sf == SF_11) || (sf == SF_12))) ? true : false;
         bool crc = true;    // true for uplink, false for downlink
-        bool header = (sf == SF_6) ? false : true; 
+        bool header = true; 
 
         uint32_t Ts = ((1U << sf) * 1000000U) / bw;     //symbol rate (us)
         uint32_t Tpreamble = (Ts * 12U) +  (Ts / 4U);       //preamble (us)

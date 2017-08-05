@@ -74,6 +74,8 @@ enum states {
 
     IDLE,
     
+    RSSI_RANDOM,    // getting a 'random' seed from the radio
+    
     WAIT_TX,
     TX,         // radio is TX
     WAIT_RX1,   // waiting for first RX window
