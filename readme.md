@@ -7,6 +7,7 @@ A LoRaWAN device implementation still in an early stage of development.
 
 ## Highlights
 
+- Support for class A
 - Event driven style
 - Modular implementation with separation of concerns:
     - Chanel List
@@ -22,34 +23,32 @@ A LoRaWAN device implementation still in an early stage of development.
 - Build-time Porting features
     - Replace AES and CMAC implementations
     - Replace logging and assert functions
-    - Optimise chanel capacity / memory usage
 - Tests utilising the Cmocka framework
 - Ruby binding for accelerated integration testing and simulation
 
 ## High Level Architecture
 
-LDL tries to separate concerns into standalone modules. Individual modules are not useful
-on their own but this approach reduces unit testing effort since dependency modules can be
-mocked out without special linker commands.
+LDL tries to separate concerns into standalone modules. These modules can be mocked out during unit 
+testing without special linker commands.
 
 An overview of the modules:
 
 ![image missing](doc/plantuml/modules.png "LoraDeviceLib Modules")
 
-LDL is intended to be driven from two tasks - a 'mainloop' level task and an 'interrupt' level task.
+LDL is intended to be driven from two tasks - a _mainloop_ level task and an _interrupt_ level task.
 
-The interrupt level task interacts with the EventManager to signal that an IO event has occured. This task will
-never block. On simple systems the interrupt level task may be an ISR, on more complicated systems it may be a task with a higher priority
-than the 'mainloop' task.
+The _interrupt_ level task interacts with the EventManager to signal that an IO event has occured. This task will
+never block. On simple systems the _interrupt_ level task may be an ISR, on more complicated systems it may be a task with a higher priority
+than the _mainloop_ task.
 
-The mainloop level task drives all other functionility by via calls made to EventManager.tick():
+The _mainloop_ level task drives all other functionility by via calls made to EventManager.tick():
 
 ![image missing](doc/plantuml/event_tick.png "EventManger Tick")
 
 The handlers call out to Mac which may in turn call out to other modules, including back to EventManager
 to set handlers for new events or to cancel existing handlers.
 
-It is important to realise that EventManager.tick() drives _all_ functionality. And below a simplified sequence 
+It is important to realise that EventManager.tick() drives all functionality. And below a simplified sequence 
 of an upstream data frame being sent:
 
 ![image missing](doc/plantuml/tick_upstream.png "Upstream")
@@ -61,9 +60,9 @@ And below a simplified sequence of a downstream data frame being received:
 ### Timing Requirements
 
 LoRaWAN requires that receive windows open at a precise interval measured
-from the end of the TX. This can be challenging to implement on busy 
-embedded systems that don't use an RTOS since other tasks
-in the mainloop will add jitter to when LDL can open the RX window.
+from the end of the TX. This can be challenging to implement on a busy system
+that doesn't use an RTOS since other tasks in the mainloop will add
+jitter to when LDL can open the RX window.
 
 The diagram below illustrates the TX -> RX1 -> RX2 pattern:
 
@@ -100,10 +99,9 @@ In summary:
 ### Implement System Time
 
 ```
-uint64_t Time_getTIme(void);
+uint64_t System_getTime(void);
 ```
-This function must return system time (e.g. time since power up) in microseconds. Granularity is
-whatever your system can manage.
+This function must return system time (e.g. time since power up) in microseconds.
 
 ### Define a Platform Specific Error Message Stream
 
@@ -119,11 +117,6 @@ Define `LORA_ASSERT(X)` to be an assertion that takes X as an argument.
 LoraDeviceLib makes run time assertions to catch bugs. It is recommended
 that this macro is defined at least for debug builds.
 
-### Change the Number of Statically Allocated Band and Channel Structures
-
-- Define `LORA_NUM_CHANNELS` with an integer to define the channel capacity
-- Define `LORA_NUM_BANDS` with an integer to define the band capacity
-
 ### Substitute an Alternative AES Implementation
 
 1. Define `LORA_USE_PLATFORM_AES`
@@ -135,6 +128,13 @@ that this macro is defined at least for debug builds.
 1. Define `LORA_USE_PLATFORM_CMAC`
 2. Define `struct lora_cmac_ctx` to suit the platform implementation
 3. Implement `LoraCMAC_init`, `LoraCMAC_update`, and `LoraCMAC_finish` to wrap platform implementation
+
+### Customise lora_radio_sx1272
+
+- define LORA_RADIO_SX1272_USE_BOOST
+
+    - Define this symbol if your hardware makes use of the BOOST pin
+    - If not defined, radio will use the RFO pin
 
 ## License
 

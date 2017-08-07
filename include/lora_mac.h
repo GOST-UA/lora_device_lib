@@ -101,7 +101,6 @@ struct lora_mac {
 
     enum states state;
     
-    
     uint8_t rate;
     uint8_t power;
     

@@ -51,3 +51,10 @@ const struct lora_region_default *Region_getDefaultSettings(const struct lora_re
 {
     return mock_ptr_type(const struct lora_region_default *);
 }
+
+bool Region_getRX1DataRate(const struct lora_region *self, uint8_t tx_rate, uint8_t rx1_offset, uint8_t *rx1_rate)
+{
+    *rx1_rate = mock();
+    
+    return mock();
+}

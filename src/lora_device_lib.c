@@ -39,8 +39,8 @@ bool ldl_init(struct ldl *self, enum lora_region_id region_id, enum lora_radio_t
 
         ChannelList_init(&self->channels, region);
         Event_init(&self->events);
-        LoraRadio_init(&self->radio, radioType, board);
-        LoraMAC_init(&self->mac, &self->channels, &self->radio, &self->events);
+        Radio_init(&self->radio, radioType, board);
+        MAC_init(&self->mac, &self->channels, &self->radio, &self->events);
         
         retval = true;        
     }
@@ -54,7 +54,7 @@ bool ldl_init(struct ldl *self, enum lora_region_id region_id, enum lora_radio_t
 
 bool ldl_personalize(struct ldl *self, uint32_t devAddr, const void *nwkSKey, const void *appSKey)
 {
-    return LoraMAC_personalize(&self->mac, devAddr, nwkSKey, appSKey);
+    return MAC_personalize(&self->mac, devAddr, nwkSKey, appSKey);
 }
 
 bool ldl_addChannel(struct ldl *self, uint32_t freq, uint8_t chIndex)
@@ -84,17 +84,17 @@ bool ldl_setRateAndPower(struct ldl *self, uint8_t rate, uint8_t power)
 
 void ldl_setResponseHandler(struct ldl *self, void *receiver, lora_mac_response_fn cb)
 {
-    LoraMAC_setResponseHandler(&self->mac, receiver, cb);
+    MAC_setResponseHandler(&self->mac, receiver, cb);
 }
 
 bool ldl_join(struct ldl *self)
 {
-    return LoraMAC_join(&self->mac);
+    return MAC_join(&self->mac);
 }
 
 bool ldl_send(struct ldl *self, bool confirmed, uint8_t port, const void *data, uint8_t len)
 {
-    return LoraMAC_send(&self->mac, confirmed, port, data, len);
+    return MAC_send(&self->mac, confirmed, port, data, len);
 }
 
 void ldl_tick(struct ldl *self)
@@ -104,5 +104,5 @@ void ldl_tick(struct ldl *self)
 
 void idl_interrupt(struct ldl *self, uint8_t n, uint64_t time)
 {
-    LoraRadio_interrupt(&self->radio, n, time);
+    Radio_interrupt(&self->radio, n, time);
 }

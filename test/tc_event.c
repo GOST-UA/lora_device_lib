@@ -8,11 +8,6 @@
 
 #include <string.h>
 
-uint32_t System_getTime(void)
-{
-    return mock_type(uint32_t);
-}
-
 void dummy_handler(void *receiver, uint64_t time)
 {    
     function_called();

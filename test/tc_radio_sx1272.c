@@ -5,7 +5,7 @@
 #include "cmocka.h"
 
 #include "lora_radio.h"
-#include "lora_regs_sx1272.h"
+#include "lora_radio_sx1272.h"
 #include "mock_board.h"
 
 #include <string.h>
@@ -102,53 +102,59 @@ static void test_Radio_transmit(void **user)
         .erp = DBM_30 
     };
     
-    /* set REG_LR_OPMODE to sleep mode */
+    /* set RegOpMode to sleep mode */
     expect_value(board_select, state, true);    
-    expect_value(board_write, data, 0x80U | REG_LR_OPMODE);
+    expect_value(board_write, data, 0x80U | RegOpMode);
     expect_value(board_write, data, 0x00U);
     expect_value(board_select, state, false);  
     
-    /* set REG_LR_OPMODE to standby mode */
+    /* set RegOpMode to standby mode */
     expect_value(board_select, state, true);    
-    expect_value(board_write, data, 0x80U | REG_LR_OPMODE);
+    expect_value(board_write, data, 0x80U | RegOpMode);
     expect_value(board_write, data, 0x81U);
     expect_value(board_select, state, false);  
     
-    /* set REG_LR_IRQFLAGS to clear all interrupt flags */
+    /* set RegIrqFlags to clear all interrupt flags */
     expect_value(board_select, state, true);    
-    expect_value(board_write, data, 0x80U | REG_LR_IRQFLAGS);
+    expect_value(board_write, data, 0x80U | RegIrqFlags);
     expect_value(board_write, data, 0xffU);
     expect_value(board_select, state, false);  
     
-    /* set REG_LR_IRQFLAGSMASK to unmask TX_DONE interrupt */
+    /* set RegIrqFlagsMask to unmask TX_DONE interrupt */
     expect_value(board_select, state, true);    
-    expect_value(board_write, data, 0x80U | REG_LR_IRQFLAGSMASK);
+    expect_value(board_write, data, 0x80U | RegIrqFlagsMask);
     expect_value(board_write, data, 0xf7U);
     expect_value(board_select, state, false);  
     
     /* set REG_LR_DIOMAPPING1 to raise DIO0 on TX DONE */
     expect_value(board_select, state, true);    
-    expect_value(board_write, data, 0x80U | REG_LR_OPMODE);
+    expect_value(board_write, data, 0x80U | RegOpMode);
     expect_value(board_write, data, 1U);
     expect_value(board_select, state, false);  
     
     /* freq */
     expect_value(board_select, state, true);    
-    expect_value(board_write, data, 0x80U | REG_LR_FRFMSB);
+    expect_value(board_write, data, 0x80U | RegFrfMsb);
     expect_value(board_write, data, 0xaaU);
     expect_value(board_write, data, 0xbbU);
     expect_value(board_write, data, 0xccU);
     expect_value(board_select, state, false);  
     
+    /* power */
+    //expect_value(board_select, state, true);    
+    //expect_value(board_write, data, 0x80U | Reg);
+    //expect_value(board_write, data, 0xaaU);
+    //expect_value(board_select, state, false);  
+    
     /* SYNCWORD */
     expect_value(board_select, state, true);    
-    expect_value(board_write, data, 0x80U | REG_LR_SYNCWORD);
+    expect_value(board_write, data, 0x80U | RegSyncWord);
     expect_value(board_write, data, 0x34U);
     expect_value(board_select, state, false);  
     
-    /* REG_LR_MODEMCONFIG1, REG_LR_MODEMCONFIG2,  */
+    /* RegModemConfig1, RegModemConfig2,  */
     expect_value(board_select, state, true);    
-    expect_value(board_write, data, 0x80U | REG_LR_MODEMCONFIG1);
+    expect_value(board_write, data, 0x80U | RegModemConfig1);
     expect_value(board_write, data, 0x00U);
     expect_value(board_write, data, 0x00U);
     expect_value(board_write, data, 0x00U);
@@ -158,21 +164,21 @@ static void test_Radio_transmit(void **user)
     
     /* set REG_LR_FIFOADDRPTR to the base address (0) */
     expect_value(board_select, state, true);    
-    expect_value(board_write, data, 0x80U | REG_LR_FIFOADDRPTR);
+    expect_value(board_write, data, 0x80U | RegFifoAddrPtr);
     expect_value(board_write, data, 0x00U);
     expect_value(board_select, state, false);  
     
     /* burst write the FIFO */
     expect_value(board_select, state, true);    
-    expect_value(board_write, data, 0x80U | REG_LR_FIFO);    
+    expect_value(board_write, data, 0x80U | RegFifo);    
     for(i=0U; i < sizeof(payload); i++){
         expect_value(board_write, data, payload[i]);
     }        
     expect_value(board_select, state, false);  
     
-    /* set REG_LR_OPMODE to single transmit */
+    /* set RegOpMode to single transmit */
     expect_value(board_select, state, true);    
-    expect_value(board_write, data, 0x80U | REG_LR_OPMODE);
+    expect_value(board_write, data, 0x80U | RegOpMode);
     expect_value(board_write, data, 0x83U);
     expect_value(board_select, state, false);  
         
@@ -192,39 +198,39 @@ static void test_Radio_receive(void **user)
         .erp = DBM_30 
     };
     
-    /* set REG_LR_OPMODE to sleep mode */
+    /* set RegOpMode to sleep mode */
     expect_value(board_select, state, true);    
-    expect_value(board_write, data, 0x80U | REG_LR_OPMODE);
+    expect_value(board_write, data, 0x80U | RegOpMode);
     expect_value(board_write, data, 0x00U);
     expect_value(board_select, state, false);  
     
-    /* set REG_LR_OPMODE to standby mode */
+    /* set RegOpMode to standby mode */
     expect_value(board_select, state, true);    
-    expect_value(board_write, data, 0x80U | REG_LR_OPMODE);
+    expect_value(board_write, data, 0x80U | RegOpMode);
     expect_value(board_write, data, 0x81U);
     expect_value(board_select, state, false);  
     
-    /* set REG_LR_IRQFLAGS to clear all interrupt flags */
+    /* set RegIrqFlags to clear all interrupt flags */
     expect_value(board_select, state, true);    
-    expect_value(board_write, data, 0x80U | REG_LR_IRQFLAGS);
+    expect_value(board_write, data, 0x80U | RegIrqFlags);
     expect_value(board_write, data, 0xffU);
     expect_value(board_select, state, false);  
     
-    /* set REG_LR_IRQFLAGSMASK to unmask TX_DONE interrupt */
+    /* set RegIrqFlagsMASK to unmask TX_DONE interrupt */
     expect_value(board_select, state, true);    
-    expect_value(board_write, data, 0x80U | REG_LR_IRQFLAGSMASK);
+    expect_value(board_write, data, 0x80U | RegIrqFlagsMask);
     expect_value(board_write, data, 0xf7U);
     expect_value(board_select, state, false);  
     
     /* set REG_LR_DIOMAPPING1 to raise DIO0 on TX DONE */
     expect_value(board_select, state, true);    
-    expect_value(board_write, data, 0x80U | REG_LR_OPMODE);
+    expect_value(board_write, data, 0x80U | RegOpMode);
     expect_value(board_write, data, 1U);
     expect_value(board_select, state, false);  
     
     /* freq */
     expect_value(board_select, state, true);    
-    expect_value(board_write, data, 0x80U | REG_LR_FRFMSB);
+    expect_value(board_write, data, 0x80U | RegFrfMsb);
     expect_value(board_write, data, 0xaaU);
     expect_value(board_write, data, 0xbbU);
     expect_value(board_write, data, 0xccU);
@@ -232,24 +238,24 @@ static void test_Radio_receive(void **user)
     
     /* SYNCWORD */
     expect_value(board_select, state, true);    
-    expect_value(board_write, data, 0x80U | REG_LR_SYNCWORD);
+    expect_value(board_write, data, 0x80U | RegSyncWord);
     expect_value(board_write, data, 0x34U);
     expect_value(board_select, state, false);  
     
     expect_value(board_select, state, true);    
-    expect_value(board_write, data, 0x80U | REG_LR_DETECTOPTIMIZE);
+    expect_value(board_write, data, 0x80U | RegDetectOptimize);
     expect_value(board_write, data, 0x03U);
     expect_value(board_select, state, false);  
     
     expect_value(board_select, state, true);    
-    expect_value(board_write, data, 0x80U | REG_LR_DETECTIONTHRESHOLD);
+    expect_value(board_write, data, 0x80U | RegDetectionThreshold);
     expect_value(board_write, data, 0x0aU);
     expect_value(board_select, state, false);  
     
     
-    /* REG_LR_MODEMCONFIG1, REG_LR_MODEMCONFIG2,  */
+    /* RegModemConfig1, RegModemConfig2,  */
     expect_value(board_select, state, true);    
-    expect_value(board_write, data, 0x80U | REG_LR_MODEMCONFIG1);
+    expect_value(board_write, data, 0x80U | RegModemConfig1);
     expect_value(board_write, data, 0x00U);
     expect_value(board_write, data, 0x00U);
     expect_value(board_write, data, 0x00U);
@@ -259,7 +265,7 @@ static void test_Radio_receive(void **user)
     
     
     expect_value(board_select, state, true);    
-    expect_value(board_write, data, 0x80U | REG_LR_OPMODE);
+    expect_value(board_write, data, 0x80U | RegOpMode);
     expect_value(board_write, data, 0x86U);
     expect_value(board_select, state, false);  
         
@@ -271,7 +277,7 @@ static void test_Radio_sleep(void **user)
     struct user_data *u = (struct user_data *)(*user);
     
     expect_value(board_select, state, true);    
-    expect_value(board_write, data, 0x80U | REG_LR_OPMODE);
+    expect_value(board_write, data, 0x80U | RegOpMode);
     expect_value(board_write, data, 0x00U);
     expect_value(board_select, state, false);      
     
@@ -284,12 +290,12 @@ static void test_Radio_collect(void **user)
     uint8_t buffer[100];
     
     expect_value(board_select, state, true);    
-    expect_value(board_write, data, 0x00U | REG_LR_FIFORXCURRENTADDR);
+    expect_value(board_write, data, 0x00U | RegFifoRxCurrentAddr);
     will_return(board_read, 42);
     expect_value(board_select, state, false);      
     
     expect_value(board_select, state, true);    
-    expect_value(board_write, data, 0x00U | REG_LR_FIFO);    
+    expect_value(board_write, data, 0x00U | RegFifo);    
     will_return_count(board_read, 0xa5, 42);    
     expect_value(board_select, state, false);      
     

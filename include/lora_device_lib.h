@@ -36,7 +36,7 @@ struct ldl {
     
     struct lora_mac mac;
     struct lora_channel_list channels;
-    struct lora_radio radio;    
+    volatile struct lora_radio radio;    
     struct lora_event events;    
 };
 

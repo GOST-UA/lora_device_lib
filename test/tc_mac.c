@@ -5,58 +5,12 @@
 #include "cmocka.h"
 
 #include "lora_mac.h"
+#include "lora_channel_list.h"
+#include "lora_radio.h"
+#include "lora_event.h"
 
 #include <string.h>
 
-struct lora_channel_list {
-    
-};
-
-struct lora_radio {
-        
-};
-
-struct lora_event {
-    
-};
-
-enum lora_region_id ChannelList_region(const struct lora_channeL_list *self)
-{
-    return EU_863_870;
-}
-
-
-bool LoraRadio_setParameters(struct lora_radio *self, uint32_t freq, enum lora_signal_bandwidth bw, enum lora_spreading_factor sf)
-{
-    return false;
-}
-
-void LoraRadio_transmit(struct lora_radio *self, const void *data, uint8_t len)
-{
-}
-
-void LoraRadio_receive(struct lora_radio *self)
-{    
-}
-
-uint8_t LoraRadio_collect(struct lora_radio *self, void *data, uint8_t max)
-{
-    return 0;
-}
-
-void ChannelList_registerTransmission(struct lora_channel_list *self, uint32_t timeNow, uint8_t payloadLen)
-{
-}
-
-uint64_t getTime(void)
-{
-    return 0U;
-}
-
-uint32_t ChannelList_waitTime(const struct lora_channel_list *self, uint64_t timeNow)
-{
-    return 0U;
-}
 
 
 static int setup_MAC(void **user)

@@ -10,31 +10,6 @@
 
 #include <string.h>
 
-void LoraAES_init(struct lora_aes_ctx *ctx, const uint8_t *key)
-{
-}
-
-void LoraAES_encrypt(const struct lora_aes_ctx *ctx, uint8_t *s)
-{
-}
-
-void LoraAES_decrypt(const struct lora_aes_ctx *ctx, uint8_t *s)
-{
-}
-
-void LoraCMAC_init(struct lora_cmac_ctx *ctx, const struct lora_aes_ctx *aes_ctx)
-{
-}
-
-void LoraCMAC_update(struct lora_cmac_ctx *ctx, const void *data, uint8_t len)
-{
-}
-
-void LoraCMAC_finish(struct lora_cmac_ctx *ctx, void *out, size_t outMax)
-{
-    memset(out, 0, outMax);
-}
-
 static void test_LoraFrame_data_encode_empty(void **user)
 {
     const uint8_t expected[] = "\x02\x00\x02\x00\x00\x00\x00\x01\x00\x00\x00\x00";

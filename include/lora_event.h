@@ -73,7 +73,7 @@ struct lora_event {
     struct on_timeout *free;
     struct on_timeout *head;
 
-    struct on_input onInput[EVENT_NUM_EVENTS];
+    volatile struct on_input onInput[EVENT_NUM_EVENTS];
 };
 
 /** Init from mainloop

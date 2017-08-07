@@ -54,6 +54,8 @@ struct lora_radio_tx_setting {
     enum lora_spreading_factor sf;
     enum lora_coding_rate cr;
     uint16_t preamble_symbols;
+    uint8_t power;
+    
     enum lora_erp_setting  erp;    
     
 };
@@ -149,6 +151,8 @@ void Radio_interrupt(struct lora_radio *self, uint8_t n, uint64_t time);
  * 
  * */
 void Radio_setEventHandler(struct lora_radio *self, void *receiver, radioEventCB cb);
+
+uint8_t Radio_getRandom(struct lora_radio *self);
 
 #ifdef __cplusplus
 }
