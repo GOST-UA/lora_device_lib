@@ -82,7 +82,7 @@ static void test_Radio_transmit_noPayload(void **user)
         .bw = BW_125,
         .sf = SF_7,
         .cr = CR_5,
-        .erp = DBM_30 
+        .power = 14
     };
     
     Radio_transmit(&u->radio, &setting, NULL, 0U);
@@ -95,11 +95,11 @@ static void test_Radio_transmit(void **user)
     const uint8_t payload[] = {0x00U, 0x01U, 0x03U};
     
     struct lora_radio_tx_setting setting = {
-        .freq = 0xaabbcc,
+        .freq = 0,
         .bw = BW_125,
         .sf = SF_7,
         .cr = CR_5,
-        .erp = DBM_30 
+        .power = 14
     };
     
     /* set RegOpMode to sleep mode */
@@ -128,23 +128,29 @@ static void test_Radio_transmit(void **user)
     
     /* set REG_LR_DIOMAPPING1 to raise DIO0 on TX DONE */
     expect_value(board_select, state, true);    
-    expect_value(board_write, data, 0x80U | RegOpMode);
-    expect_value(board_write, data, 1U);
+    expect_value(board_write, data, 0x80U | RegDioMapping1);
+    expect_value(board_write, data, 0x01U);
     expect_value(board_select, state, false);  
     
     /* freq */
     expect_value(board_select, state, true);    
     expect_value(board_write, data, 0x80U | RegFrfMsb);
-    expect_value(board_write, data, 0xaaU);
-    expect_value(board_write, data, 0xbbU);
-    expect_value(board_write, data, 0xccU);
+    expect_value(board_write, data, 0x00U);
+    expect_value(board_write, data, 0x00U);
+    expect_value(board_write, data, 0x00U);
     expect_value(board_select, state, false);  
     
-    /* power */
-    //expect_value(board_select, state, true);    
-    //expect_value(board_write, data, 0x80U | Reg);
-    //expect_value(board_write, data, 0xaaU);
-    //expect_value(board_select, state, false);  
+    /* power dac */
+    expect_value(board_select, state, true);    
+    expect_value(board_write, data, 0x80U | RegPaDac);
+    expect_value(board_write, data, 0x84U);
+    expect_value(board_select, state, false);  
+    
+    /* power config */
+    expect_value(board_select, state, true);    
+    expect_value(board_write, data, 0x80U | RegPaConfig);
+    expect_value(board_write, data, 0x0fU);
+    expect_value(board_select, state, false);  
     
     /* SYNCWORD */
     expect_value(board_select, state, true);    
@@ -155,8 +161,8 @@ static void test_Radio_transmit(void **user)
     /* RegModemConfig1, RegModemConfig2,  */
     expect_value(board_select, state, true);    
     expect_value(board_write, data, 0x80U | RegModemConfig1);
-    expect_value(board_write, data, 0x00U);
-    expect_value(board_write, data, 0x00U);
+    expect_value(board_write, data, 0x08U | 0x02U);
+    expect_value(board_write, data, 0x74U);
     expect_value(board_write, data, 0x00U);
     expect_value(board_write, data, 0x00U);
     expect_value(board_write, data, 0x08U);
@@ -191,11 +197,11 @@ static void test_Radio_receive(void **user)
     const uint8_t payload[] = {0x00U, 0x01U, 0x03U};
     
     struct lora_radio_tx_setting setting = {
-        .freq = 0xaabbcc,
+        .freq = 0,
         .bw = BW_125,
         .sf = SF_7,
         .cr = CR_5,
-        .erp = DBM_30 
+        .power = 14 
     };
     
     /* set RegOpMode to sleep mode */
@@ -231,9 +237,9 @@ static void test_Radio_receive(void **user)
     /* freq */
     expect_value(board_select, state, true);    
     expect_value(board_write, data, 0x80U | RegFrfMsb);
-    expect_value(board_write, data, 0xaaU);
-    expect_value(board_write, data, 0xbbU);
-    expect_value(board_write, data, 0xccU);
+    expect_value(board_write, data, 0x00U);
+    expect_value(board_write, data, 0x00U);
+    expect_value(board_write, data, 0x00U);
     expect_value(board_select, state, false);  
     
     /* SYNCWORD */

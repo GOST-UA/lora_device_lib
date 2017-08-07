@@ -89,11 +89,11 @@ bool Radio_transmit(struct lora_radio *self, const struct lora_radio_tx_setting 
                 
                 writeReg(self, RegIrqFlags, 0xff);      // clear all interrupts
                 writeReg(self, RegIrqFlagsMask, 0xf7U); // unmask TX_DONE interrupt                    
-                writeReg(self, RegDioMapping1, 0x40);   // raise  DIO0 on TX_DONE
+                writeReg(self, RegDioMapping1, 0x01U);   // raise  DIO0 on TX_DONE
                      
                 setFreq(self, settings->freq);              // set carrier frequency
     
-                setPower(self, settings->erp);              // set power
+                setPower(self, settings->power);              // set power
                 
                 writeReg(self, RegSyncWord, 0x34);      // set sync word
             
@@ -129,7 +129,7 @@ bool Radio_receive(struct lora_radio *self, const struct lora_radio_rx_setting *
             
             writeReg(self, RegIrqFlags, 0xff);      // clear all interrupts
             writeReg(self, RegIrqFlagsMask, 0xf7U); // unmask TX_DONE interrupt                    
-            writeReg(self, RegDioMapping1, 0x40);   // raise  DIO0 on TX_DONE
+            writeReg(self, RegDioMapping1, 0x00U);   // DIO0 (RX_TIMEOUT) DIO1 (RX_DONE)
                  
             setFreq(self, settings->freq);              // set carrier frequency
             

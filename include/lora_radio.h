@@ -54,10 +54,7 @@ struct lora_radio_tx_setting {
     enum lora_spreading_factor sf;
     enum lora_coding_rate cr;
     uint16_t preamble_symbols;
-    uint8_t power;
-    
-    enum lora_erp_setting  erp;    
-    
+    int power;    
 };
 
 struct lora_radio_rx_setting {

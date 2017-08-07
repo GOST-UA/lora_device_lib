@@ -324,7 +324,7 @@ enum lora_frame_result LoraFrame_decode(const uint8_t *appKey, const uint8_t *ne
     case FRAME_TYPE_DATA_CONFIRMED_UP:
     case FRAME_TYPE_DATA_CONFIRMED_DOWN:
 
-        if(len < (6U + 3U + 4U)){
+        if(len < (4U + 1U + 2U + 4U)){
 
             LORA_ERROR("frame too short")
             return LORA_FRAME_BAD;
