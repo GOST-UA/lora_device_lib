@@ -48,10 +48,10 @@ static void test_Event_onInput_tx_complete(void **user)
     /* fire event at time 1 */
     Event_receive(state, EVENT_TX_COMPLETE, 1);
     
-    /* if we tick 30 units later delay will be 29 */
+    /* tick 30 time units later */
     will_return(System_getTime, 30);
     expect_value(dummy_handler, receiver, (void *)&dummy_receiver);     
-    expect_value(dummy_handler, time, 0);                             
+    expect_value(dummy_handler, time, 1);       // event occured at time 1                             
     
     Event_tick(state);
     
@@ -100,13 +100,12 @@ static void test_Event_onTimeout(void **user)
     
     /* register the event to timeout in 25 units from now (1) */    
     int dummy_receiver = 42;    
-    will_return(System_getTime, 1);
     void *event_ptr = Event_onTimeout(state, 25, &dummy_receiver, dummy_handler);
     
     /* should get a reference back */
     assert_non_null(event_ptr);
     
-    /* if we tick 30 units later delay will be 4 */
+    /* tick at 30 time units */
     will_return(System_getTime, 30);
     expect_value(dummy_handler, receiver, (void *)&dummy_receiver);     
     expect_value(dummy_handler, time, 25);                                 
@@ -126,7 +125,6 @@ static void test_Event_onTimeout_cancel(void **user)
     
     /* register the event to timeout in 25 units from now (1) */    
     int dummy_receiver = 42;    
-    will_return(System_getTime, 1);
     
     void *event_ptr = Event_onTimeout(state, 25, &dummy_receiver, dummy_handler);
     

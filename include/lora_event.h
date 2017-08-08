@@ -50,9 +50,9 @@ enum on_input_types {
 struct on_input {
     
     event_handler_t handler;
-    bool state;
-    uint64_t time;    
-    void *receiver;
+    void *receiver;             
+    bool state;                 // todo: make atomic or protect
+    uint64_t time;              /**< time event received (us) */        
 };
 
 /** timer event state */
@@ -61,8 +61,8 @@ struct on_timeout {
     struct on_timeout *next;
         
     event_handler_t handler;
-    uint64_t time;
     void *receiver;
+    uint64_t time;    
 };
 
 struct lora_event {

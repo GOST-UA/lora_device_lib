@@ -288,7 +288,7 @@ static void tx(void *receiver, uint64_t time)
         radio_setting.bw = rate_setting->bw;
         radio_setting.sf = rate_setting->sf;
         radio_setting.cr = CR_5;
-        radio_setting.erp = self->power;
+        radio_setting.power = self->power;
         
         if(Radio_transmit(self->radio, &radio_setting, self->buffer, self->bufferLen)){
     
@@ -398,7 +398,7 @@ static void rxStart(void *receiver, uint64_t time)
         radio_setting.bw = rate_setting->bw;
         radio_setting.sf = rate_setting->sf;
         radio_setting.cr = CR_5;
-        radio_setting.preamble_symbols = 8U;
+        radio_setting.preamble = 8U;
         
         if(Radio_receive(self->radio, &radio_setting)){
          

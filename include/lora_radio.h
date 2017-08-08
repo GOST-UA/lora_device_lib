@@ -53,7 +53,7 @@ struct lora_radio_tx_setting {
     enum lora_signal_bandwidth bw;
     enum lora_spreading_factor sf;
     enum lora_coding_rate cr;
-    uint16_t preamble_symbols;
+    uint16_t preamble;
     int power;    
 };
 
@@ -63,7 +63,8 @@ struct lora_radio_rx_setting {
     enum lora_signal_bandwidth bw;
     enum lora_spreading_factor sf;
     enum lora_coding_rate cr;
-    uint16_t preamble_symbols;
+    uint16_t preamble;
+    uint16_t timeout;
 };
 
 /** Initialise self to default state

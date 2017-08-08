@@ -11,8 +11,6 @@
 
 #include <string.h>
 
-
-
 static int setup_MAC(void **user)
 {
     static struct lora_mac self;
@@ -20,11 +18,25 @@ static int setup_MAC(void **user)
     static struct lora_radio radio;
     static struct lora_event events;    
     
+    will_return(ChannelList_region, (void *));
+    
     MAC_init(&self, &channels, &radio, &events);
     
     *user = (void *)&self;
     
     return 0;
+}
+
+static void test_MAC_init(void **user)
+{
+    struct lora_mac self;
+    struct lora_channel_list channels;
+    struct lora_radio radio;
+    struct lora_event events;    
+    
+    will_return(ChannelList_region, (void *));
+    
+    MAC_init(&self, &channels, &radio, &events);
 }
 
 static void test_MAC_personalize(void **user)
@@ -37,6 +49,7 @@ static void test_MAC_personalize(void **user)
 int main(void)
 {
     const struct CMUnitTest tests[] = {
+        cmocka_unit_test(test_MAC_init),
         cmocka_unit_test_setup(test_MAC_personalize, setup_MAC),
     };
 

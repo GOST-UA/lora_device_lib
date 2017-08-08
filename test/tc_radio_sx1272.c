@@ -99,7 +99,8 @@ static void test_Radio_transmit(void **user)
         .bw = BW_125,
         .sf = SF_7,
         .cr = CR_5,
-        .power = 14
+        .power = 14,
+        .preamble = 8
     };
     
     /* set RegOpMode to sleep mode */
@@ -158,14 +159,36 @@ static void test_Radio_transmit(void **user)
     expect_value(board_write, data, 0x34U);
     expect_value(board_select, state, false);  
     
-    /* RegModemConfig1, RegModemConfig2,  */
+    /* RegModemConfig1, RegModemConfig2,  
+     * 
+     * RegModemConfig1 = Bw (7..6) | CodingRate (5..3) | ImplicitHeader (2) | Crc (1) | LowDateRateOptimise (0)
+     * 
+     * RegModemConfig2 = SpreadingFactor (7..4) | TxContinuousMode (3) | AgcAutoOn (2) | SymbTimeout (1..0) (MSB)
+     * 
+     * RegSymbTimeoutLSB (7..0)
+     * 
+     * RegPreambleMsb
+     * RegPreambleLsb
+     * 
+     * */
     expect_value(board_select, state, true);    
     expect_value(board_write, data, 0x80U | RegModemConfig1);
-    expect_value(board_write, data, 0x08U | 0x02U);
-    expect_value(board_write, data, 0x74U);
+    expect_value(board_write, data, 0x00U | 0x08U | 0x04U | 0x02U);
+    expect_value(board_write, data, 0x70U | 0x04U | 0x00U);
     expect_value(board_write, data, 0x00U);
     expect_value(board_write, data, 0x00U);
     expect_value(board_write, data, 0x08U);
+    expect_value(board_select, state, false);  
+    
+    /* LNA register */
+    expect_value(board_select, state, true);    
+    expect_value(board_write, data, 0x80U | RegLna);
+    expect_value(board_write, data, 0x60U);
+    expect_value(board_select, state, false);  
+    
+    expect_value(board_select, state, true);    
+    expect_value(board_write, data, 0x80U | RegFifoTxBaseAddr);
+    expect_value(board_write, data, 0x00U);
     expect_value(board_select, state, false);  
     
     /* set REG_LR_FIFOADDRPTR to the base address (0) */
@@ -194,14 +217,14 @@ static void test_Radio_transmit(void **user)
 static void test_Radio_receive(void **user)
 {
     struct user_data *u = (struct user_data *)(*user);        
-    const uint8_t payload[] = {0x00U, 0x01U, 0x03U};
     
-    struct lora_radio_tx_setting setting = {
+    struct lora_radio_rx_setting setting = {
         .freq = 0,
         .bw = BW_125,
         .sf = SF_7,
         .cr = CR_5,
-        .power = 14 
+        .preamble = 8, 
+        .timeout = 0, 
     };
     
     /* set RegOpMode to sleep mode */
@@ -228,10 +251,10 @@ static void test_Radio_receive(void **user)
     expect_value(board_write, data, 0xf7U);
     expect_value(board_select, state, false);  
     
-    /* set REG_LR_DIOMAPPING1 to raise DIO0 on TX DONE */
+    /* set REG_LR_DIOMAPPING1 */
     expect_value(board_select, state, true);    
-    expect_value(board_write, data, 0x80U | RegOpMode);
-    expect_value(board_write, data, 1U);
+    expect_value(board_write, data, 0x80U | RegDioMapping1);
+    expect_value(board_write, data, 0x00);
     expect_value(board_select, state, false);  
     
     /* freq */
@@ -257,25 +280,40 @@ static void test_Radio_receive(void **user)
     expect_value(board_write, data, 0x80U | RegDetectionThreshold);
     expect_value(board_write, data, 0x0aU);
     expect_value(board_select, state, false);  
-    
-    
-    /* RegModemConfig1, RegModemConfig2,  */
+        
+    /* RegModemConfig1, RegModemConfig2,  
+     * 
+     * RegModemConfig1 = Bw (7..6) | CodingRate (5..3) | ImplicitHeader (2) | Crc (1) | LowDateRateOptimise (0)
+     * 
+     * RegModemConfig2 = SpreadingFactor (7..4) | TxContinuousMode (3) | AgcAutoOn (2) | SymbTimeout (1..0) (MSB)
+     * 
+     * RegSymbTimeoutLSB (7..0)
+     * 
+     * RegPreambleMsb
+     * RegPreambleLsb
+     * 
+     * */
     expect_value(board_select, state, true);    
     expect_value(board_write, data, 0x80U | RegModemConfig1);
-    expect_value(board_write, data, 0x00U);
-    expect_value(board_write, data, 0x00U);
+    expect_value(board_write, data, 0x00U | 0x08U | 0x04U | 0x00U);
+    expect_value(board_write, data, 0x70U | 0x04U | 0x00U);
     expect_value(board_write, data, 0x00U);
     expect_value(board_write, data, 0x00U);
     expect_value(board_write, data, 0x08U);
     expect_value(board_select, state, false);  
     
+    /* LNA register */
+    expect_value(board_select, state, true);    
+    expect_value(board_write, data, 0x80U | RegLna);
+    expect_value(board_write, data, 0x60U);
+    expect_value(board_select, state, false);  
     
     expect_value(board_select, state, true);    
     expect_value(board_write, data, 0x80U | RegOpMode);
     expect_value(board_write, data, 0x86U);
     expect_value(board_select, state, false);  
         
-    Radio_transmit(&u->radio, &setting, payload, sizeof(payload));
+    Radio_receive(&u->radio, &setting);
 }
 
 static void test_Radio_sleep(void **user)

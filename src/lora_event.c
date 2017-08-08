@@ -60,6 +60,7 @@ void Event_tick(struct lora_event *self)
     
     time = System_getTime();
     
+    /* timeouts */
     while((ptr != NULL) && (time >= ptr->time)){
         
         to = *ptr;
@@ -80,6 +81,7 @@ void Event_tick(struct lora_event *self)
         to.handler(to.receiver, to.time);        
     }
     
+    /* io events */
     for(i=0U; i < sizeof(self->onInput)/sizeof(*self->onInput); i++){
         
         if((self->onInput[i].handler != NULL) && self->onInput[i].state){
@@ -154,7 +156,7 @@ void *Event_onTimeout(struct lora_event *self, uint64_t timeout, void *receiver,
 
 void *Event_onInput(struct lora_event *self, enum on_input_types event, void *receiver, event_handler_t handler)
 {
-    self->onInput[event].state = false; // this needs to be atomic
+    self->onInput[event].state = false;
     self->onInput[event].handler = handler;
     self->onInput[event].receiver = receiver;
     

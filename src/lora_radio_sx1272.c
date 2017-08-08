@@ -38,7 +38,7 @@ static void writeFIFO(struct lora_radio *self, const uint8_t *data, uint8_t len)
 
 static void setFreq(struct lora_radio *self, uint32_t freq);
 
-static void setModemConfig(struct lora_radio *self, enum lora_signal_bandwidth bw, enum lora_spreading_factor sf, bool crc, uint16_t symbolTimeout);
+static void setModemConfig(struct lora_radio *self, enum lora_signal_bandwidth bw, enum lora_spreading_factor sf, bool crc, uint16_t preamble, uint16_t timeout);
 
 static void setPower(struct lora_radio *self, int dbm);
 
@@ -97,7 +97,7 @@ bool Radio_transmit(struct lora_radio *self, const struct lora_radio_tx_setting 
                 
                 writeReg(self, RegSyncWord, 0x34);      // set sync word
             
-                setModemConfig(self, settings->bw, settings->sf, true, settings->preamble_symbols);
+                setModemConfig(self, settings->bw, settings->sf, true, settings->preamble, 0U);
                 
                 writeFIFO(self, data, len);                     // set pointers and write to fifo
                 
@@ -123,24 +123,24 @@ bool Radio_receive(struct lora_radio *self, const struct lora_radio_rx_setting *
         
         if(settings->sf != SF_FSK){
             
-            writeReg(self, RegOpMode, 0x00U);       // set sleep mode (to transition to long range mode)
+            writeReg(self, RegOpMode, 0x00U);           // set sleep mode (to transition to long range mode)
             
-            writeReg(self, RegOpMode, 0x81U);       // set standby mode (long range)
+            writeReg(self, RegOpMode, 0x81U);           // set standby mode (long range)
             
-            writeReg(self, RegIrqFlags, 0xff);      // clear all interrupts
-            writeReg(self, RegIrqFlagsMask, 0xf7U); // unmask TX_DONE interrupt                    
-            writeReg(self, RegDioMapping1, 0x00U);   // DIO0 (RX_TIMEOUT) DIO1 (RX_DONE)
+            writeReg(self, RegIrqFlags, 0xff);          // clear all interrupts
+            writeReg(self, RegIrqFlagsMask, 0xf7U);     // unmask TX_DONE interrupt                    
+            writeReg(self, RegDioMapping1, 0x00U);      // DIO0 (RX_TIMEOUT) DIO1 (RX_DONE)
                  
             setFreq(self, settings->freq);              // set carrier frequency
             
-            writeReg(self, RegSyncWord, 0x34);      // set sync word
+            writeReg(self, RegSyncWord, 0x34);          // set sync word
             
             writeReg(self, RegDetectOptimize, 0x03U);
             writeReg(self, RegDetectionThreshold, 0x0AU);
             
-            setModemConfig(self, settings->bw, settings->sf, false, settings->preamble_symbols);
+            setModemConfig(self, settings->bw, settings->sf, false, settings->preamble, settings->timeout);
                         
-            writeReg(self, RegOpMode, 0x86U);     // receive mode
+            writeReg(self, RegOpMode, 0x86U);           // receive mode
             
             retval = true;        
         }
@@ -149,7 +149,7 @@ bool Radio_receive(struct lora_radio *self, const struct lora_radio_rx_setting *
     return retval;
 }
 
-static void setModemConfig(struct lora_radio *self, enum lora_signal_bandwidth bw, enum lora_spreading_factor sf, bool crc, uint16_t symbolTimeout)
+static void setModemConfig(struct lora_radio *self, enum lora_signal_bandwidth bw, enum lora_spreading_factor sf, bool crc, uint16_t preamble, uint16_t timeout)
 {
     bool lowDataRateOptimize = ((bw == BW_125) && ((sf == SF_11) || (sf == SF_12))) ? true : false;
     
@@ -209,13 +209,16 @@ static void setModemConfig(struct lora_radio *self, enum lora_signal_bandwidth b
          * tx continuous mode (1bit) (never)
          * agc auto on (1bit) (yes)
          * symbol timeout bits 9:8 */
-        _sf | 0x00U | 0x04U | (((uint8_t)(symbolTimeout >> 8)) & 0x3U),
-        symbolTimeout,
-        0U,
-        8U
+        _sf | 0x00U | 0x04U | (((uint8_t)(timeout >> 8)) & 0x3U),
+        timeout,
+        preamble >> 8,
+        preamble
     };
     
     _write(self, RegModemConfig1, buf, sizeof(buf));
+    
+    /* set LNA here (even if we use autogain) */
+    writeReg(self, RegLna, 0x60 | 0x00);    
 }
 
 uint8_t Radio_collect(struct lora_radio *self, void *data, uint8_t max)

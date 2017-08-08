@@ -202,7 +202,7 @@ uint8_t LoraFrame_encode(const uint8_t *key, const struct lora_frame *f, uint8_t
 
 enum lora_frame_result LoraFrame_decode(const uint8_t *appKey, const uint8_t *netSKey, const uint8_t *appSKey, uint8_t *in, uint8_t len, struct lora_frame *f)
 {
-    const enum message_type types[] = {
+    static const enum message_type types[] = {
         FRAME_TYPE_JOIN_REQ,
         FRAME_TYPE_JOIN_ACCEPT,
         FRAME_TYPE_DATA_UNCONFIRMED_UP,

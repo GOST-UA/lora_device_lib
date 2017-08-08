@@ -24,7 +24,7 @@
 
 #include <string.h>
 
-bool ldl_init(struct ldl *self, enum lora_region_id region_id, enum lora_radio_type radioType, const struct lora_board *board)
+bool ldl_init(struct ldl *self, enum lora_region_id region_id, const struct lora_board *board)
 {
     LORA_ASSERT(self != NULL)
     
@@ -39,7 +39,7 @@ bool ldl_init(struct ldl *self, enum lora_region_id region_id, enum lora_radio_t
 
         ChannelList_init(&self->channels, region);
         Event_init(&self->events);
-        Radio_init(&self->radio, radioType, board);
+        Radio_init(&self->radio, board);
         MAC_init(&self->mac, &self->channels, &self->radio, &self->events);
         
         retval = true;        
