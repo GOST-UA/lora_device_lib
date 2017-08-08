@@ -99,6 +99,10 @@ $(DIR_BIN)/tc_region: $(addprefix $(DIR_BUILD)/, tc_region.o lora_region.o $(OBJ
 	@ echo linking $@
 	@ $(CC) $(LDFLAGS) $^ -o $@
 
+$(DIR_BIN)/tc_integration: $(addprefix $(DIR_BUILD)/, tc_integration.o mock_lora_system.o $(OBJ) $(OBJ_CMOCKA))
+	@ echo linking $@
+	@ $(CC) $(LDFLAGS) $^ -o $@
+
 
 
 

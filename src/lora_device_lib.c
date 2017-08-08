@@ -79,7 +79,7 @@ void ldl_unmaskChannel(struct ldl *self, uint8_t chIndex)
 
 bool ldl_setRateAndPower(struct ldl *self, uint8_t rate, uint8_t power)
 {
-    return ChannelList_setRateAndPower(&self->channels, rate, power);
+    return false;
 }
 
 void ldl_setResponseHandler(struct ldl *self, void *receiver, lora_mac_response_fn cb)

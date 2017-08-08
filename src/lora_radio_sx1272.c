@@ -229,7 +229,7 @@ uint8_t Radio_collect(struct lora_radio *self, void *data, uint8_t max)
     return readFIFO(self, data, max);
 }
 
-void Radio_raiseInterrupt(struct lora_radio *self, uint8_t n, uint64_t time)
+void Radio_interrupt(struct lora_radio *self, uint8_t n, uint64_t time)
 {    
     LORA_ASSERT(self != NULL)
     

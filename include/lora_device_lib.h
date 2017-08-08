@@ -31,12 +31,13 @@ extern "C" {
 #include "lora_channel_list.h"
 #include "lora_radio.h"
 #include "lora_region.h"
+#include "lora_board.h"
 
 struct ldl {
     
     struct lora_mac mac;
     struct lora_channel_list channels;
-    volatile struct lora_radio radio;    
+    struct lora_radio radio;    
     struct lora_event events;    
 };
 
