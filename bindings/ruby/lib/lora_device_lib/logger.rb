@@ -4,7 +4,7 @@ module LoraDeviceLib
 
     class Logger
     
-        @logger = ::Logger.new('ldl')
+        @logger = ::Logger.new(STDOUT)
         
         def self.error(msg)
             @logger.error(msg)
@@ -13,6 +13,12 @@ module LoraDeviceLib
         def self.info(msg)
             @logger.info(msg)
         end
+        
+        def self.debug(msg)
+            @logger.debug(msg)
+        end
+        
+        
     
     end
 

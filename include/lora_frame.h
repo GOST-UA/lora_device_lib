@@ -50,7 +50,7 @@ struct lora_frame {
         
         struct {
     
-            uint32_t devAddr;
+            uint8_t devAddr[4];
             uint32_t counter;
             bool ack;
             bool adr;
@@ -70,12 +70,12 @@ struct lora_frame {
 
             uint8_t appNonce[3];
             uint8_t netID[3];
-            uint32_t devAddr;
+            uint8_t devAddr[4];
             uint8_t rx1DataRateOffset;
             uint8_t rx2DataRate;
             uint8_t rxDelay;
             uint8_t cfList[16];
-            bool cfListPresent;
+            uint8_t cfListLen;
             
         } joinAccept; 
         
@@ -83,8 +83,8 @@ struct lora_frame {
             
             uint8_t appEUI[8];
             uint8_t devEUI[8];
-            uint16_t devNonce;
-            
+            uint8_t devNonce[2];
+                
         } joinRequest;
         
     } fields;
@@ -106,7 +106,7 @@ extern const size_t LORA_PHYPAYLOAD_OVERHEAD;
 
 /** encode a frame
  *
- * @param[in] key   key to use for MIC and encrypt (16 byte field)
+ * @param[in] key
  * @param[in] f     frame parameter structure
  * @param[out] out  frame buffer
  * @param[in] max   maximum byte length of `out`
@@ -116,12 +116,12 @@ extern const size_t LORA_PHYPAYLOAD_OVERHEAD;
  * @retval 0 frame could not be encoded
  *
  * */
-uint8_t LoraFrame_encode(const uint8_t *key, const struct lora_frame *f, uint8_t *out, uint8_t max);
+uint8_t Frame_encode(const void *key, const struct lora_frame *f, uint8_t *out, uint8_t max);
 
 /** decode a frame
  *
  * @param[in] appKey    application key (16 byte field)
- * @param[in] netSKey   network session key (16 byte field)
+ * @param[in] nwkSKey   network session key (16 byte field)
  * @param[in] appSKey   application session key (16 byte field)
  * @param[in] in        frame buffer (decrypt will be done in-place)
  * @param[in] len       byte length of `in`
@@ -134,7 +134,7 @@ uint8_t LoraFrame_encode(const uint8_t *key, const struct lora_frame *f, uint8_t
  * @retval LORA_FRAME_MIC   frame format OK but MIC check failed
  *
  * */
-enum lora_frame_result LoraFrame_decode(const uint8_t *appKey, const uint8_t *netSKey, const uint8_t *appSKey, uint8_t *in, uint8_t len, struct lora_frame *f);
+enum lora_frame_result Frame_decode(const void *appKey, const void *nwkSKey, const void *appSKey, void *in, uint8_t len, struct lora_frame *f);
 
 /** calculate size of the PhyPayload
  *
@@ -144,9 +144,9 @@ enum lora_frame_result LoraFrame_decode(const uint8_t *appKey, const uint8_t *ne
  * @return PhyPayload size in bytes
  *
  * */
-uint16_t LoraFrame_getPhyPayloadSize(uint8_t dataLen, uint8_t optsLen);
+uint16_t Frame_getPhyPayloadSize(uint8_t dataLen, uint8_t optsLen);
 
-bool LoraFrame_isUpstream(enum message_type type);
+bool Frame_isUpstream(enum message_type type);
 
 #ifdef __cplusplus
 }

@@ -98,10 +98,11 @@ bool MAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *d
     LORA_ASSERT((len == 0) || (data != NULL))
     
     bool retval = false;
-    uint16_t bufferMax = LoraFrame_getPhyPayloadSize(0, len);
+    uint16_t bufferMax = Frame_getPhyPayloadSize(0, len);
     
     struct lora_channel_setting settings;
     const struct lora_data_rate *rate_setting;
+    struct lora_frame f;
     
     if(self->personalised || self->joined){
     
@@ -118,23 +119,20 @@ bool MAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *d
                     
                     if(rate_setting->payload >= bufferMax){ 
 
-                        struct lora_frame f = {
-
-                            .type = FRAME_TYPE_DATA_UNCONFIRMED_UP,
-                            .fields.data.devAddr = self->devAddr,
-                            .fields.data.counter = (uint32_t)getUpCount(self),
-                            .fields.data.ack = false,
-                            .fields.data.adr = false,
-                            .fields.data.adrAckReq = false,
-                            .fields.data.pending = false,
-                            .fields.data.opts = NULL,
-                            .fields.data.optsLen = 0U,
-                            .fields.data.port = port,
-                            .fields.data.data = ((len > 0U) ? (const uint8_t *)data : NULL),
-                            .fields.data.dataLen = len
-                        };
-
-                        self->bufferLen = LoraFrame_encode(self->appSKey, &f, self->buffer, sizeof(self->buffer));
+                        f.type = FRAME_TYPE_DATA_UNCONFIRMED_UP;
+                        (void)memcpy(f.fields.data.devAddr, self->devAddr, sizeof(f.fields.data.devAddr));
+                        f.fields.data.counter = (uint32_t)getUpCount(self);
+                        f.fields.data.ack = false;
+                        f.fields.data.adr = false;
+                        f.fields.data.adrAckReq = false;
+                        f.fields.data.pending = false;
+                        f.fields.data.opts = NULL;
+                        f.fields.data.optsLen = 0U;
+                        f.fields.data.port = port;
+                        f.fields.data.data = ((len > 0U) ? (const uint8_t *)data : NULL);
+                        f.fields.data.dataLen = len;
+                        
+                        self->bufferLen = Frame_encode((port == 0) ? self->nwkSKey : self->appSKey, &f, self->buffer, sizeof(self->buffer));
                         
                         uint64_t timeNow = System_getTime();
                         
@@ -189,9 +187,9 @@ bool MAC_join(struct lora_mac *self)
             
             (void)memcpy(f.fields.joinRequest.appEUI, self->appEUI, sizeof(f.fields.joinRequest.appEUI));
             (void)memcpy(f.fields.joinRequest.appEUI, self->devEUI, sizeof(f.fields.joinRequest.devEUI));
-            f.fields.joinRequest.devNonce = 0U;
+            (void)memset(f.fields.joinRequest.devNonce, 0 , sizeof(f.fields.joinRequest.devNonce));
 
-            self->bufferLen = LoraFrame_encode(self->appKey, &f, self->buffer, sizeof(self->buffer));
+            self->bufferLen = Frame_encode(self->appKey, &f, self->buffer, sizeof(self->buffer));
             
             uint64_t timeNow = System_getTime();
             
@@ -233,9 +231,9 @@ bool MAC_setNbTrans(struct lora_mac *self, uint8_t nbTrans)
     return retval;
 }
 
-bool MAC_personalize(struct lora_mac *self, uint32_t devAddr, const void *nwkSKey, const void *appSKey)
+bool MAC_personalize(struct lora_mac *self, const uint8_t *devAddr, const void *nwkSKey, const void *appSKey)
 {
-    self->devAddr = devAddr;        
+    (void)memcpy(self->devAddr, devAddr, sizeof(self->devAddr));
     (void)memcpy(self->nwkSKey, nwkSKey, sizeof(self->nwkSKey));
     (void)memcpy(self->appSKey, appSKey, sizeof(self->appSKey));    
     return true;
@@ -528,7 +526,7 @@ static void collect(struct lora_mac *self)
     
     self->bufferLen = Radio_collect(self->radio, self->buffer, sizeof(self->buffer));        
     
-    if(LoraFrame_decode(self->appKey, self->nwkSKey, self->appSKey, self->buffer, self->bufferLen, &result)){
+    if(Frame_decode(self->appKey, self->nwkSKey, self->appSKey, self->buffer, self->bufferLen, &result)){
         
         switch(result.type){
         case FRAME_TYPE_JOIN_ACCEPT:
@@ -572,7 +570,7 @@ static void collect(struct lora_mac *self)
             
             if(self->personalised){
             
-                if(self->devAddr == result.fields.data.devAddr){
+                if(memcmp(self->devAddr, result.fields.data.devAddr, sizeof(result.fields.data.devAddr)) == 0){
                 
                     if(validateDownCount(self, result.fields.data.counter)){
                 

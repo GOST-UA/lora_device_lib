@@ -144,7 +144,7 @@ struct lora_mac {
     uint8_t buffer[UINT8_MAX];
     uint8_t bufferLen;
 
-    uint32_t devAddr;
+    uint8_t devAddr[4];
     
     uint8_t nbTrans;    /**< number of transmissions for each uplink message */
     
@@ -154,7 +154,7 @@ struct lora_mac {
     bool confirmPending;
     bool confirmed;
     
-    uint16_t devNonce;
+    uint8_t devNonce[2];
     
     #define RX_WDT_INTERVAL 60000
     
@@ -184,7 +184,7 @@ void MAC_init(struct lora_mac *self, struct lora_channel_list *channels, struct 
  * @return true if personalization could be performed
  * 
  * */
-bool MAC_personalize(struct lora_mac *self, uint32_t devAddr, const void *nwkSKey, const void *appSKey);
+bool MAC_personalize(struct lora_mac *self, const uint8_t *devAddr, const void *nwkSKey, const void *appSKey);
 
 /** Set the number of times an upstream data frame will be sent (for redundancy)
  * 

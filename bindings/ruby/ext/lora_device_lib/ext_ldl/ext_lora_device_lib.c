@@ -46,26 +46,24 @@ static VALUE _ldl_interrupt(VALUE self, VALUE n, VALUE time);
 
 static void _response(void *receiver, enum lora_mac_response_type type, const union lora_mac_response_arg *arg);
 
-static void board_select(void *receiver, bool state);
-static void board_reset(void *receiver, bool state);
-static void board_reset_wait(void *receiver);
-static void board_write(void *receiver, uint8_t data);
-static uint8_t board_read(void *receiver);
+static VALUE radio_rx(VALUE self, VALUE message);
 
-uint64_t Time_getTime(void)
+uint64_t System_getTime(void)
 {
     return NUM2ULL(rb_funcall(rb_const_get(cLoraDeviceLib, rb_intern("SystemTime")), rb_intern("time"), 0));
 }
 
+void System_usleep(uint32_t interval)
+{
+}
+
 void Init_ext_lora_device_lib(void)
 {
-    
-    
     cLoraDeviceLib = rb_define_module("LoraDeviceLib");
     
     cLDL = rb_define_class_under(cLoraDeviceLib, "LDL", rb_cObject);
     rb_define_alloc_func(cLDL, _ldl_alloc);
-        
+    
     rb_define_method(cLDL, "initialize", _ldl_initialize, 1);
     rb_define_method(cLDL, "initialize_copy", _ldl_initialize_copy, 1);
     
@@ -79,39 +77,125 @@ void Init_ext_lora_device_lib(void)
     rb_define_method(cLDL, "join", _ldl_join, -1);
     rb_define_method(cLDL, "send_unconfirmed", _ldl_send_unconfirmed, -1);
     rb_define_method(cLDL, "send_confirmed", _ldl_send_confirmed, -1);    
+    
+    rb_define_method(cLDL, "radio_rx", radio_rx, 1);    
 }
 
-static VALUE _ldl_initialize(int argc, VALUE *argv, VALUE self)
+void Radio_init(struct lora_radio *self, const struct lora_board *board)
+{    
+    rb_iv_set(self, "@radio", );
+}
+
+uint32_t Radio_resetHardware(struct lora_radio *self)
 {
-    VALUE board;
-    struct ldl *this;    
-    Data_Get_Struct(self, struct ldl, this);
     
-    (void)rb_scan_args(argc, argv, "10", &board);
+    
+    return 0U;
+}
+
+void Radio_sleep(struct lora_radio *self)
+{    
+    rb_funcall(rb_iv_get(self, "@radio"), rb_intern("receive")) == Qtrue);
+}
+
+bool Radio_transmit(struct lora_radio *self, const struct lora_radio_setting *settings, const void *data, uint8_t len)
+{    
+    return(rb_funcall(rb_iv_get(self, "@radio"), rb_intern("transmit")) == Qtrue);
+}
+
+bool Radio_receive(struct lora_radio *self, bool continuous, const struct lora_radio_setting *settings)
+{    
+    return(rb_funcall(rb_iv_get(self, "@radio"), rb_intern("receive")) == Qtrue);
+}
+
+uint8_t Radio_collect(struct lora_radio *self, void *data, uint8_t max)
+{    
+    VALUE buffer = rb_iv_get(self, "@rx_buffer");
+    
+    uint8_t read = (RSTRING_LEN(buffer) > max) ? max : (uint8_t)RSTRING_LEN(buffer);
+    
+    (void)memcpy(data, RSTRING_PTR(buffer), read);
+    
+    return read;
+}
+
+void Radio_interrupt(struct lora_radio *self, uint8_t n, uint64_t time)
+{   
+     
+}
+
+void Radio_setEventHandler(struct lora_radio *self, void *receiver, radioEventCB cb)
+{
+    
+}
+
+static VALUE _ldl_alloc(VALUE klass)
+{
+    return Data_Wrap_Struct(klass, 0, free, calloc(1, sizeof(struct ldl)));
+}
+
+/* Create a new LDL instance
+ * 
+ * Regions supported:
+ * 
+ * - :eu_863_870
+ * 
+ * 
+ * @param region [Symbol]
+ * 
+ * */
+static VALUE _ldl_initialize(VALUE self, VALUE region)
+{
+    struct ldl *this;    
+    enum lora_region_id region_id;
+    size_t i;
+    
+    Data_Get_Struct(self, struct ldl, this);
     
     ldl_setResponseHandler(this, (void *)self, _response);  
     
-    struct lora_board boardAdapter = {
-        .receiver = (void *)board,
-        .select = board_select,
-        .reset = board_reset,
-        .reset_wait = board_reset_wait,
-        .write = board_write,
-        .read = board_read
+    struct region_symbol_map {
+        VALUE symbol;
+        enum lora_region_id region;
     };
     
-    if(!ldl_init(this, EU_863_870, LORA_RADIO_SX1272, &boardAdapter)){
+    struct radio_symbol_map {
+        VALUE symbol;
+        enum lora_board board;        
+    };
+    
+    struct region_symbol_map map[] = {
+        {
+            .symbol = ID2SYM(rb_intern("eu_863_870")),
+            .region_id = EU_863_870
+        }        
+    };
+    
+    for(i=0U; i < sizeof(map)/sizeof(*map); i++){
+        
+        if(map[i].symbol == region){
+            
+            region_id = map[i].region_id;
+            break;
+        }
+    }
+    
+    if(i == sizeof(map)/sizeof(*map)){
+        
+        rb_raise(rb_eTypeError, "invalid region")
+    }
+    
+    if(!ldl_init(this, region_id, NULL)){
         
         rb_raise(rb_const_get(cLoraDeviceLib, rb_intern("LoraError")), "ldl_init() failed");
     }
     
-    rb_iv_set(self, "@board", board);
     rb_iv_set(self, "@tx_handler", Qnil);
     rb_iv_set(self, "@rx_handler", Qnil);
     rb_iv_set(self, "@join_handler", Qnil);
     rb_iv_set(self, "@rx_queue", rb_funcall(rb_const_get(rb_cObject, rb_intern("Queue")), rb_intern("new"), 0));
     
-    rb_iv_set(cLDL, "@logger", rb_funcall(rb_const_get(rb_cObject, rb_intern("Logger")), rb_intern("new"), 1, rb_str_new_cstr("LDL")));
+    rb_iv_set(self, "@radio_state", ID2SYM(rb_intern("sleep")));
     
     return self;
 }
@@ -136,11 +220,6 @@ static VALUE _ldl_initialize_copy(VALUE copy, VALUE orig)
     (void)memcpy(copy_ldl, orig_ldl, sizeof(struct ldl));
     
     return copy;
-}
-
-static VALUE _ldl_alloc(VALUE klass)
-{
-    return Data_Wrap_Struct(klass, NULL, free, calloc(1, sizeof(struct ldl)));
 }
 
 static VALUE _ldl_personalize(VALUE self, VALUE devAddr, VALUE nwkSKey, VALUE appSKey)
@@ -325,7 +404,7 @@ static void _response(void *receiver, enum lora_mac_response_type type, const un
         VALUE rx_queue = rb_iv_get(self, "@rx_queue");
         VALUE hash = rb_hash_new();
         rb_hash_aset(hash, ID2SYM(rb_intern("port")), UINT2NUM(arg->rx.port));
-        rb_hash_aset(hash, ID2SYM(rb_intern("msg")), rb_str_new(arg->rx.data, arg->rx.len));
+        rb_hash_aset(hash, ID2SYM(rb_intern("msg")), rb_str_new((const char *)arg->rx.data, arg->rx.len));
         
         rb_funcall(rx_queue, rb_intern("push"), 1, hash);
     
@@ -345,32 +424,7 @@ static void _response(void *receiver, enum lora_mac_response_type type, const un
     }   
 }
 
-static void board_select(void *receiver, bool state)
+static VALUE radio_rx(VALUE self, VALUE message)
 {
-    VALUE self = (VALUE)receiver;    
-    (void)rb_funcall(self, rb_intern(state ? "select_on" : "select_off"), 0);
-}
-
-static void board_reset(void *receiver, bool state)
-{
-    VALUE self = (VALUE)receiver;
-    (void)rb_funcall(self, rb_intern(state ? "reset_on" : "reset_off"), 0);
-}
-
-static void board_reset_wait(void *receiver)
-{
-    VALUE self = (VALUE)receiver;
-    (void)rb_funcall(self, rb_intern("reset_wait"), 0);
-}
-
-static void board_write(void *receiver, uint8_t data)
-{
-    VALUE self = (VALUE)receiver;
-    (void)rb_funcall(self, rb_intern("write"), 1, UINT2NUM(data));
-}
-
-static uint8_t board_read(void *receiver)
-{
-    VALUE self = (VALUE)receiver;
-    return (uint8_t)NUM2UINT(rb_funcall(self, rb_intern("read"), 0));
+    // check if radio is waiting to rx
 }

@@ -18,7 +18,7 @@ static int setup_MAC(void **user)
     static struct lora_radio radio;
     static struct lora_event events;    
     
-    will_return(ChannelList_region, (void *));
+    will_return(ChannelList_region, NULL);
     
     MAC_init(&self, &channels, &radio, &events);
     
@@ -34,7 +34,7 @@ static void test_MAC_init(void **user)
     struct lora_radio radio;
     struct lora_event events;    
     
-    will_return(ChannelList_region, (void *));
+    will_return(ChannelList_region, NULL);
     
     MAC_init(&self, &channels, &radio, &events);
 }
@@ -42,8 +42,9 @@ static void test_MAC_init(void **user)
 static void test_MAC_personalize(void **user)
 {
     struct lora_mac *self = (struct lora_mac *)(*user);
+    uint8_t devAddr[] = "\x00\x00\x00\x00";
     
-    MAC_personalize(self, 1, "\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa", "\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb");
+    MAC_personalize(self, devAddr, "\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa", "\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb");
 }
 
 int main(void)

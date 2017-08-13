@@ -1,56 +1,4 @@
 module LoraDeviceLib
-
-    class SPIBuffer
-    
-        MAX_SIZE = 0xff
-    
-        attr_accessor :read_base
-        attr_accessor :write_base
-        attr_accessor :addr_ptr
-        attr_accessor :rx_ptr
-    
-        def initialize(ptr, read_base, write_base)
-            @buffer = Array.new(0, MAX_SIZE)
-            @read_base = 0
-            @write_base = 0
-            @addr_ptr = 0
-            @rx_ptr = 0
-        end
-        
-        
-        
-        def write(data)
-            
-        
-            addr = addr_ptr % MAX_SIZE
-            @buffer[addr] = data
-            addr += 1
-        end
-        
-        def spi_write
-            
-        end
-        
-        def spi_read
-        end
-        
-        def harness_write            
-        end
-        
-        def harness_read            
-        end
-
-        private
-        
-            def addr(ptr)
-                ptr % MAX_SIZE
-            end        
-            def incr(ptr)
-                ptr + 1
-            end
-        
-    end
-
     class Board_sx1272 < Board
     
         # max addr
@@ -289,7 +237,7 @@ module LoraDeviceLib
             @type = :LORA_RADIO_SX1272
             @reset = false
             @select = false
-            @fifo = LoraFifo.new
+            #@fifo = LoraFifo.new
             reset()            
         end
         
@@ -342,7 +290,7 @@ module LoraDeviceLib
                 if @select
                     raise BoardError.new "double select on"                
                 else
-                    puts __method__
+                    Logger.debug "select on"
                     @select = true
                     @buffer = []
                 end            
@@ -352,8 +300,8 @@ module LoraDeviceLib
         # release the select line
         def select_off       
             if @select
+                Logger.debug "select off"
                 @select = false
-                puts __method__               
                 apply_buffer(@buffer)
                 @mode = nil                
             else
@@ -362,24 +310,29 @@ module LoraDeviceLib
         end
                 
         # set the reset line
-        def reset_on
+        def reset_on            
             if @reset
                 raise BoardError.new "double reset on"                
             else
-                puts __method__
+                Logger.debug "reset on"
                 reset()
                 @reset = true
             end
         end
         
         # release the reset line
-        def reset_off
+        def reset_off        
             if @reset
-                puts __method__
+                Logger.debug "reset off"
                 @reset = false
             else
                 raise BoardError.new "double reset off"                                
             end
+        end
+        
+        # wait for a reset to take effect
+        def reset_wait
+            Logger.debug "reset wait"
         end
         
         # write a byte
@@ -394,13 +347,14 @@ module LoraDeviceLib
                     when nil
                         @addr = data & 0x7f                    
                         @ptr = @addr
-                        @mode = ( (data & 0x80) == 0 ? :read : :write )                    
-                    else                                
+                        @mode = ( (data & 0x80) == 0 ? :read : :write )                                            
+                        Logger.debug "#{@mode} mode; start address #{"0x%02X" % @addr}"
+                    else
+                        Logger.debug "write #{"0x%02X" % data} at address #{@addr}"
                         @buffer << data                                        
-                        addr_and_increment()
+                        addr_and_increment()                        
                         self
                     end                
-                    puts "wrote 0x#{ "%02X" % data }"                
                 else            
                     raise BoardError.new "write without select"                
                 end
@@ -414,8 +368,8 @@ module LoraDeviceLib
             if @reset
                 raise BoardError.new "read during reset"
             else
-                if @select                          
-                    read_register(add_and_increment)                                  
+                if @select
+                    read_register(addr_and_increment)                                  
                 else            
                     raise BoardError.new "read without select"            
                 end
@@ -443,146 +397,147 @@ module LoraDeviceLib
         
         end
             
-            def write_register(addr, data)
-                    
-                if reg = lookup_reg(addr)
-                    
-                    @register[addr] = b
-                
-                    case reg[:name]
-                    when :REG_LR_FIFO          
-                    
-                        fifo.write(b)
-                                  
-                    when :REG_LR_OPMODE
-                    when :REG_LR_FRFMSB
-                    when :REG_LR_FRFMID
-                    when :REG_LR_FRFLSB
-                    when :REG_LR_PACONFIG
-                    when :REG_LR_PARAMP
-                    when :REG_LR_OCP
-                    when :REG_LR_LNA
-                    when :REG_LR_FIFOADDRPTR
-                    when :REG_LR_FIFOTXBASEADDR
-                    when :REG_LR_FIFORXBASEADDR
-                    when :REG_LR_FIFORXCURRENTADDR
-                    when :REG_LR_IRQFLAGSMASK
-                    when :REG_LR_IRQFLAGS
-                    when :REG_LR_RXNBBYTES
-                    when :REG_LR_RXHEADERCNTVALUEMSB
-                    when :REG_LR_RXHEADERCNTVALUELSB
-                    when :REG_LR_RXPACKETCNTVALUEMSB
-                    when :REG_LR_RXPACKETCNTVALUELSB
-                    when :REG_LR_MODEMSTAT
-                    when :REG_LR_PKTSNRVALUE
-                    when :REG_LR_PKTRSSIVALUE
-                    when :REG_LR_RSSIVALUE
-                    when :REG_LR_HOPCHANNEL
-                    when :REG_LR_MODEMCONFIG1
-                    when :REG_LR_MODEMCONFIG2
-                    when :REG_LR_SYMBTIMEOUTLSB
-                    when :REG_LR_PREAMBLEMSB
-                    when :REG_LR_PREAMBLELSB
-                    when :REG_LR_PAYLOADLENGTH
-                    when :REG_LR_PAYLOADMAXLENGTH
-                    when :REG_LR_HOPPERIOD
-                    when :REG_LR_FIFORXBYTEADDR
-                    when :REG_LR_FEIMSB
-                    when :REG_LR_FEIMID
-                    when :REG_LR_FEILSB
-                    when :REG_LR_RSSIWIDEBAND
-                    when :REG_LR_DETECTOPTIMIZE
-                    when :REG_LR_INVERTIQ
-                    when :REG_LR_DETECTIONTHRESHOLD
-                    when :REG_LR_SYNCWORD
-                    when :REG_LR_INVERTIQ2
-                    when :REG_LR_DIOMAPPING1
-                    when :REG_LR_DIOMAPPING2
-                    when :REG_LR_VERSION
-                    when :REG_LR_AGCREF
-                    when :REG_LR_AGCTHRESH1
-                    when :REG_LR_AGCTHRESH2
-                    when :REG_LR_AGCTHRESH3
-                    when :REG_LR_PLLHOP
-                    when :REG_LR_TCXO
-                    when :REG_LR_PADAC
-                    when :REG_LR_PLL
-                    when :REG_LR_PLLLOWPN
-                    when :REG_LR_FORMERTEMP
-                    end                
-                end
-            end
-            
-            def read_register(addr)
-                
-                if reg = lookup_reg(addr)
-                    
-                    @register[addr] = b
-                
-                    case reg[:name]
-                    when :REG_LR_FIFO                                  
-                    when :REG_LR_OPMODE
-                    when :REG_LR_FRFMSB
-                    when :REG_LR_FRFMID
-                    when :REG_LR_FRFLSB
-                    when :REG_LR_PACONFIG
-                    when :REG_LR_PARAMP
-                    when :REG_LR_OCP
-                    when :REG_LR_LNA
-                    when :REG_LR_FIFOADDRPTR
-                    when :REG_LR_FIFOTXBASEADDR
-                    when :REG_LR_FIFORXBASEADDR
-                    when :REG_LR_FIFORXCURRENTADDR
-                    when :REG_LR_IRQFLAGSMASK
-                    when :REG_LR_IRQFLAGS
-                    when :REG_LR_RXNBBYTES
-                    when :REG_LR_RXHEADERCNTVALUEMSB
-                    when :REG_LR_RXHEADERCNTVALUELSB
-                    when :REG_LR_RXPACKETCNTVALUEMSB
-                    when :REG_LR_RXPACKETCNTVALUELSB
-                    when :REG_LR_MODEMSTAT
-                    when :REG_LR_PKTSNRVALUE
-                    when :REG_LR_PKTRSSIVALUE
-                    when :REG_LR_RSSIVALUE
-                    when :REG_LR_HOPCHANNEL
-                    when :REG_LR_MODEMCONFIG1
-                    when :REG_LR_MODEMCONFIG2
-                    when :REG_LR_SYMBTIMEOUTLSB
-                    when :REG_LR_PREAMBLEMSB
-                    when :REG_LR_PREAMBLELSB
-                    when :REG_LR_PAYLOADLENGTH
-                    when :REG_LR_PAYLOADMAXLENGTH
-                    when :REG_LR_HOPPERIOD
-                    when :REG_LR_FIFORXBYTEADDR
-                    when :REG_LR_FEIMSB
-                    when :REG_LR_FEIMID
-                    when :REG_LR_FEILSB
-                    when :REG_LR_RSSIWIDEBAND
-                    when :REG_LR_DETECTOPTIMIZE
-                    when :REG_LR_INVERTIQ
-                    when :REG_LR_DETECTIONTHRESHOLD
-                    when :REG_LR_SYNCWORD
-                    when :REG_LR_INVERTIQ2
-                    when :REG_LR_DIOMAPPING1
-                    when :REG_LR_DIOMAPPING2
-                    when :REG_LR_VERSION
-                    when :REG_LR_AGCREF
-                    when :REG_LR_AGCTHRESH1
-                    when :REG_LR_AGCTHRESH2
-                    when :REG_LR_AGCTHRESH3
-                    when :REG_LR_PLLHOP
-                    when :REG_LR_TCXO
-                    when :REG_LR_PADAC
-                    when :REG_LR_PLL
-                    when :REG_LR_PLLLOWPN
-                    when :REG_LR_FORMERTEMP
-                    end                
-                end
-            end
         
+            
+        def write_register(addr, data)
+                
+            if reg = lookup_reg(addr)
+                
+                @register[addr] = b
+            
+                case reg[:name]
+                when :REG_LR_FIFO          
+                
+                    fifo.write(b)
+                              
+                when :REG_LR_OPMODE                        
+                when :REG_LR_FRFMSB
+                when :REG_LR_FRFMID
+                when :REG_LR_FRFLSB
+                when :REG_LR_PACONFIG
+                when :REG_LR_PARAMP
+                when :REG_LR_OCP
+                when :REG_LR_LNA
+                when :REG_LR_FIFOADDRPTR
+                when :REG_LR_FIFOTXBASEADDR
+                when :REG_LR_FIFORXBASEADDR
+                when :REG_LR_FIFORXCURRENTADDR
+                when :REG_LR_IRQFLAGSMASK
+                when :REG_LR_IRQFLAGS
+                when :REG_LR_RXNBBYTES
+                when :REG_LR_RXHEADERCNTVALUEMSB
+                when :REG_LR_RXHEADERCNTVALUELSB
+                when :REG_LR_RXPACKETCNTVALUEMSB
+                when :REG_LR_RXPACKETCNTVALUELSB
+                when :REG_LR_MODEMSTAT
+                when :REG_LR_PKTSNRVALUE
+                when :REG_LR_PKTRSSIVALUE
+                when :REG_LR_RSSIVALUE
+                when :REG_LR_HOPCHANNEL
+                when :REG_LR_MODEMCONFIG1
+                when :REG_LR_MODEMCONFIG2
+                when :REG_LR_SYMBTIMEOUTLSB
+                when :REG_LR_PREAMBLEMSB
+                when :REG_LR_PREAMBLELSB
+                when :REG_LR_PAYLOADLENGTH
+                when :REG_LR_PAYLOADMAXLENGTH
+                when :REG_LR_HOPPERIOD
+                when :REG_LR_FIFORXBYTEADDR
+                when :REG_LR_FEIMSB
+                when :REG_LR_FEIMID
+                when :REG_LR_FEILSB
+                when :REG_LR_RSSIWIDEBAND
+                when :REG_LR_DETECTOPTIMIZE
+                when :REG_LR_INVERTIQ
+                when :REG_LR_DETECTIONTHRESHOLD
+                when :REG_LR_SYNCWORD
+                when :REG_LR_INVERTIQ2
+                when :REG_LR_DIOMAPPING1
+                when :REG_LR_DIOMAPPING2
+                when :REG_LR_VERSION
+                when :REG_LR_AGCREF
+                when :REG_LR_AGCTHRESH1
+                when :REG_LR_AGCTHRESH2
+                when :REG_LR_AGCTHRESH3
+                when :REG_LR_PLLHOP
+                when :REG_LR_TCXO
+                when :REG_LR_PADAC
+                when :REG_LR_PLL
+                when :REG_LR_PLLLOWPN
+                when :REG_LR_FORMERTEMP
+                end                
+            end
+        end
+        
+        def read_register(addr)
+            
+            Logger.debug "read at address #{"0x%02X" % addr}"
+            
+            if reg = lookup_reg(addr)
+                
+                @register[addr] = b
+            
+                case reg[:name]
+                when :REG_LR_FIFO                                  
+                when :REG_LR_OPMODE
+                when :REG_LR_FRFMSB
+                when :REG_LR_FRFMID
+                when :REG_LR_FRFLSB
+                when :REG_LR_PACONFIG
+                when :REG_LR_PARAMP
+                when :REG_LR_OCP
+                when :REG_LR_LNA
+                when :REG_LR_FIFOADDRPTR
+                when :REG_LR_FIFOTXBASEADDR
+                when :REG_LR_FIFORXBASEADDR
+                when :REG_LR_FIFORXCURRENTADDR
+                when :REG_LR_IRQFLAGSMASK
+                when :REG_LR_IRQFLAGS
+                when :REG_LR_RXNBBYTES
+                when :REG_LR_RXHEADERCNTVALUEMSB
+                when :REG_LR_RXHEADERCNTVALUELSB
+                when :REG_LR_RXPACKETCNTVALUEMSB
+                when :REG_LR_RXPACKETCNTVALUELSB
+                when :REG_LR_MODEMSTAT
+                when :REG_LR_PKTSNRVALUE
+                when :REG_LR_PKTRSSIVALUE
+                when :REG_LR_RSSIVALUE
+                when :REG_LR_HOPCHANNEL
+                when :REG_LR_MODEMCONFIG1
+                when :REG_LR_MODEMCONFIG2
+                when :REG_LR_SYMBTIMEOUTLSB
+                when :REG_LR_PREAMBLEMSB
+                when :REG_LR_PREAMBLELSB
+                when :REG_LR_PAYLOADLENGTH
+                when :REG_LR_PAYLOADMAXLENGTH
+                when :REG_LR_HOPPERIOD
+                when :REG_LR_FIFORXBYTEADDR
+                when :REG_LR_FEIMSB
+                when :REG_LR_FEIMID
+                when :REG_LR_FEILSB
+                when :REG_LR_RSSIWIDEBAND
+                when :REG_LR_DETECTOPTIMIZE
+                when :REG_LR_INVERTIQ
+                when :REG_LR_DETECTIONTHRESHOLD
+                when :REG_LR_SYNCWORD
+                when :REG_LR_INVERTIQ2
+                when :REG_LR_DIOMAPPING1
+                when :REG_LR_DIOMAPPING2
+                when :REG_LR_VERSION
+                when :REG_LR_AGCREF
+                when :REG_LR_AGCTHRESH1
+                when :REG_LR_AGCTHRESH2
+                when :REG_LR_AGCTHRESH3
+                when :REG_LR_PLLHOP
+                when :REG_LR_TCXO
+                when :REG_LR_PADAC
+                when :REG_LR_PLL
+                when :REG_LR_PLLLOWPN
+                when :REG_LR_FORMERTEMP
+                end                
+            end
         end
         
     end
-
 
 end
