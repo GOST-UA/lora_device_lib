@@ -33,17 +33,20 @@ const size_t LORA_PHYPAYLOAD_OVERHEAD = (1U + 4U + 1U + 2U + 4U);
 
 /* static function prototypes *****************************************/
 
-static void cipherData(enum message_type type, const uint8_t *key, const uint8_t *devAddr, uint32_t counter, uint8_t *data, uint8_t len);
-static uint32_t cmacData(enum message_type type, const uint8_t *key, const uint8_t *devAddr, uint32_t counter, const uint8_t *msg, uint8_t len);
-static uint32_t cmacMessage(const uint8_t *key, uint8_t *msg, uint8_t len);
+static void cipherData(enum message_type type, const uint8_t *key, uint32_t devAddr, uint32_t counter, uint8_t *data, uint8_t len);
+static void cmacData(enum message_type type, const uint8_t *key, uint32_t devAddr, uint32_t counter, const uint8_t *msg, uint8_t len, uint8_t *mic);
+static void cmacMessage(const uint8_t *key, uint8_t *msg, uint8_t len, uint8_t *mic);
 static void xor128(uint8_t *acc, const uint8_t *op);
+/* LoraWAN treats EUIs as ordered multibyte fields so their order needs to be swapped (heh) */
+static void swapEUI(uint8_t *out, const uint8_t *in);
+static void swapMIC(uint8_t *out, const uint8_t *in);
 
 /* functions **********************************************************/
 
 uint8_t Frame_encode(const void *key, const struct lora_frame *f, uint8_t *out, uint8_t max)
 {
     uint8_t pos = 0U;
-    uint32_t mic;
+    uint8_t mic[4U];
     uint16_t size;
     uint8_t dlSettings;
 
@@ -67,8 +70,14 @@ uint8_t Frame_encode(const void *key, const struct lora_frame *f, uint8_t *out, 
                 out[pos] = (uint8_t)f->type;
                 pos++;
                 
-                (void)memcpy(&out[pos], f->fields.data.devAddr, sizeof(f->fields.data.devAddr));
-                pos += sizeof(f->fields.data.devAddr);
+                out[pos] = (uint8_t)f->fields.data.devAddr;
+                pos++;
+                out[pos] = (uint8_t)(f->fields.data.devAddr >> 8);
+                pos++;
+                out[pos] = (uint8_t)(f->fields.data.devAddr >> 16);
+                pos++;
+                out[pos] = (uint8_t)(f->fields.data.devAddr >> 24);
+                pos++;
                 
                 out[pos] = (f->fields.data.adr ? 0x80U : 0x00) |
                     (f->fields.data.adrAckReq ? 0x40U : 0x00) |
@@ -76,6 +85,7 @@ uint8_t Frame_encode(const void *key, const struct lora_frame *f, uint8_t *out, 
                     (f->fields.data.pending ? 0x10U : 0x00) |
                     (f->fields.data.optsLen & 0x0fU);
                 pos++;
+                
                 out[pos] = (uint8_t)f->fields.data.counter;
                 pos++;
                 out[pos] = (uint8_t)(f->fields.data.counter >> 8);
@@ -98,10 +108,10 @@ uint8_t Frame_encode(const void *key, const struct lora_frame *f, uint8_t *out, 
                     pos += f->fields.data.dataLen;                
                 }
 
-                mic = cmacData(f->type, key, f->fields.data.devAddr, f->fields.data.counter, out, pos);
+                cmacData(f->type, key, f->fields.data.devAddr, f->fields.data.counter, out, pos, mic);
 
-                (void)memcpy(&out[pos], &mic, sizeof(mic));
-                pos += sizeof(mic);     
+                swapMIC(&out[pos], mic);
+                pos += sizeof(mic);
             }
             else{
 
@@ -125,14 +135,28 @@ uint8_t Frame_encode(const void *key, const struct lora_frame *f, uint8_t *out, 
                 out[pos] = (uint8_t)f->type;
                 pos++;
                 
-                (void)memcpy(&out[pos], f->fields.joinAccept.appNonce, sizeof(f->fields.joinAccept.appNonce));
-                pos += sizeof(f->fields.joinAccept.appNonce);
+                out[pos] = f->fields.joinAccept.appNonce;
+                pos++;
+                out[pos] = f->fields.joinAccept.appNonce >> 8;
+                pos++;
+                out[pos] = f->fields.joinAccept.appNonce >> 16;
+                pos++;
                 
-                (void)memcpy(&out[pos], f->fields.joinAccept.netID, sizeof(f->fields.joinAccept.netID));
-                pos += sizeof(f->fields.joinAccept.netID);
+                out[pos] = f->fields.joinAccept.netID;
+                pos++;
+                out[pos] = f->fields.joinAccept.netID >> 8;
+                pos++;
+                out[pos] = f->fields.joinAccept.netID >> 16;
+                pos++;
                 
-                (void)memcpy(&out[pos], &f->fields.joinAccept.devAddr, sizeof(f->fields.joinAccept.devAddr));
-                pos += sizeof(f->fields.joinAccept.devAddr);
+                out[pos] = (uint8_t)f->fields.joinAccept.devAddr;
+                pos++;
+                out[pos] = (uint8_t)(f->fields.joinAccept.devAddr >> 8);
+                pos++;
+                out[pos] = (uint8_t)(f->fields.joinAccept.devAddr >> 16);
+                pos++;
+                out[pos] = (uint8_t)(f->fields.joinAccept.devAddr >> 24);
+                pos++;
                 
                 dlSettings = f->fields.joinAccept.rx1DataRateOffset;
                 dlSettings <<= 4;
@@ -150,9 +174,9 @@ uint8_t Frame_encode(const void *key, const struct lora_frame *f, uint8_t *out, 
                     pos += sizeof(f->fields.joinAccept.cfList);            
                 }
                 
-                mic = cmacMessage(key, out, pos);
+                cmacMessage(key, out, pos, mic);
                 
-                (void)memcpy(&out[pos], &mic, sizeof(mic));
+                swapMIC(&out[pos], mic);
                 pos += sizeof(mic);
                 
                 LoraAES_init(&aes_ctx, key);
@@ -181,18 +205,20 @@ uint8_t Frame_encode(const void *key, const struct lora_frame *f, uint8_t *out, 
             out[pos] = (uint8_t)f->type;
             pos++;
             
-            (void)memcpy(&out[pos], f->fields.joinRequest.appEUI, sizeof(f->fields.joinRequest.appEUI));
+            swapEUI(&out[pos], f->fields.joinRequest.appEUI);
             pos += sizeof(f->fields.joinRequest.appEUI);
             
-            (void)memcpy(&out[pos], f->fields.joinRequest.devEUI, sizeof(f->fields.joinRequest.devEUI));
+            swapEUI(&out[pos], f->fields.joinRequest.devEUI);
             pos += sizeof(f->fields.joinRequest.devEUI);
             
-            (void)memcpy(&out[pos], f->fields.joinRequest.devNonce, sizeof(f->fields.joinRequest.devNonce));
-            pos += sizeof(f->fields.joinRequest.devNonce);
+            out[pos] = f->fields.joinRequest.devNonce;
+            pos++;
+            out[pos] = (f->fields.joinRequest.devNonce >> 8);
+            pos++;
             
-            mic = cmacMessage(key, out, pos);
+            cmacMessage(key, out, pos, mic);
             
-            (void)memcpy(&out[pos], &mic, sizeof(mic));
+            swapMIC(&out[pos], mic);
             pos += sizeof(mic);
         }
         else{
@@ -219,7 +245,8 @@ enum lora_frame_result Frame_decode(const void *appKey, const void *nwkSKey, con
     uint8_t *ptr = (uint8_t *)in;
     uint8_t fhdr;
     uint8_t pos = 0U;
-    uint32_t mic;
+    uint8_t mic[4U];
+    uint8_t ourMIC[4U];
     const uint8_t *key;
     uint8_t dlSettings;
 
@@ -249,19 +276,24 @@ enum lora_frame_result Frame_decode(const void *appKey, const void *nwkSKey, con
             return LORA_FRAME_BAD;
         }
         
-        (void)memcpy(f->fields.joinRequest.appEUI, &ptr[pos], sizeof(f->fields.joinRequest.appEUI));
+        swapEUI(f->fields.joinRequest.appEUI, &ptr[pos]);
         pos += sizeof(f->fields.joinRequest.appEUI);
         
-        (void)memcpy(f->fields.joinRequest.devEUI, &ptr[pos], sizeof(f->fields.joinRequest.devEUI));
+        swapEUI(f->fields.joinRequest.devEUI, &ptr[pos]);
         pos += sizeof(f->fields.joinRequest.devEUI);
         
-        (void)memcpy(&f->fields.joinRequest.devNonce, &ptr[pos], sizeof(f->fields.joinRequest.devNonce));
-        pos += sizeof(f->fields.joinRequest.devNonce);
+        f->fields.joinRequest.devNonce = ptr[pos + 1];        
+        f->fields.joinRequest.devNonce <<= 8;        
+        f->fields.joinRequest.devNonce |= ptr[pos];        
+        pos += 2U;
         
-        (void)memcpy(&mic, &ptr[pos], sizeof(mic));
+        swapMIC(mic, &ptr[pos]);
+        pos += sizeof(mic);
         
-        if(cmacMessage(appKey, ptr, pos) != mic){
-            
+        cmacMessage(appKey, ptr, pos, ourMIC);
+        
+        if(memcmp(ourMIC, mic, sizeof(mic)) != 0){
+        
             LORA_ERROR("join request cmic bad")
             return LORA_FRAME_MIC;
         }
@@ -284,14 +316,28 @@ enum lora_frame_result Frame_decode(const void *appKey, const void *nwkSKey, con
             LoraAES_encrypt(&aes_ctx, &ptr[pos+16U]);
         }
     
-        (void)memcpy(f->fields.joinAccept.appNonce, &ptr[pos], sizeof(f->fields.joinAccept.appNonce));
-        pos += sizeof(f->fields.joinAccept.appNonce);
+        f->fields.joinAccept.appNonce = ptr[pos + 2];        
+        f->fields.joinAccept.appNonce <<= 8;        
+        f->fields.joinAccept.appNonce |= ptr[pos + 1];        
+        f->fields.joinAccept.appNonce <<= 8;        
+        f->fields.joinAccept.appNonce |= ptr[pos];        
+        pos += 3U;
         
-        (void)memcpy(f->fields.joinAccept.netID, &ptr[pos], sizeof(f->fields.joinAccept.netID));
-        pos += sizeof(f->fields.joinAccept.netID);
+        f->fields.joinAccept.netID = ptr[pos + 2];        
+        f->fields.joinAccept.netID <<= 8;        
+        f->fields.joinAccept.netID |= ptr[pos + 1];        
+        f->fields.joinAccept.netID <<= 8;        
+        f->fields.joinAccept.netID |= ptr[pos];        
+        pos += 3U;
         
-        (void)memcpy(&f->fields.joinAccept.devAddr, &ptr[pos], sizeof(f->fields.joinAccept.devAddr));
-        pos += sizeof(f->fields.joinAccept.devAddr);
+        f->fields.joinAccept.devAddr = ptr[pos + 3];        
+        f->fields.joinAccept.devAddr <<= 8;        
+        f->fields.joinAccept.devAddr |= ptr[pos + 2];        
+        f->fields.joinAccept.devAddr <<= 8;        
+        f->fields.joinAccept.devAddr |= ptr[pos + 1];        
+        f->fields.joinAccept.devAddr <<= 8;        
+        f->fields.joinAccept.devAddr |= ptr[pos];        
+        pos += 4U;
         
         dlSettings = ptr[pos];
         pos++;
@@ -314,10 +360,13 @@ enum lora_frame_result Frame_decode(const void *appKey, const void *nwkSKey, con
             f->fields.joinAccept.cfListLen = 0U;
         }
         
-        (void)memcpy(&mic, &ptr[pos], sizeof(mic));
+        swapMIC(mic, &ptr[pos]);
+        pos += sizeof(mic);
         
-        if(cmacMessage(appKey, ptr, pos) != mic){
-            
+        cmacMessage(appKey, ptr, pos, ourMIC);
+        
+        if(memcmp(ourMIC, mic, sizeof(mic)) != 0){
+        
             LORA_ERROR("join accept cmic bad")
             return LORA_FRAME_MIC;
         }
@@ -335,9 +384,15 @@ enum lora_frame_result Frame_decode(const void *appKey, const void *nwkSKey, con
             LORA_ERROR("frame too short")
             return LORA_FRAME_BAD;
         }
-
-        (void)memcpy(f->fields.data.devAddr, &ptr[pos], sizeof(f->fields.data.devAddr));
-        pos += sizeof(f->fields.data.devAddr);
+        
+        f->fields.data.devAddr = ptr[pos + 3];        
+        f->fields.data.devAddr <<= 8;        
+        f->fields.data.devAddr |= ptr[pos + 2];        
+        f->fields.data.devAddr <<= 8;        
+        f->fields.data.devAddr |= ptr[pos + 1];        
+        f->fields.data.devAddr <<= 8;        
+        f->fields.data.devAddr |= ptr[pos];        
+        pos += 4U;
 
         fhdr = ptr[pos];
         pos++;
@@ -384,9 +439,12 @@ enum lora_frame_result Frame_decode(const void *appKey, const void *nwkSKey, con
             return LORA_FRAME_BAD;
         }
         
-        (void)memcpy(&mic, &ptr[pos], sizeof(mic));
-
-        if(cmacData(f->type, key, f->fields.data.devAddr, f->fields.data.counter, ptr, pos) != mic){
+        swapMIC(mic, &ptr[pos]);
+        pos += sizeof(mic);
+        
+        cmacData(f->type, key, f->fields.data.devAddr, f->fields.data.counter, ptr, pos, ourMIC);
+        
+        if(memcmp(ourMIC, mic, sizeof(mic)) != 0){
 
             LORA_ERROR("frame MIC error")
             return LORA_FRAME_MIC;
@@ -430,7 +488,7 @@ bool Frame_isUpstream(enum message_type type)
 
 /* static functions ***************************************************/
 
-static void cipherData(enum message_type type, const uint8_t *key, const uint8_t *devAddr, uint32_t counter, uint8_t *data, uint8_t len)
+static void cipherData(enum message_type type, const uint8_t *key, uint32_t devAddr, uint32_t counter, uint8_t *data, uint8_t len)
 {
     struct lora_aes_ctx ctx;
     uint8_t a[16];
@@ -447,10 +505,10 @@ static void cipherData(enum message_type type, const uint8_t *key, const uint8_t
     a[3] = 0x00U;
     a[4] = 0x00U;
     a[5] = (Frame_isUpstream(type) ? 0x00U : 0x01U);
-    a[6] = devAddr[0];
-    a[7] = devAddr[1];
-    a[8] = devAddr[2];
-    a[9] = devAddr[3];
+    a[6] = (uint8_t)devAddr;
+    a[7] = (uint8_t)(devAddr >> 8);
+    a[8] = (uint8_t)(devAddr >> 16);
+    a[9] = (uint8_t)(devAddr >> 24);
     a[10] = (uint8_t)counter;
     a[11] = (uint8_t)(counter >> 8);
     a[12] = (uint8_t)(counter >> 16);
@@ -480,12 +538,11 @@ static void cipherData(enum message_type type, const uint8_t *key, const uint8_t
     }
 }
 
-static uint32_t cmacData(enum message_type type, const uint8_t *key, const uint8_t *devAddr, uint32_t counter, const uint8_t *msg, uint8_t len)
+static void cmacData(enum message_type type, const uint8_t *key, uint32_t devAddr, uint32_t counter, const uint8_t *msg, uint8_t len, uint8_t *mic)
 {
     uint8_t b[16];
     struct lora_aes_ctx aes_ctx;
     struct lora_cmac_ctx ctx;
-    uint32_t retval;
 
     b[0] = 0x49U;
     b[1] = 0x00U;
@@ -493,10 +550,10 @@ static uint32_t cmacData(enum message_type type, const uint8_t *key, const uint8
     b[3] = 0x00U;
     b[4] = 0x00U;
     b[5] = (Frame_isUpstream(type) ? 0x00U : 0x01U);
-    b[6] = devAddr[0];
-    b[7] = devAddr[1];
-    b[8] = devAddr[2];
-    b[9] = devAddr[3];
+    b[6] = (uint8_t)devAddr;
+    b[7] = (uint8_t)(devAddr >> 8);
+    b[8] = (uint8_t)(devAddr >> 16);
+    b[9] = (uint8_t)(devAddr >> 24);
     b[10] = (uint8_t)counter;
     b[11] = (uint8_t)(counter >> 8);
     b[12] = (uint8_t)(counter >> 16);
@@ -508,23 +565,18 @@ static uint32_t cmacData(enum message_type type, const uint8_t *key, const uint8
     LoraCMAC_init(&ctx, &aes_ctx);
     LoraCMAC_update(&ctx, b, (uint16_t)sizeof(b));
     LoraCMAC_update(&ctx, msg, len);
-    LoraCMAC_finish(&ctx, &retval, sizeof(retval));
-    
-    return retval;
+    LoraCMAC_finish(&ctx, mic, 4U);
 }
 
-static uint32_t cmacMessage(const uint8_t *key, uint8_t *msg, uint8_t len)
+static void cmacMessage(const uint8_t *key, uint8_t *msg, uint8_t len, uint8_t *mic)
 {
     struct lora_aes_ctx aes_ctx;
     struct lora_cmac_ctx ctx;
-    uint32_t retval;
 
     LoraAES_init(&aes_ctx, key);
     LoraCMAC_init(&ctx, &aes_ctx);
     LoraCMAC_update(&ctx, msg, len);
-    LoraCMAC_finish(&ctx, &retval, sizeof(retval));
-    
-    return retval;
+    LoraCMAC_finish(&ctx, mic, 4U);
 }
 
 static void xor128(uint8_t *acc, const uint8_t *op)
@@ -545,4 +597,24 @@ static void xor128(uint8_t *acc, const uint8_t *op)
     acc[13] ^= op[13];
     acc[14] ^= op[14];
     acc[15] ^= op[15];
+}
+
+static void swapEUI(uint8_t *out, const uint8_t *in)
+{
+    out[0] = in[7];
+    out[1] = in[6];
+    out[2] = in[5];
+    out[3] = in[4];
+    out[4] = in[3];
+    out[5] = in[2];
+    out[6] = in[1];
+    out[7] = in[0];
+}
+
+static void swapMIC(uint8_t *out, const uint8_t *in)
+{
+    out[0] = in[3];
+    out[1] = in[2];
+    out[2] = in[1];
+    out[3] = in[0];
 }

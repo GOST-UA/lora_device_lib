@@ -44,7 +44,7 @@ struct ldl {
 
 bool ldl_init(struct ldl *self, enum lora_region_id region_id, const struct lora_board *board);
 
-bool ldl_personalize(struct ldl *self, const uint8_t *devAddr, const void *nwkSKey, const void *appSKey);
+bool ldl_personalize(struct ldl *self, uint32_t devAddr, const void *nwkSKey, const void *appSKey);
 
 bool ldl_addChannel(struct ldl *self, uint32_t freq, uint8_t chIndex);
 void ldl_removeChannel(struct ldl *self, uint8_t chIndex);

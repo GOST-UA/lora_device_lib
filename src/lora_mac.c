@@ -120,7 +120,7 @@ bool MAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *d
                     if(rate_setting->payload >= bufferMax){ 
 
                         f.type = FRAME_TYPE_DATA_UNCONFIRMED_UP;
-                        (void)memcpy(f.fields.data.devAddr, self->devAddr, sizeof(f.fields.data.devAddr));
+                        f.fields.data.devAddr = self->devAddr;
                         f.fields.data.counter = (uint32_t)getUpCount(self);
                         f.fields.data.ack = false;
                         f.fields.data.adr = false;
@@ -187,7 +187,7 @@ bool MAC_join(struct lora_mac *self)
             
             (void)memcpy(f.fields.joinRequest.appEUI, self->appEUI, sizeof(f.fields.joinRequest.appEUI));
             (void)memcpy(f.fields.joinRequest.appEUI, self->devEUI, sizeof(f.fields.joinRequest.devEUI));
-            (void)memset(f.fields.joinRequest.devNonce, 0 , sizeof(f.fields.joinRequest.devNonce));
+            f.fields.joinRequest.devNonce = 0U;
 
             self->bufferLen = Frame_encode(self->appKey, &f, self->buffer, sizeof(self->buffer));
             
@@ -231,9 +231,9 @@ bool MAC_setNbTrans(struct lora_mac *self, uint8_t nbTrans)
     return retval;
 }
 
-bool MAC_personalize(struct lora_mac *self, const uint8_t *devAddr, const void *nwkSKey, const void *appSKey)
+bool MAC_personalize(struct lora_mac *self, uint32_t devAddr, const void *nwkSKey, const void *appSKey)
 {
-    (void)memcpy(self->devAddr, devAddr, sizeof(self->devAddr));
+    self->devAddr = devAddr;
     (void)memcpy(self->nwkSKey, nwkSKey, sizeof(self->nwkSKey));
     (void)memcpy(self->appSKey, appSKey, sizeof(self->appSKey));    
     return true;
@@ -535,23 +535,50 @@ static void collect(struct lora_mac *self)
                 
                 struct lora_aes_ctx aes_ctx;
                 struct lora_cmac_ctx cmac_ctx;
-                uint8_t hdr;
+                uint8_t block[16U];
                 
                 LoraAES_init(&aes_ctx, self->appKey);
-                LoraCMAC_init(&cmac_ctx, &aes_ctx); 
                 
-                hdr = 1U;
-                LoraCMAC_update(&cmac_ctx, &hdr, sizeof(hdr));
-                LoraCMAC_update(&cmac_ctx, result.fields.joinAccept.appNonce, sizeof(result.fields.joinAccept.appNonce));
-                LoraCMAC_update(&cmac_ctx, result.fields.joinAccept.netID, sizeof(result.fields.joinAccept.netID));
-                LoraCMAC_update(&cmac_ctx, &self->devNonce, sizeof(self->devNonce));
+                block[0] = 1U;
+                block[1] = result.fields.joinAccept.appNonce;
+                block[2] = result.fields.joinAccept.appNonce >> 8;
+                block[3] = result.fields.joinAccept.appNonce >> 16;
+                block[4] = result.fields.joinAccept.netID;
+                block[5] = result.fields.joinAccept.netID >> 8;
+                block[6] = result.fields.joinAccept.netID >> 16;
+                block[7] = self->devNonce;
+                block[8] = self->devNonce >> 8;                    
+                block[9] = 0U;                    
+                block[10] = 0U;                    
+                block[11] = 0U;                    
+                block[12] = 0U;                    
+                block[13] = 0U;                    
+                block[14] = 0U;                    
+                block[15] = 0U;                    
+                
+                LoraCMAC_init(&cmac_ctx, &aes_ctx); 
+                LoraCMAC_update(&cmac_ctx, block, sizeof(block));
                 LoraCMAC_finish(&cmac_ctx, self->nwkSKey, sizeof(self->nwkSKey));
                 
-                hdr = 2U;
-                LoraCMAC_update(&cmac_ctx, &hdr, sizeof(hdr));
-                LoraCMAC_update(&cmac_ctx, result.fields.joinAccept.appNonce, sizeof(result.fields.joinAccept.appNonce));
-                LoraCMAC_update(&cmac_ctx, result.fields.joinAccept.netID, sizeof(result.fields.joinAccept.netID));
-                LoraCMAC_update(&cmac_ctx, &self->devNonce, sizeof(self->devNonce));
+                block[0] = 2U;
+                block[1] = result.fields.joinAccept.appNonce;
+                block[2] = result.fields.joinAccept.appNonce >> 8;
+                block[3] = result.fields.joinAccept.appNonce >> 16;
+                block[4] = result.fields.joinAccept.netID;
+                block[5] = result.fields.joinAccept.netID >> 8;
+                block[6] = result.fields.joinAccept.netID >> 16;
+                block[7] = self->devNonce;
+                block[8] = self->devNonce >> 8;                    
+                block[9] = 0U;                    
+                block[10] = 0U;                    
+                block[11] = 0U;                    
+                block[12] = 0U;                    
+                block[13] = 0U;                    
+                block[14] = 0U;                    
+                block[15] = 0U;                    
+                
+                LoraCMAC_init(&cmac_ctx, &aes_ctx); 
+                LoraCMAC_update(&cmac_ctx, block, sizeof(block));
                 LoraCMAC_finish(&cmac_ctx, self->appSKey, sizeof(self->appSKey));
                 
                 self->joinPending = false;
@@ -570,7 +597,7 @@ static void collect(struct lora_mac *self)
             
             if(self->personalised){
             
-                if(memcmp(self->devAddr, result.fields.data.devAddr, sizeof(result.fields.data.devAddr)) == 0){
+                if(self->devAddr == result.fields.data.devAddr){
                 
                     if(validateDownCount(self, result.fields.data.counter)){
                 

@@ -28,6 +28,7 @@ extern "C" {
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 /* types **************************************************************/
 
@@ -49,8 +50,8 @@ struct lora_frame {
     union {
         
         struct {
-    
-            uint8_t devAddr[4];
+
+            uint32_t devAddr;
             uint32_t counter;
             bool ack;
             bool adr;
@@ -68,9 +69,9 @@ struct lora_frame {
         
         struct {
 
-            uint8_t appNonce[3];
-            uint8_t netID[3];
-            uint8_t devAddr[4];
+            uint32_t appNonce;
+            uint32_t netID;
+            uint32_t devAddr;
             uint8_t rx1DataRateOffset;
             uint8_t rx2DataRate;
             uint8_t rxDelay;
@@ -83,7 +84,7 @@ struct lora_frame {
             
             uint8_t appEUI[8];
             uint8_t devEUI[8];
-            uint8_t devNonce[2];
+            uint16_t devNonce;
                 
         } joinRequest;
         

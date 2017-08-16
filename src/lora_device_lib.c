@@ -52,7 +52,7 @@ bool ldl_init(struct ldl *self, enum lora_region_id region_id, const struct lora
     return retval;
 }
 
-bool ldl_personalize(struct ldl *self, const uint8_t *devAddr, const void *nwkSKey, const void *appSKey)
+bool ldl_personalize(struct ldl *self, uint32_t devAddr, const void *nwkSKey, const void *appSKey)
 {
     return MAC_personalize(&self->mac, devAddr, nwkSKey, appSKey);
 }

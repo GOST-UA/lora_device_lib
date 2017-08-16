@@ -10,9 +10,9 @@
 
 #include <string.h>
 
-static void test_LoraFrame_data_encode_empty(void **user)
+static void test_Frame_data_encode_empty(void **user)
 {
-    const uint8_t devAddr[] = {0x00, 0x00, 0x00, 0x00};
+    uint32_t devAddr = 0U;
     const uint8_t expected[] = "\x02\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00";
     const uint8_t dummyKey[] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
     struct lora_frame input;
@@ -22,7 +22,7 @@ static void test_LoraFrame_data_encode_empty(void **user)
 
     input.type = FRAME_TYPE_DATA_UNCONFIRMED_UP;
     input.fields.data.counter = 256;
-    (void)memcpy(&input.fields.data.devAddr, devAddr, sizeof(input.fields.data.devAddr));
+    input.fields.data.devAddr = devAddr;
      
     outLen = Frame_encode(dummyKey, &input, out, sizeof(out));
     
@@ -30,9 +30,9 @@ static void test_LoraFrame_data_encode_empty(void **user)
     assert_memory_equal(expected, out, sizeof(expected)-1U);
 }
 
-static void test_LoraFrame_data_decode_empty(void **user)
+static void test_Frame_data_decode_empty(void **user)
 {
-    const uint8_t devAddr[] = {0x00, 0x00, 0x00, 0x00};
+    uint32_t devAddr = 0U;
     uint8_t input[] = "\x02\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00";
     const uint8_t dummyKey[] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
     struct lora_frame expected;
@@ -43,7 +43,7 @@ static void test_LoraFrame_data_decode_empty(void **user)
     (void)memset(&expected, 0, sizeof(expected));
     expected.type = FRAME_TYPE_DATA_UNCONFIRMED_UP;
     expected.fields.data.counter = 256;
-    (void)memcpy(&expected.fields.data.devAddr, devAddr, sizeof(expected.fields.data.devAddr));
+    expected.fields.data.devAddr = devAddr;
 
     result = Frame_decode(dummyKey, dummyKey, dummyKey, input, sizeof(input)-1U, &output);
 
@@ -54,8 +54,8 @@ static void test_LoraFrame_data_decode_empty(void **user)
 int main(void)
 {
     const struct CMUnitTest tests[] = {
-        cmocka_unit_test(test_LoraFrame_data_encode_empty),        
-        cmocka_unit_test(test_LoraFrame_data_decode_empty),        
+        cmocka_unit_test(test_Frame_data_encode_empty),        
+        cmocka_unit_test(test_Frame_data_decode_empty),        
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);

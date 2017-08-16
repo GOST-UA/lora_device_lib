@@ -42,7 +42,7 @@ static void test_MAC_init(void **user)
 static void test_MAC_personalize(void **user)
 {
     struct lora_mac *self = (struct lora_mac *)(*user);
-    uint8_t devAddr[] = "\x00\x00\x00\x00";
+    uint32_t devAddr = 0U;
     
     MAC_personalize(self, devAddr, "\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa", "\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb");
 }
