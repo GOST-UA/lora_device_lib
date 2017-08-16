@@ -54,10 +54,9 @@ void Radio_setEventHandler(struct lora_radio *self, void *receiver, radioEventCB
 {
     LORA_ASSERT(self != NULL)
     
-    // todo: this is a critical section
-    self->eventReceiver = receiver;
-    self->eventHandler = cb;
-    
+    System_atomic_setPtr(&self->eventReceiver, NULL);
+    self->eventHandler = cb;    
+    System_atomic_setPtr(&self->eventReceiver, receiver);    
 }
 
 uint32_t Radio_resetHardware(struct lora_radio *self)
@@ -233,18 +232,18 @@ void Radio_interrupt(struct lora_radio *self, uint8_t n, uint64_t time)
 {    
     LORA_ASSERT(self != NULL)
     
-    switch(n){
-    case 0U:
-        if(self->eventHandler != NULL){
-            
+    if(self->eventHandler != NULL){
+    
+        switch(n){
+        case 0U:    
             self->eventHandler(self->eventReceiver, LORA_RADIO_TX_COMPLETE, time);
-        }
-        break;
-    case 1U:
-    case 2U:
-    case 3U:
-    default:
-        break;
+            break;
+        case 1U:
+        case 2U:
+        case 3U:
+        default:
+            break;
+        }    
     }    
 }
 

@@ -87,7 +87,7 @@ $(DIR_BIN)/tc_frame_with_encryption: $(addprefix $(DIR_BUILD)/, tc_frame_with_en
 	@ echo linking $@
 	@ $(CC) $(LDFLAGS) $^ -o $@
 
-$(DIR_BIN)/tc_radio_sx1272: $(addprefix $(DIR_BUILD)/, tc_radio_sx1272.o lora_radio_sx1272.o mock_board.o $(OBJ_CMOCKA))
+$(DIR_BIN)/tc_radio_sx1272: $(addprefix $(DIR_BUILD)/, tc_radio_sx1272.o lora_radio_sx1272.o mock_board.o mock_lora_system.o $(OBJ_CMOCKA))
 	@ echo linking $@
 	@ $(CC) $(LDFLAGS) $^ -o $@
 

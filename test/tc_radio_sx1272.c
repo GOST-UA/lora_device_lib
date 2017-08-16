@@ -19,9 +19,6 @@ static void handle_event(void *receiver, enum lora_radio_event event, uint64_t t
 }
 #endif
 
-void System_usleep(uint32_t interval)
-{
-}
 
 /**********************************************************************/
 

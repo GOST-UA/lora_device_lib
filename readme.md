@@ -96,40 +96,57 @@ In summary:
     
 ## Porting Guide
 
-### Implement System Time
+### Must Implement System_getTime()
 
-```
+~~~
 uint64_t System_getTime(void);
-```
+~~~
+
 This function must return system time (e.g. time since power up) in microseconds.
 
-### Define a Platform Specific Error Message Stream
+### Must Implement System_usleep()
+
+~~~
+void System_usleep(uint32_t interval);
+~~~
+
+This function must cause the program counter to block for an interval of microseconds.
+
+### Must Implement System_atomic_setPtr()
+
+~~~
+void System_atomic_setPtr(void **receiver, void *value);
+~~~
+
+This function must write atomically write value to the receiver memory location.
+
+### May Define a Platform Specific Error Message Stream
 
 Define `LORA_ERROR(...)` to be a function that takes a printf style variadic argument.
 
 LoraDeviceLib will print messages to explain why certain functions fail. The
 default configuration is to remove these messages from the build.
 
-### Define a Platform Specific Assert Handler
+### May Define a Platform Specific Assert Handler
 
 Define `LORA_ASSERT(X)` to be an assertion that takes X as an argument.
 
 LoraDeviceLib makes run time assertions to catch bugs. It is recommended
 that this macro is defined at least for debug builds.
 
-### Substitute an Alternative AES Implementation
+### May Substitute an Alternative AES Implementation
 
 1. Define `LORA_USE_PLATFORM_AES`
 2. Define `struct lora_aes_ctx` to suit the platform implementation
 3. Implement `LoraAES_init` and `LoraAES_encrypt` to wrap platform implementation
 
-### Substitute an Alternative CMAC Implementation
+### May Substitute an Alternative CMAC Implementation
 
 1. Define `LORA_USE_PLATFORM_CMAC`
 2. Define `struct lora_cmac_ctx` to suit the platform implementation
 3. Implement `LoraCMAC_init`, `LoraCMAC_update`, and `LoraCMAC_finish` to wrap platform implementation
 
-### Customise lora_radio_sx1272
+### May Customise lora_radio_sx1272
 
 - define LORA_RADIO_SX1272_USE_BOOST
 

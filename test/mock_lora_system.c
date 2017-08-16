@@ -14,3 +14,8 @@ uint64_t System_getTime(void)
 void System_usleep(uint32_t interval)
 {
 }
+
+void System_atomic_setPtr(void **receiver, void *value)
+{
+    *receiver = value;
+}
