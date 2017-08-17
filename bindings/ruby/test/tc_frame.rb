@@ -1,21 +1,37 @@
 require 'minitest/autorun'
-require 'lora_device_lib/ext_frame'
+require 'lora_device_lib'
 
 class TestFrame < Minitest::Test
     
     include LoraDeviceLib
-    
-    DUMMY_KEY = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
 
     def test_unconfirmedUp
     
-        msg = UnconfirmedUp.new(
-            appSKey: DUMMY_KEY,
-            nwkSKey: DUMMY_KEY)
+        msg = UnconfirmedUp.new
             
         out = msg.encode
         
-        puts out.bytes.map{|c|02%X % c.to_s(16)}.join("\\x")
+        puts out.bytes.map{|c|"\\x%02X" % c}.join("")
+    
+    end
+    
+    def test_joinReq
+    
+        msg = JoinReq.new
+            
+        out = msg.encode
+        
+        puts out.bytes.map{|c|"\\x%02X" % c}.join("")
+    
+    end
+    
+    def test_joinAccept
+    
+        msg = JoinAccept.new
+        
+        out = msg.encode
+        
+        puts out.bytes.map{|c|"\\x%02X" % c}.join("")
     
     end
 

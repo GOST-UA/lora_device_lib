@@ -13,6 +13,8 @@ static VALUE cConfirmedUp;
 static VALUE cUnconfirmedUp;
 static VALUE cConfirmedDown;
 static VALUE cUnconfirmedDown;
+static VALUE cKey;
+static VALUE cError;
 
 static const struct {
         
@@ -46,6 +48,8 @@ static const struct {
     }        
 };
 
+static const uint8_t default_key[] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+
 /* static functions ***************************************************/
 
 static VALUE _decode(int argc, VALUE *argv, VALUE self);
@@ -57,11 +61,6 @@ static VALUE _encode_data(VALUE self);
 static VALUE _encode_join_accept(VALUE self);
 static VALUE _encode_join_req(VALUE self);
 
-static VALUE _initialize_joinReq(int argc, VALUE *argv, VALUE self);
-static VALUE _initialize_joinAccept(int argc, VALUE *argv, VALUE self);
-
-static VALUE _initialize_data(int argc, VALUE *argv, VALUE self);
-
 
 /* functions **********************************************************/
 
@@ -69,6 +68,9 @@ void Init_ext_frame(void)
 {
     cLoraDeviceLib = rb_define_module("LoraDeviceLib");
     cFrame = rb_define_class_under(cLoraDeviceLib, "Frame", rb_cObject);
+    
+    cKey = rb_const_get(cLoraDeviceLib, rb_intern("Key"));
+    cError = rb_const_get(cLoraDeviceLib, rb_intern("Error"));
     
     cJoinReq = rb_define_class_under(cLoraDeviceLib, "JoinReq", cFrame);
     cJoinAccept = rb_define_class_under(cLoraDeviceLib, "JoinAccept", cFrame);
@@ -83,11 +85,6 @@ void Init_ext_frame(void)
     rb_define_method(cJoinReq, "encode", _encode_join_req, 0);
     rb_define_method(cJoinAccept, "encode", _encode_join_accept, 0);
     rb_define_method(cDataFrame, "encode", _encode_data, 0);
-    
-    rb_define_method(cJoinReq, "initialize", _initialize_joinReq, -1);
-    rb_define_method(cJoinAccept, "initialize", _initialize_joinAccept, -1);
-    
-    rb_define_method(cDataFrame, "initialize", _initialize_data, -1);
 }
 
 /* static functions ***************************************************/
@@ -104,18 +101,65 @@ static VALUE _decode(int argc, VALUE *argv, VALUE self)
     VALUE klass;
     VALUE input;
     VALUE keys;
+    VALUE defaultKey;
+    
+    {
+        VALUE args[] = {rb_str_new((char *)default_key, sizeof(default_key)-1U)};
+        defaultKey = rb_class_new_instance(sizeof(args)/sizeof(*args), args, cKey);
+    }
     
     (void)rb_scan_args(argc, argv, "10:", &input, &keys);
     
-    nwkSKey = rb_hash_aref(keys, ID2SYM(rb_intern("nwkSKey")));
-    appSKey = rb_hash_aref(keys, ID2SYM(rb_intern("appSKey")));
-    appKey = rb_hash_aref(keys, ID2SYM(rb_intern("appKey")));
+    if(keys == Qnil){
+        
+        keys = rb_hash_new();
+    }
     
-    result = Frame_decode(RSTRING_PTR(appKey), RSTRING_PTR(nwkSKey), RSTRING_PTR(appSKey), RSTRING_PTR(input), RSTRING_LEN(input), &f);
+    if(rb_hash_aref(keys, ID2SYM(rb_intern("nwkSKey")))){
+        
+        nwkSKey = rb_hash_aref(keys, ID2SYM(rb_intern("nwkSKey")));
+    }
+    else{
+        
+        nwkSKey = defaultKey;
+    }
+    
+    if(rb_hash_aref(keys, ID2SYM(rb_intern("appSKey")))){
+        
+        appSKey = rb_hash_aref(keys, ID2SYM(rb_intern("appSKey")));
+    }
+    else{
+        
+        appSKey = defaultKey;
+    }
+    
+    if(rb_hash_aref(keys, ID2SYM(rb_intern("appKey")))){
+        
+        appKey = rb_hash_aref(keys, ID2SYM(rb_intern("appKey")));
+    }
+    else{
+        
+        appKey = defaultKey;
+    }
+     
+    if(rb_obj_is_kind_of(nwkSKey, cKey) != Qtrue){
+        
+        rb_raise(rb_eTypeError, ":nwkSKey parameter must be kind_of Key");
+    }
+    if(rb_obj_is_kind_of(appSKey, cKey) != Qtrue){
+        
+        rb_raise(rb_eTypeError, ":appSKey parameter must be kind_of Key");
+    }
+    if(rb_obj_is_kind_of(appKey, cKey) != Qtrue){
+        
+        rb_raise(rb_eTypeError, ":appKey parameter must be kind_of Key");
+    }
+        
+    result = Frame_decode(RSTRING_PTR(rb_funcall(appKey, rb_intern("value"), 0)), RSTRING_PTR(rb_funcall(nwkSKey, rb_intern("value"), 0)), RSTRING_PTR(rb_funcall(appSKey, rb_intern("value"), 0)), RSTRING_PTR(input), RSTRING_LEN(input), &f);
     
     if(result == LORA_FRAME_BAD){
         
-        //raise exception
+        rb_funcall(rb_cObject, rb_intern("raise"), 1, rb_funcall(cError, rb_intern("new"), 1, rb_str_new2("bad frame")));
     }
     
     param = rb_hash_new();
@@ -134,16 +178,16 @@ static VALUE _decode(int argc, VALUE *argv, VALUE self)
         
         rb_hash_aset(param, ID2SYM(rb_intern("appEUI")), rb_str_new((char *)f.fields.joinRequest.appEUI, sizeof(f.fields.joinRequest.appEUI)));
         rb_hash_aset(param, ID2SYM(rb_intern("devEUI")), rb_str_new((char *)f.fields.joinRequest.devEUI, sizeof(f.fields.joinRequest.devEUI)));
-        rb_hash_aset(param, ID2SYM(rb_intern("devNonce")), rb_str_new((char *)f.fields.joinRequest.devNonce, sizeof(f.fields.joinRequest.devNonce)));    
+        rb_hash_aset(param, ID2SYM(rb_intern("devNonce")), UINT2NUM(f.fields.joinRequest.devNonce));
     }
         break;
     case FRAME_TYPE_JOIN_ACCEPT:
     {
         rb_hash_aset(param, ID2SYM(rb_intern("appKey")), appKey);
         
-        rb_hash_aset(param, ID2SYM(rb_intern("appNonce")), rb_str_new((char *)f.fields.joinAccept.appNonce, sizeof(f.fields.joinAccept.appNonce)));
-        rb_hash_aset(param, ID2SYM(rb_intern("netID")), rb_str_new((char *)f.fields.joinAccept.netID, sizeof(f.fields.joinAccept.netID)));
-        rb_hash_aset(param, ID2SYM(rb_intern("devAddr")), rb_str_new((char *)f.fields.joinAccept.devAddr, sizeof(f.fields.joinAccept.devAddr)));
+        rb_hash_aset(param, ID2SYM(rb_intern("appNonce")), UINT2NUM(f.fields.joinAccept.appNonce));
+        rb_hash_aset(param, ID2SYM(rb_intern("netID")), UINT2NUM(f.fields.joinAccept.netID));
+        rb_hash_aset(param, ID2SYM(rb_intern("devAddr")), UINT2NUM(f.fields.joinAccept.devAddr));
         rb_hash_aset(param, ID2SYM(rb_intern("rx1DataRateOffset")), UINT2NUM(f.fields.joinAccept.rx1DataRateOffset));
         rb_hash_aset(param, ID2SYM(rb_intern("rx2DataRate")), UINT2NUM(f.fields.joinAccept.rx2DataRate));
         rb_hash_aset(param, ID2SYM(rb_intern("rxDelay")), UINT2NUM(f.fields.joinAccept.rxDelay));
@@ -159,7 +203,7 @@ static VALUE _decode(int argc, VALUE *argv, VALUE self)
         rb_hash_aset(param, ID2SYM(rb_intern("appSKey")), appSKey);
         
         rb_hash_aset(param, ID2SYM(rb_intern("counter")), UINT2NUM(f.fields.data.counter));      
-        rb_hash_aset(param, ID2SYM(rb_intern("devAddr")), rb_str_new((char *)f.fields.data.devAddr, sizeof(f.fields.data.devAddr)));      
+        rb_hash_aset(param, ID2SYM(rb_intern("devAddr")), UINT2NUM(f.fields.data.devAddr));      
         
         rb_hash_aset(param, ID2SYM(rb_intern("ack")), f.fields.data.ack ? Qtrue : Qfalse);      
         rb_hash_aset(param, ID2SYM(rb_intern("adr")), f.fields.data.adr ? Qtrue : Qfalse);            
@@ -175,61 +219,7 @@ static VALUE _decode(int argc, VALUE *argv, VALUE self)
     
     VALUE args[] = {param};
     
-    return rb_class_new_instance(sizeof(args),args,klass);
-}
-
-static VALUE _initialize_joinReq(int argc, VALUE *argv, VALUE self)
-{
-    VALUE opts;
-    
-    (void)rb_scan_args(argc, argv, "00:", &opts);
-    
-    rb_iv_set(self, "@appKey", rb_hash_aref(opts, ID2SYM(rb_intern("appKey"))));
-    rb_iv_set(self, "@appEUI", rb_hash_aref(opts, ID2SYM(rb_intern("appEUI"))));
-    rb_iv_set(self, "@devEUI", rb_hash_aref(opts, ID2SYM(rb_intern("devEUI"))));
-    rb_iv_set(self, "@devNonce", rb_hash_aref(opts, ID2SYM(rb_intern("devNonce"))));
-   
-    return self;
-}
-
-static VALUE _initialize_joinAccept(int argc, VALUE *argv, VALUE self)
-{
-    VALUE opts;
-    
-    (void)rb_scan_args(argc, argv, "00:", &opts);
-    
-    rb_iv_set(self, "@appKey", rb_hash_aref(opts, ID2SYM(rb_intern("appKey"))));
-    rb_iv_set(self, "@netID", rb_hash_aref(opts, ID2SYM(rb_intern("netID"))));
-    rb_iv_set(self, "@devAddr", rb_hash_aref(opts, ID2SYM(rb_intern("devAddr"))));
-    rb_iv_set(self, "@rx1DataRateOffset", rb_hash_aref(opts, ID2SYM(rb_intern("rx1DataRateOffset"))));
-    rb_iv_set(self, "@rx2DataRate", rb_hash_aref(opts, ID2SYM(rb_intern("rx2DataRate"))));
-    rb_iv_set(self, "@rxDelay", rb_hash_aref(opts, ID2SYM(rb_intern("rxDelay"))));
-    rb_iv_set(self, "@cfList", rb_hash_aref(opts, ID2SYM(rb_intern("cfList"))));
-    
-    return self;
-}
-
-static VALUE _initialize_data(int argc, VALUE *argv, VALUE self)
-{
-    VALUE opts;
-    
-    (void)rb_scan_args(argc, argv, "00:", &opts);
-    
-    rb_iv_set(self, "@nwkSKey", rb_hash_aref(opts, ID2SYM(rb_intern("nwkSKey"))));
-    rb_iv_set(self, "@appSKey", rb_hash_aref(opts, ID2SYM(rb_intern("appSKey"))));
-    rb_iv_set(self, "@counter", rb_hash_aref(opts, ID2SYM(rb_intern("counter"))));
-    rb_iv_set(self, "@devAddr", rb_hash_aref(opts, ID2SYM(rb_intern("devAddr"))));
-    
-    rb_iv_set(self, "@ack", rb_hash_aref(opts, ID2SYM(rb_intern("ack"))));
-    rb_iv_set(self, "@adr", rb_hash_aref(opts, ID2SYM(rb_intern("adr"))));
-    rb_iv_set(self, "@adrAckReq", rb_hash_aref(opts, ID2SYM(rb_intern("adrAckReq"))));
-    rb_iv_set(self, "@pending", rb_hash_aref(opts, ID2SYM(rb_intern("pending"))));
-    
-    rb_iv_set(self, "@opts", rb_hash_aref(opts, ID2SYM(rb_intern("opts"))));
-    rb_iv_set(self, "@data", rb_hash_aref(opts, ID2SYM(rb_intern("data"))));
-    rb_iv_set(self, "@port", rb_hash_aref(opts, ID2SYM(rb_intern("port"))));
-    
-    return self;
+    return rb_class_new_instance(sizeof(args)/sizeof(*args),args,klass);
 }
 
 static VALUE frameTypeToKlass(enum message_type type)
@@ -285,11 +275,11 @@ static VALUE _encode_join_req(VALUE self)
     else{
 
         f.type = FRAME_TYPE_JOIN_REQ;
-        (void)memcpy(f.fields.joinRequest.devNonce, RSTRING_PTR(devNonce), sizeof(f.fields.joinRequest.devNonce));            
+        f.fields.joinRequest.devNonce = NUM2UINT(devNonce);            
         (void)memcpy(f.fields.joinRequest.appEUI, RSTRING_PTR(appEUI), sizeof(f.fields.joinRequest.appEUI));
         (void)memcpy(f.fields.joinRequest.appEUI, RSTRING_PTR(devEUI), sizeof(f.fields.joinRequest.devEUI));
                 
-        len = Frame_encode(RSTRING_PTR(appKey), &f, out, sizeof(out));
+        len = Frame_encode(RSTRING_PTR(rb_funcall(appKey, rb_intern("value"), 0)), &f, out, sizeof(out));
         
         assert(len != 0U);
         
@@ -342,11 +332,11 @@ static VALUE _encode_join_accept(VALUE self)
         f.fields.joinAccept.rx2DataRate = NUM2UINT(rx2DataRate);
         f.fields.joinAccept.rxDelay = NUM2UINT(rxDelay);
         (void)memcpy(f.fields.joinAccept.cfList, RSTRING_PTR(cfList), RSTRING_LEN(cfList));
-        (void)memcpy(f.fields.joinAccept.appNonce, RSTRING_PTR(appNonce), sizeof(f.fields.joinAccept.appNonce));
-        (void)memcpy(f.fields.joinAccept.netID, RSTRING_PTR(netID), sizeof(f.fields.joinAccept.netID));
-        (void)memcpy(f.fields.joinAccept.devAddr, RSTRING_PTR(devAddr), sizeof(f.fields.joinAccept.devAddr));
+        f.fields.joinAccept.appNonce = NUM2UINT(appNonce);
+        f.fields.joinAccept.netID = NUM2UINT(netID);
+        f.fields.joinAccept.devAddr = NUM2UINT(devAddr);
         
-        len = Frame_encode(RSTRING_PTR(appKey), &f, out, sizeof(out));
+        len = Frame_encode(RSTRING_PTR(rb_funcall(appKey, rb_intern("value"), 0)), &f, out, sizeof(out));
         
         assert(len != 0U);
         
@@ -359,11 +349,12 @@ static VALUE _encode_join_accept(VALUE self)
 static VALUE _encode_data(VALUE self)
 {
     enum message_type type;
-    
     uint8_t out[UINT8_MAX];
+    
     uint8_t len;
     
     struct lora_frame f;
+    
     
     VALUE nwkSKey;
     VALUE appSKey;
@@ -391,10 +382,10 @@ static VALUE _encode_data(VALUE self)
     }
     else{
     
-        nwkSKey = rb_iv_get(self, "@nwkSKey");
-        appSKey = rb_iv_get(self, "@appSKey");
+        nwkSKey = rb_funcall(rb_iv_get(self, "@nwkSKey"), rb_intern("value"), 0);
+        appSKey = rb_funcall(rb_iv_get(self, "@appSKey"), rb_intern("value"), 0);
             
-        data = rb_iv_get(self, "@payload");
+        data = rb_iv_get(self, "@data");
         port = rb_iv_get(self, "@port");
         opts = rb_iv_get(self, "@opts");
         
@@ -408,7 +399,10 @@ static VALUE _encode_data(VALUE self)
         counter = rb_iv_get(self, "@counter");
         
         f.type = type;
-        (void)memcpy(f.fields.data.devAddr, RSTRING_PTR(devAddr), RSTRING_LEN(devAddr));
+        
+#if 0
+        
+        f.fields.data.devAddr = NUM2UINT(devAddr);
         f.fields.data.counter = NUM2UINT(counter);
         f.fields.data.ack = (ack == Qtrue) ? true : false;
         f.fields.data.adr = (adr == Qtrue) ? true : false;
@@ -418,10 +412,10 @@ static VALUE _encode_data(VALUE self)
         f.fields.data.opts = (opts != Qnil) ? (uint8_t *)RSTRING_PTR(opts) : NULL;
         f.fields.data.optsLen = (opts != Qnil) ? RSTRING_LEN(opts) : 0U;             
         
-        f.fields.data.data = (data != Qnil) ? (uint8_t *)RSTRING_LEN(data) : NULL;
+        f.fields.data.data = (data != Qnil) ? (uint8_t *)RSTRING_PTR(data) : NULL;
         f.fields.data.dataLen = (data != Qnil) ? RSTRING_LEN(data) : 0U;
         f.fields.data.port = (port != Qnil) ? NUM2UINT(port) : 0U;
-            
+#endif            
         len = Frame_encode((f.fields.data.port == 0) ? RSTRING_PTR(nwkSKey) : RSTRING_PTR(appSKey), &f, out, sizeof(out));
         
         assert(len != 0U);

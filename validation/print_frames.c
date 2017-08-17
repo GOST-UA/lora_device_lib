@@ -104,6 +104,23 @@ static void Frame_encode_unconfirmedUp_upCount(void)
     print_hex(__FUNCTION__, buffer, retval);
 }
 
+static void Frame_encode_unconfirmedUp_empty(void)
+{
+    uint8_t retval;
+    uint8_t buffer[UINT8_MAX];
+    const uint8_t key[] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+    
+    struct lora_frame f;
+    
+    (void)memset(&f, 0, sizeof(f));
+    
+    f.type = FRAME_TYPE_DATA_UNCONFIRMED_UP;
+    
+    retval = Frame_encode(key, &f, buffer, sizeof(buffer));
+    
+    print_hex(__FUNCTION__, buffer, retval);
+}
+
 static void Frame_encode_unconfirmedUp_withOpts(void)
 {
     uint8_t retval;
@@ -212,6 +229,7 @@ int main(int argc, const char **argv)
     Frame_encode_unconfirmedUp_upCount();
     Frame_encode_unconfirmedUp_withOpts();
     Frame_encode_unconfirmedUp_withOpts_upCount();
+    Frame_encode_unconfirmedUp_empty();
     
     exit(EXIT_SUCCESS);
 }

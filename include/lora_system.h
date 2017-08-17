@@ -7,16 +7,33 @@ extern "C" {
 
 #include <stdint.h>
 
+
+/** Retrieve system time in microseconds
+ * 
+ * @return system time in microseconds
+ * 
+ * */
 uint64_t System_getTime(void);
 
+/** Halt the program counter for interval microseconds
+ * 
+ * @param[in] interval microseconds
+ * 
+ * */
 void System_usleep(uint32_t interval);
 
+/** Set the value of receiver to value in an atomic operation
+ * 
+ * @param[out] receiver
+ * @param[in] value
+ * 
+ * */
 void System_atomic_setPtr(void **receiver, void *value);
 
 void System_rand(uint8_t *data, size_t len);
 
 /** Retrieve the Application EUI
- *
+ * 
  * @param[in] owner the owner of this EUI
  * @param[out] eui 8 byte buffer
  * 

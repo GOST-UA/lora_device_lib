@@ -563,7 +563,7 @@ static void cmacData(enum message_type type, const uint8_t *key, uint32_t devAdd
 
     LoraAES_init(&aes_ctx, key);
     LoraCMAC_init(&ctx, &aes_ctx);
-    LoraCMAC_update(&ctx, b, (uint16_t)sizeof(b));
+    LoraCMAC_update(&ctx, b, sizeof(b));
     LoraCMAC_update(&ctx, msg, len);
     LoraCMAC_finish(&ctx, mic, 4U);
 }

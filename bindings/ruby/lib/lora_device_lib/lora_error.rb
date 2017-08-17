@@ -1,6 +1,6 @@
 module LoraDeviceLib
 
-    class LoraError < StandardError
+    class Error < StandardError
     end
 
 end
