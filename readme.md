@@ -96,6 +96,30 @@ In summary:
     
 ## Porting Guide
 
+### Must Implementent System_getDevEUI()
+
+~~~
+void System_getDevEUI(void *owner, uint8_t *eui);
+~~~
+
+The MAC uses this interface to get the DevEUI. 
+
+### Must Implementent System_getAppEUI()
+
+~~~
+void System_getAppEUI(void *owner, uint8_t *eui);
+~~~
+
+The MAC uses this interface to get the AppEUI. 
+
+### Must Implementent System_getAppKey()
+
+~~~
+void System_getAppKey(void *owner, uint8_t *key)
+~~~
+
+The MAC uses this interface to get the AppKey. 
+
 ### Must Implement System_getTime()
 
 ~~~
