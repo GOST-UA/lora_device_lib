@@ -15,6 +15,10 @@ void System_atomic_setPtr(void **receiver, void *value);
 
 void System_rand(uint8_t *data, size_t len);
 
+void System_getAppEUI(void *owner, uint8_t *eui);
+void System_getDevEUI(void *owner, uint8_t *eui);
+void System_getAppKey(void *owner, uint8_t *key);
+
 #ifdef __cplusplus
 }
 #endif

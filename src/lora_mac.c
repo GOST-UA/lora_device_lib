@@ -29,7 +29,6 @@
 #include "lora_cmac.h"
 #include "lora_system.h"
 #include "lora_region.h"
-#include "lora_persistent.h"
 
 #include <string.h>
 
@@ -92,9 +91,9 @@ void MAC_init(struct lora_mac *self, struct lora_channel_list *channels, struct 
     //self->ackTimeout = defaults->ack_timeout;
     //self->ackDither = defautls->ack_dither;
     
-    Persistent_getAppEUI(self, self->appEUI);
-    Persistent_getDevEUI(self, self->devEUI);
-    Persistent_getAppKey(self, self->appKey);
+    System_getAppEUI(self, self->appEUI);
+    System_getDevEUI(self, self->devEUI);
+    System_getAppKey(self, self->appKey);
 }
 
 bool MAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *data, uint8_t len)

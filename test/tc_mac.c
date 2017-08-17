@@ -22,9 +22,9 @@ static int setup_MAC(void **user)
     static struct lora_event events;
     
     will_return(ChannelList_region, NULL);
-    will_return(Persistent_getAppEUI, eui);
-    will_return(Persistent_getDevEUI, eui);
-    will_return(Persistent_getAppKey, appKey);
+    will_return(System_getAppEUI, eui);
+    will_return(System_getDevEUI, eui);
+    will_return(System_getAppKey, appKey);
     
     MAC_init(&self, &channels, &radio, &events);
     
@@ -41,9 +41,9 @@ static void test_MAC_init(void **user)
     struct lora_event events;    
     
     will_return(ChannelList_region, NULL);
-    will_return(Persistent_getAppEUI, eui);
-    will_return(Persistent_getDevEUI, eui);
-    will_return(Persistent_getAppKey, appKey);
+    will_return(System_getAppEUI, eui);
+    will_return(System_getDevEUI, eui);
+    will_return(System_getAppKey, appKey);
     
     MAC_init(&self, &channels, &radio, &events);
 }

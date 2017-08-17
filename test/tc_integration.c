@@ -14,9 +14,9 @@ static void test_init(void **user)
     struct ldl self;
     struct lora_board board;
 
-    will_return(Persistent_getAppEUI, eui);
-    will_return(Persistent_getDevEUI, eui);
-    will_return(Persistent_getAppKey, appKey);
+    will_return(System_getAppEUI, eui);
+    will_return(System_getDevEUI, eui);
+    will_return(System_getAppKey, appKey);
     
     ldl_init(&self, EU_863_870, &board);
 }
