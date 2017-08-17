@@ -6,22 +6,22 @@
 
 #include "lora_frame.h"
 
-uint8_t LoraFrame_encode(const uint8_t *key, const struct lora_frame *f, uint8_t *out, uint8_t max)
+uint8_t Frame_encode(const void *key, const struct lora_frame *f, uint8_t *out, uint8_t max)
 {
     return mock();
 }
 
-enum lora_frame_result LoraFrame_decode(const uint8_t *appKey, const uint8_t *netSKey, const uint8_t *appSKey, uint8_t *in, uint8_t len, struct lora_frame *f)
+enum lora_frame_result Frame_decode(const void *appKey, const void *nwkSKey, const void *appSKey, void *in, uint8_t len, struct lora_frame *f)
 {
     return mock();
 }
 
-uint16_t LoraFrame_getPhyPayloadSize(uint8_t dataLen, uint8_t optsLen)
+uint16_t Frame_getPhyPayloadSize(uint8_t dataLen, uint8_t optsLen)
 {
     return mock();
 }
 
-bool LoraFrame_isUpstream(enum message_type type)
+bool Frame_isUpstream(enum message_type type)
 {
     return mock();
 }

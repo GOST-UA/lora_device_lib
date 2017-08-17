@@ -11,14 +11,20 @@
 
 #include <string.h>
 
+static const uint8_t eui[] = "\x00\x00\x00\x00\x00\x00\x00\x00";
+static const uint8_t appKey[] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+
 static int setup_MAC(void **user)
 {
     static struct lora_mac self;
     static struct lora_channel_list channels;
     static struct lora_radio radio;
-    static struct lora_event events;    
+    static struct lora_event events;
     
     will_return(ChannelList_region, NULL);
+    will_return(Persistent_getAppEUI, eui);
+    will_return(Persistent_getDevEUI, eui);
+    will_return(Persistent_getAppKey, appKey);
     
     MAC_init(&self, &channels, &radio, &events);
     
@@ -35,6 +41,9 @@ static void test_MAC_init(void **user)
     struct lora_event events;    
     
     will_return(ChannelList_region, NULL);
+    will_return(Persistent_getAppEUI, eui);
+    will_return(Persistent_getDevEUI, eui);
+    will_return(Persistent_getAppKey, appKey);
     
     MAC_init(&self, &channels, &radio, &events);
 }

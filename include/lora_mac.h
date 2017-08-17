@@ -116,6 +116,7 @@ struct lora_mac {
 
     uint8_t nwkSKey[16U];
     uint8_t appSKey[16U];
+    uint32_t devAddr;
 
     uint16_t rwindow;
     uint16_t upCounter;
@@ -143,8 +144,6 @@ struct lora_mac {
     
     uint8_t buffer[UINT8_MAX];
     uint8_t bufferLen;
-
-    uint32_t devAddr;
     
     uint8_t nbTrans;    /**< number of transmissions for each uplink message */
     

@@ -150,6 +150,13 @@ void Radio_interrupt(struct lora_radio *self, uint8_t n, uint64_t time);
  * */
 void Radio_setEventHandler(struct lora_radio *self, void *receiver, radioEventCB cb);
 
+/** Sample a 'random' byte from the radio (probably using some kind of wideband measurement)
+ * 
+ * @param[in] self
+ * 
+ * @return random byte
+ * 
+ * */
 uint8_t Radio_getRandom(struct lora_radio *self);
 
 #ifdef __cplusplus
