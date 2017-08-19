@@ -94,7 +94,7 @@ In summary:
 
 ### Mandatory
 
-#### Implementent System_getDevEUI()
+#### Implement System_getDevEUI()
 
 ~~~
 void System_getDevEUI(void *owner, uint8_t *eui);
@@ -102,7 +102,7 @@ void System_getDevEUI(void *owner, uint8_t *eui);
 
 The MAC uses this interface to get the DevEUI. 
 
-#### Implementent System_getAppEUI()
+#### Implement System_getAppEUI()
 
 ~~~
 void System_getAppEUI(void *owner, uint8_t *eui);
@@ -110,7 +110,7 @@ void System_getAppEUI(void *owner, uint8_t *eui);
 
 The MAC uses this interface to get the AppEUI. 
 
-#### Implementent System_getAppKey()
+#### Implement System_getAppKey()
 
 ~~~
 void System_getAppKey(void *owner, uint8_t *key)
@@ -144,33 +144,33 @@ This function must atomically write value to the receiver memory location.
 
 ### Optional
 
-### Define a Platform Specific Error Message Stream
+#### Define a Platform Specific Error Message Stream
 
 Define `LORA_ERROR(...)` to be a function that takes a printf style variadic argument.
 
 LoraDeviceLib will print messages to explain why certain functions fail. The
 default configuration is to remove these messages from the build.
 
-### Define a Platform Specific Assert Handler
+#### Define a Platform Specific Assert Handler
 
 Define `LORA_ASSERT(X)` to be an assertion that takes X as an argument.
 
 LoraDeviceLib makes run time assertions to catch bugs. It is recommended
 that this macro is defined at least for debug builds.
 
-### Substitute an Alternative AES Implementation
+#### Substitute an Alternative AES Implementation
 
 1. Define `LORA_USE_PLATFORM_AES`
 2. Define `struct lora_aes_ctx` to suit the platform implementation
 3. Implement `LoraAES_init` and `LoraAES_encrypt` to wrap platform implementation
 
-### Substitute an Alternative CMAC Implementation
+#### Substitute an Alternative CMAC Implementation
 
 1. Define `LORA_USE_PLATFORM_CMAC`
 2. Define `struct lora_cmac_ctx` to suit the platform implementation
 3. Implement `LoraCMAC_init`, `LoraCMAC_update`, and `LoraCMAC_finish` to wrap platform implementation
 
-### Customise lora_radio_sx1272
+#### Customise lora_radio_sx1272
 
 - define LORA_RADIO_SX1272_USE_BOOST
 
