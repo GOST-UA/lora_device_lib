@@ -13,6 +13,12 @@ module LoraDeviceLib
     class JoinReq < Frame
         
         attr_reader :appKey
+        
+        attr_reader :original
+        
+        attr_reader :appEUI
+        attr_reader :devEUI
+        attr_reader :devNonce
     
         def initialize(**param)
             
@@ -31,7 +37,7 @@ module LoraDeviceLib
             end
             
             if @appEUI
-                if !@appEUI.kind_of? EUI64
+                if not @appEUI.kind_of? EUI64
                     raise TypeError
                 end
             else
@@ -39,7 +45,7 @@ module LoraDeviceLib
             end
             
             if @devEUI
-                if !@devEUI.kind_of? EUI64
+                if not @devEUI.kind_of? EUI64
                     raise TypeError
                 end                
             else
@@ -62,6 +68,16 @@ module LoraDeviceLib
     class JoinAccept < Frame
     
         attr_reader :appKey
+        
+        attr_reader :original
+        
+        attr_reader :netID
+        attr_reader :devAddr
+        attr_reader :rx1DataRateOffset
+        attr_reader :rx2DataRate
+        attr_reader :rxDelay
+        attr_reader :cfList
+        attr_reader :appNonce
     
         def initialize(**param)
             
@@ -161,6 +177,16 @@ module LoraDeviceLib
     
         attr_reader :appSKey
         attr_reader :nwkSKey
+        
+        attr_reader :original
+        
+        attr_reader :ack
+        attr_reader :adr
+        attr_reader :adrAckReq
+        attr_reader :pending
+        attr_reader :opts
+        attr_reader :data
+        attr_reader :port
         
         def initialize(**param)
             

@@ -15,6 +15,7 @@ static VALUE cConfirmedDown;
 static VALUE cUnconfirmedDown;
 static VALUE cKey;
 static VALUE cError;
+static VALUE cEUI64;
 
 static const struct {
         
@@ -71,6 +72,8 @@ void Init_ext_frame(void)
     
     cKey = rb_const_get(cLoraDeviceLib, rb_intern("Key"));
     cError = rb_const_get(cLoraDeviceLib, rb_intern("Error"));
+    
+    cEUI64 = rb_const_get(cLoraDeviceLib, rb_intern("EUI64"));
     
     cJoinReq = rb_define_class_under(cLoraDeviceLib, "JoinReq", cFrame);
     cJoinAccept = rb_define_class_under(cLoraDeviceLib, "JoinAccept", cFrame);
@@ -176,8 +179,8 @@ static VALUE _decode(int argc, VALUE *argv, VALUE self)
     {
         rb_hash_aset(param, ID2SYM(rb_intern("appKey")), appKey);
         
-        rb_hash_aset(param, ID2SYM(rb_intern("appEUI")), rb_str_new((char *)f.fields.joinRequest.appEUI, sizeof(f.fields.joinRequest.appEUI)));
-        rb_hash_aset(param, ID2SYM(rb_intern("devEUI")), rb_str_new((char *)f.fields.joinRequest.devEUI, sizeof(f.fields.joinRequest.devEUI)));
+        rb_hash_aset(param, ID2SYM(rb_intern("appEUI")), rb_funcall(cEUI64, rb_intern("new"), 1, rb_str_new((char *)f.fields.joinRequest.appEUI, sizeof(f.fields.joinRequest.appEUI))));
+        rb_hash_aset(param, ID2SYM(rb_intern("devEUI")), rb_funcall(cEUI64, rb_intern("new"), 1, rb_str_new((char *)f.fields.joinRequest.devEUI, sizeof(f.fields.joinRequest.devEUI))));
         rb_hash_aset(param, ID2SYM(rb_intern("devNonce")), UINT2NUM(f.fields.joinRequest.devNonce));
     }
         break;
