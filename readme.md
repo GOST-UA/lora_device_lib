@@ -32,18 +32,16 @@ LDL breaks the problem into standalone modules which can be mocked out during te
 
 ![image missing](doc/plantuml/modules.png "LoraDeviceLib Modules")
 
-LDL is intended to be driven from two tasks - an _iterrupt level task and a _mainloop_ level task.
+LDL is intended to be driven from two tasks - an _iterrupt_ level task and a _mainloop_ level task.
 
-The _interrupt_ level task signals when IO events occur. It runs for a short time and will not block. The _interrupt_ level task must *never*
-be interrupted by the _mainloop_ level task. Many systems will drive this from an ISR.
+The _interrupt_ level task signals when IO events occur. It runs for a short time and never blocks. The _interrupt_ level task must *never*
+be interrupted by the _mainloop_ level task. 
 
 The _mainloop_ level task drives all other functionility from a single thread of execution. 
-There are a small number of critical sections between the _interrupt_ level and _mainloop_ level threads. Access to these critical
-sections is managed through use of atomic write operations in the _mainloop_ thread.
+There are a small number of critical sections between the _interrupt_ level and _mainloop_ level threads - the _mainloop_ level task
+will always use atomic operations when accessing these sections.
 
-All _mainloop_ code runs from calls to EventManager.tick().
-
-Below is an example of what happens when you call :
+All _mainloop_ code runs from calls to EventManager.tick():
 
 ![image missing](doc/plantuml/event_tick.png "EventManger Tick")
 
@@ -142,7 +140,7 @@ This function must cause the program counter to block for an interval of microse
 void System_atomic_setPtr(void **receiver, void *value);
 ~~~
 
-This function must write atomically write value to the receiver memory location.
+This function must atomically write value to the receiver memory location.
 
 ### Optional
 
