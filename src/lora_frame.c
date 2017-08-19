@@ -285,10 +285,10 @@ enum lora_frame_result Frame_decode(const void *appKey, const void *nwkSKey, con
         f->fields.joinRequest.devNonce |= ptr[pos];        
         pos += 2U;
         
+        cmacMessage(appKey, ptr, pos, ourMIC);
+        
         swapMIC(mic, &ptr[pos]);
         pos += (uint8_t)sizeof(mic);
-        
-        cmacMessage(appKey, ptr, pos, ourMIC);
         
         if(memcmp(ourMIC, mic, sizeof(mic)) != 0){
         
@@ -358,10 +358,10 @@ enum lora_frame_result Frame_decode(const void *appKey, const void *nwkSKey, con
             f->fields.joinAccept.cfListLen = 0U;
         }
         
+        cmacMessage(appKey, ptr, pos, ourMIC);
+        
         swapMIC(mic, &ptr[pos]);
         pos += (uint8_t)sizeof(mic);
-        
-        cmacMessage(appKey, ptr, pos, ourMIC);
         
         if(memcmp(ourMIC, mic, sizeof(mic)) != 0){
         
@@ -435,11 +435,10 @@ enum lora_frame_result Frame_decode(const void *appKey, const void *nwkSKey, con
             LORA_ERROR("frame too short")
             return LORA_FRAME_BAD;
         }
-        
-        swapMIC(mic, &ptr[pos]);
-        pos += (uint8_t)sizeof(mic);
-        
+
         cmacData(f->type, key, f->fields.data.devAddr, f->fields.data.counter, ptr, pos, ourMIC);
+
+        swapMIC(mic, &ptr[pos]);
         
         if(memcmp(ourMIC, mic, sizeof(mic)) != 0){
 
@@ -451,6 +450,8 @@ enum lora_frame_result Frame_decode(const void *appKey, const void *nwkSKey, con
 
             cipherData(f->type, key, f->fields.data.devAddr, f->fields.data.counter, &ptr[pos - f->fields.data.dataLen], f->fields.data.dataLen);
         }
+        
+        pos += (uint8_t)sizeof(mic);
         break;
     }
     

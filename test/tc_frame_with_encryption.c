@@ -136,7 +136,7 @@ static void test_Frame_decode_unconfirmedUp(void **user)
     
     assert_int_equal(LORA_FRAME_OK, result);    
     
-    assert_int_equal(FRAME_TYPE_DATA_CONFIRMED_UP, f.type);    
+    assert_int_equal(FRAME_TYPE_DATA_UNCONFIRMED_UP, f.type);    
     
     assert_int_equal(0, f.fields.data.optsLen);    
     
@@ -158,7 +158,7 @@ static void test_Frame_decode_unconfirmedUp_withOpts(void **user)
     
     assert_int_equal(LORA_FRAME_OK, result);    
     
-    assert_int_equal(FRAME_TYPE_DATA_CONFIRMED_UP, f.type);    
+    assert_int_equal(FRAME_TYPE_DATA_UNCONFIRMED_UP, f.type);    
     
     assert_int_equal(sizeof(opts)-1, f.fields.data.optsLen);    
     assert_memory_equal(opts, f.fields.data.opts, f.fields.data.optsLen);    
