@@ -9,7 +9,7 @@ A LoRaWAN device implementation still in an early stage of development.
 
 - Support for class A
 - Event driven style
-- Modular implementation with separation of concerns:
+- Modular implementation
     - Chanel List
     - MAC
     - MAC Commands
@@ -28,32 +28,30 @@ A LoRaWAN device implementation still in an early stage of development.
 
 ## High Level Architecture
 
-LDL tries to separate concerns into standalone modules. These modules can be mocked out during unit 
-testing without special linker commands.
-
-An overview of the modules:
+LDL breaks the problem into standalone modules which can be mocked out during testing:
 
 ![image missing](doc/plantuml/modules.png "LoraDeviceLib Modules")
 
-LDL is intended to be driven from two tasks - a _mainloop_ level task and an _interrupt_ level task.
+LDL is intended to be driven from two tasks - an _iterrupt level task and a _mainloop_ level task.
 
-The _interrupt_ level task interacts with the EventManager to signal that an IO event has occured. This task will
-never block. On simple systems the _interrupt_ level task may be an ISR, on more complicated systems it may be a task with a higher priority
-than the _mainloop_ task.
+The _interrupt_ level task signals when IO events occur. It runs for a short time and will not block. The _interrupt_ level task must *never*
+be interrupted by the _mainloop_ level task. Many systems will drive this from an ISR.
 
-The _mainloop_ level task drives all other functionility by via calls made to EventManager.tick():
+The _mainloop_ level task drives all other functionility from a single thread of execution. 
+There are a small number of critical sections between the _interrupt_ level and _mainloop_ level threads. Access to these critical
+sections is managed through use of atomic write operations in the _mainloop_ thread.
+
+All _mainloop_ code runs from calls to EventManager.tick().
+
+Below is an example of what happens when you call :
 
 ![image missing](doc/plantuml/event_tick.png "EventManger Tick")
 
-The handlers call out to Mac which may in turn call out to other modules, including back to EventManager
-to set handlers for new events or to cancel existing handlers.
-
-It is important to realise that EventManager.tick() drives all functionality. And below a simplified sequence 
-of an upstream data frame being sent:
+Below is a simplified sequence of sending data:
 
 ![image missing](doc/plantuml/tick_upstream.png "Upstream")
 
-And below a simplified sequence of a downstream data frame being received:
+Below is a simplified sequence of recieving data:
 
 ![image missing](doc/plantuml/tick_downstream.png "Downstream")
 
@@ -96,7 +94,9 @@ In summary:
     
 ## Porting Guide
 
-### Must Implementent System_getDevEUI()
+### Mandatory
+
+#### Implementent System_getDevEUI()
 
 ~~~
 void System_getDevEUI(void *owner, uint8_t *eui);
@@ -104,7 +104,7 @@ void System_getDevEUI(void *owner, uint8_t *eui);
 
 The MAC uses this interface to get the DevEUI. 
 
-### Must Implementent System_getAppEUI()
+#### Implementent System_getAppEUI()
 
 ~~~
 void System_getAppEUI(void *owner, uint8_t *eui);
@@ -112,7 +112,7 @@ void System_getAppEUI(void *owner, uint8_t *eui);
 
 The MAC uses this interface to get the AppEUI. 
 
-### Must Implementent System_getAppKey()
+#### Implementent System_getAppKey()
 
 ~~~
 void System_getAppKey(void *owner, uint8_t *key)
@@ -120,7 +120,7 @@ void System_getAppKey(void *owner, uint8_t *key)
 
 The MAC uses this interface to get the AppKey. 
 
-### Must Implement System_getTime()
+#### Implement System_getTime()
 
 ~~~
 uint64_t System_getTime(void);
@@ -128,7 +128,7 @@ uint64_t System_getTime(void);
 
 This function must return system time (e.g. time since power up) in microseconds.
 
-### Must Implement System_usleep()
+#### Implement System_usleep()
 
 ~~~
 void System_usleep(uint32_t interval);
@@ -136,7 +136,7 @@ void System_usleep(uint32_t interval);
 
 This function must cause the program counter to block for an interval of microseconds.
 
-### Must Implement System_atomic_setPtr()
+#### Implement System_atomic_setPtr()
 
 ~~~
 void System_atomic_setPtr(void **receiver, void *value);
@@ -144,33 +144,35 @@ void System_atomic_setPtr(void **receiver, void *value);
 
 This function must write atomically write value to the receiver memory location.
 
-### May Define a Platform Specific Error Message Stream
+### Optional
+
+### Define a Platform Specific Error Message Stream
 
 Define `LORA_ERROR(...)` to be a function that takes a printf style variadic argument.
 
 LoraDeviceLib will print messages to explain why certain functions fail. The
 default configuration is to remove these messages from the build.
 
-### May Define a Platform Specific Assert Handler
+### Define a Platform Specific Assert Handler
 
 Define `LORA_ASSERT(X)` to be an assertion that takes X as an argument.
 
 LoraDeviceLib makes run time assertions to catch bugs. It is recommended
 that this macro is defined at least for debug builds.
 
-### May Substitute an Alternative AES Implementation
+### Substitute an Alternative AES Implementation
 
 1. Define `LORA_USE_PLATFORM_AES`
 2. Define `struct lora_aes_ctx` to suit the platform implementation
 3. Implement `LoraAES_init` and `LoraAES_encrypt` to wrap platform implementation
 
-### May Substitute an Alternative CMAC Implementation
+### Substitute an Alternative CMAC Implementation
 
 1. Define `LORA_USE_PLATFORM_CMAC`
 2. Define `struct lora_cmac_ctx` to suit the platform implementation
 3. Implement `LoraCMAC_init`, `LoraCMAC_update`, and `LoraCMAC_finish` to wrap platform implementation
 
-### May Customise lora_radio_sx1272
+### Customise lora_radio_sx1272
 
 - define LORA_RADIO_SX1272_USE_BOOST
 

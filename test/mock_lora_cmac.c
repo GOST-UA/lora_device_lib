@@ -16,7 +16,7 @@ void LoraCMAC_update(struct lora_cmac_ctx *ctx, const void *data, uint8_t len)
 {
 }
 
-void LoraCMAC_finish(struct lora_cmac_ctx *ctx, void *out, size_t outMax)
+void LoraCMAC_finish(const struct lora_cmac_ctx *ctx, void *out, uint8_t outMax)
 {
     memset(out, 0, outMax);
 }

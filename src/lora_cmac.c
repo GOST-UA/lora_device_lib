@@ -32,11 +32,9 @@
 
 /* defines ************************************************************/
 
-typedef uint8_t word_t;
-
-#define WORD_BLOCK_SIZE (AES_BLOCK_SIZE / sizeof(word_t))
-#define LSB 0x01U
-#define MSB 0x80U
+#define BLOCK_SIZE  16U
+#define LSB         0x01U
+#define MSB         0x80U
 
 /* static function prototypes *****************************************/
 
@@ -47,7 +45,7 @@ typedef uint8_t word_t;
  * @param[in] mask XORed with accumulator
  *
  * */
-static void xor128(word_t *acc, const word_t *mask);
+static void xor128(uint8_t *acc, const uint8_t *mask);
 
 /**
  * left shift (by one bit) a 128bit vector
@@ -55,7 +53,7 @@ static void xor128(word_t *acc, const word_t *mask);
  * @param[in/out] v vector to shift
  *
  * */
-static void leftShift128(word_t *v);
+static void leftShift128(uint8_t *v);
 
 /* functions  *********************************************************/
 
@@ -77,116 +75,120 @@ void LoraCMAC_update(struct lora_cmac_ctx *ctx, const void *data, uint8_t len)
     size_t i;
     size_t blocks;
     size_t pos = 0U;
-    const uint8_t *in = (const uint8_t *)data;
+    const uint8_t *in = (const uint8_t *)data;    
     
-    if((len > 0U) && ((ctx->size + len) > ctx->size)){
+    if(len > 0U){
 
-        if((part + len) > sizeof(ctx->m)){
+        if(((part == 0U) && (ctx->size > 0U)) || ((part + len) > sizeof(ctx->m))){
 
-            blocks = (part + len) / sizeof(ctx->m);
-
-            if(((part + len) % sizeof(ctx->m)) == 0U){
-
-                blocks--;
+            /* sometimes a whole extra block will already be cached, process it */
+            if((part == 0U) && (ctx->size > 0U)){
+                
+                xor128(ctx->x, ctx->m);
+                LoraAES_encrypt(ctx->aes_ctx, ctx->x);
             }
 
-            (void)memcpy(&ctx->m[part], in, sizeof(ctx->m) - part);
-            pos += sizeof(ctx->m) - part;
-
+            /* number of new blocks to process */
+            blocks = (part + len) / sizeof(ctx->m);
+                        
+            /* do not process the last new block */
+            if(((part + len) % sizeof(ctx->m)) == 0U){
+            
+                blocks -= 1U;
+            }
+            
+            /* make up the first block to process */
+            
             for(i=0U; i < blocks; i++){
 
-                xor128(ctx->m, ctx->k);
-                LoraAES_encrypt(ctx->aes_ctx, ctx->m);
-                (void)memcpy(ctx->k, ctx->m, sizeof(ctx->m));
-                
-                if(i < (blocks-1U)){
+                (void)memcpy(&ctx->m[part], &in[pos], sizeof(ctx->m) - part);
+                pos += sizeof(ctx->m) - part;
 
-                    (void)memcpy(ctx->m, &in[pos], sizeof(ctx->m));
-                    pos += sizeof(ctx->m);
-                } 
+                part = 0U;
+
+                xor128(ctx->x, ctx->m);
+                LoraAES_encrypt(ctx->aes_ctx, ctx->x);                
             }
-
-            part = 0U;   
         }
-
+                    
         (void)memcpy(&ctx->m[part], &in[pos], len - pos);
-        ctx->size += len;
+        ctx->size += len;        
     }
 }
 
-void LoraCMAC_finish(struct lora_cmac_ctx *ctx, void *out, size_t outMax)
+void LoraCMAC_finish(const struct lora_cmac_ctx *ctx, void *out, uint8_t outMax)
 {
     LORA_ASSERT(ctx != NULL)
 
-    word_t k1[WORD_BLOCK_SIZE];
-    word_t k2[WORD_BLOCK_SIZE];
-    word_t k[WORD_BLOCK_SIZE];
-    word_t m[WORD_BLOCK_SIZE];
+    uint8_t k[BLOCK_SIZE];
+    
+    uint8_t k1[BLOCK_SIZE];
+    uint8_t k2[BLOCK_SIZE];
+    
+    uint8_t m_last[BLOCK_SIZE];
 
+    size_t part;
+
+    /* generate subkeys */
+    
     (void)memset(k, 0, sizeof(k));
-
     LoraAES_encrypt(ctx->aes_ctx, k);
     
     (void)memcpy(k1, k, sizeof(k1));
     leftShift128(k1);
 
-    if((*(uint8_t *)k & 0x80U) == 0x80U){
+    if((k[0] & 0x80U) == 0x80U){
 
-        ((uint8_t *)k1)[AES_BLOCK_SIZE - 1U] ^= 0x87U;
+        k1[15] ^= 0x87U;
     }
 
     (void)memcpy(k2, k1, sizeof(k2));
     leftShift128(k2);
 
-    if((*(uint8_t *)k1 & 0x80U) == 0x80U){
+    if((k1[0] & 0x80U) == 0x80U){
 
-        ((uint8_t *)k2)[AES_BLOCK_SIZE - 1U] ^= 0x87U;
+        k2[15] ^= 0x87U;
     }
 
-    size_t part = ctx->size % sizeof(ctx->m);
+    /* process last block (m_last) */
+    
+    part = ctx->size % sizeof(ctx->m);
 
-    if(ctx->size == 0U){
+    (void)memset(m_last, 0, sizeof(m_last));
+    
+    if((ctx->size == 0U) || (part > 0U)){
 
-        (void)memset(m, 0, sizeof(m));
+        (void)memcpy(m_last, ctx->m, part);
+
+        m_last[part] = 0x80U;
+        xor128(m_last, k2);        
     }
-    else if(part > 0){
+    else{        
 
-        (void)memcpy(m, ctx->m, part);
-    }
-    else{
+        (void)memcpy(m_last, ctx->m, sizeof(m_last));
 
-        (void)memcpy(m, ctx->m, sizeof(ctx->m));
-    }
-        
-    if((ctx->size == 0) || (part > 0U)){
-
-        ((uint8_t *)m)[part] = 0x80U;
-        xor128(m, k2);        
-    }
-    else{
-
-        xor128(m, k1);
+        xor128(m_last, k1);
     }
 
-    xor128(m, ctx->k);
+    xor128(m_last, ctx->x);
 
-    LoraAES_encrypt(ctx->aes_ctx, (uint8_t *)m);
+    LoraAES_encrypt(ctx->aes_ctx, m_last);
 
-    (void)memcpy(out, m, (outMax > sizeof(m)) ? sizeof(m) : outMax);
+    (void)memcpy(out, m_last, (outMax > sizeof(m_last)) ? sizeof(m_last) : outMax);
 }
 
 /* static functions  **************************************************/
 
-static void leftShift128(word_t *v)
+static void leftShift128(uint8_t *v)
 {
-    word_t t;
-    word_t tt;
-    word_t carry;
+    uint8_t t;
+    uint8_t tt;
+    uint8_t carry;
     uint8_t i;
     
     carry = 0U;
 
-    for(i=(uint8_t)WORD_BLOCK_SIZE; i > 0U; i--){
+    for(i=16U; i > 0U; i--){
 
         t = v[i-1U];
 
@@ -199,14 +201,24 @@ static void leftShift128(word_t *v)
     }
 }
 
-static void xor128(word_t *acc, const word_t *mask)
+static void xor128(uint8_t *acc, const uint8_t *mask)
 {
-    uint8_t i;
-    
-    for(i=0U; i < WORD_BLOCK_SIZE; i++){
-
-        acc[i] ^= mask[i];
-    }
+    acc[0] ^= mask[0];
+    acc[1] ^= mask[1];
+    acc[2] ^= mask[2];
+    acc[3] ^= mask[3];
+    acc[4] ^= mask[4];
+    acc[5] ^= mask[5];
+    acc[6] ^= mask[6];
+    acc[7] ^= mask[7];
+    acc[8] ^= mask[8];
+    acc[9] ^= mask[9];
+    acc[10] ^= mask[10];
+    acc[11] ^= mask[11];
+    acc[12] ^= mask[12];
+    acc[13] ^= mask[13];
+    acc[14] ^= mask[14];
+    acc[15] ^= mask[15];        
 }
 
 #endif

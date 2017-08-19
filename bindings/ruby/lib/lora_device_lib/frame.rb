@@ -1,7 +1,15 @@
 module LoraDeviceLib
 
     class Frame
+    
+        def initialize(**param)
+            if self.class == Frame
+                raise "#{self.class} is an abstract class"
+            end
+        end
+    
     end    
+    
     class JoinReq < Frame
         
         attr_reader :appKey
@@ -33,7 +41,7 @@ module LoraDeviceLib
             if @devEUI
                 if !@devEUI.kind_of? EUI64
                     raise TypeError
-                end
+                end                
             else
                 @devEUI = EUI64.new("00-00-00-00-00-00-00-00")
             end
@@ -41,6 +49,9 @@ module LoraDeviceLib
             if @devNonce
                 if !@devNonce.kind_of? Integer
                     raise TypeError
+                end
+                if not (0..0xffff).include? @devNonce
+                    raise ArgumentError
                 end
             else
                 @devNonce = 0
@@ -73,8 +84,11 @@ module LoraDeviceLib
             end
             
             if @netID
-                if !@netID.kind_of? Integer
+                if not @netID.kind_of? Integer
                     raise TypeError
+                end
+                if not (0..0xffffff).include? @netID
+                    raise ArgumentError
                 end
             else
                 @netID = 0
@@ -84,29 +98,41 @@ module LoraDeviceLib
                 if !@devAddr.kind_of? Integer
                     raise TypeError
                 end
+                if not (0..0xffffffff).include? @devAddr
+                    raise ArgumentError
+                end
             else
                 @devAddr = 0
             end
             
             if @rx1DataRateOffset
-                if !Range.new(0,255).include? @rx1DataRateOffset
+                if not @rx1DataRateOffset.kind_of? Integer
                     raise TypeError
+                end            
+                if not (0..0xff).include? @rx1DataRateOffset
+                    raise ArgumentError
                 end
             else
                 @rx1DataRateOffset = 0
             end
             
             if @rx2DataRate
-                if !Range.new(0,255).include? @rx2DataRate
+                if not @rx2DataRate.kind_of? Integer
                     raise TypeError
+                end
+                if not (0..255).include? @rx2DataRate
+                    raise ArgumentError
                 end
             else
                 @rx2DataRate = 0
             end
             
             if @rxDelay
-                if !Range.new(0,255).include? @rxDelay
+                if not @rxDelay.kind_of? Integer
                     raise TypeError
+                end
+                if not (0..255).include? @rxDelay
+                    raise ArgumentError
                 end
             else
                 @rxDelay = 0
@@ -119,8 +145,11 @@ module LoraDeviceLib
             end
             
             if @appNonce
-                if !Range.new(0,0xffffff).include? @appNonce
+                if not @appNonce.kind_of? Integer
                     raise TypeError
+                end
+                if not (0..0xffffff).include? @appNonce
+                    raise ArgumentError
                 end
             else
                 @appNonce = 0
@@ -134,6 +163,10 @@ module LoraDeviceLib
         attr_reader :nwkSKey
         
         def initialize(**param)
+            
+            if self.class == DataFrame
+                raise "#{self.class} is an abstract class"
+            end
             
             @original = param[:original]
             
@@ -152,7 +185,7 @@ module LoraDeviceLib
             @port = param[:port]
             
             if @nwkSKey
-                if !@nwkSKey.kind_of? Key
+                if not @nwkSKey.kind_of? Key
                     raise TypeError
                 end
             else
@@ -160,7 +193,7 @@ module LoraDeviceLib
             end
             
             if @appSKey
-                if !@appSKey.kind_of? Key
+                if not @appSKey.kind_of? Key
                     raise TypeError
                 end
             else
@@ -168,49 +201,55 @@ module LoraDeviceLib
             end
             
             if @counter
-                if !Range.new(0, 65535).include? @counter  
-                    raise TypeError.new ":counter must be an integer in the range 0..65535"
+                if not @counter.kind_of? Integer
+                    raise TypeError
+                end
+                if not (0..0xffff).include? @counter  
+                    raise ArgumentError.new ":counter must be an integer in the range 0..65535"
                 end
             else
                 @counter = 0
             end
             
             if @devAddr
-                if !@devAddr.kind_of? Integer
+                if not @devAddr.kind_of? Integer
                     raise TypeError.new ":devAddr must be an integer"
                 end
-            else
-            
+                if not (0..0xffffffff).include? @devAddr
+                    raise ArgumentError
+                end
+            else            
                 @devAddr = 0
             end
             
             if @opts
-                if !@opts.kind_of? String or @opts.size > 16
+                if not @opts.kind_of? String
                     raise TypeError
                 end
-            else
-                @opts = ""
-            end
-            
-            if @data
-                if !@data.kind_of? String
-                    raise TypeError
+                if not (0..16).include? @opts.size
+                    raise ArgumentError
                 end
             else
                 @opts = ""
             end
             
             if @port
-                if !@port.kind_of? Integer or @port > 255
+                if not @port.kind_of? Integer
                     raise TypeError
                 end
+                if not (0..0xff).include? @port
+                    raise ArgumentError
+                end            
             else
                 @port = 0
             end
             
             if @data
-                if !@data.kind_of? String or @data.size > 255
+                if not @data.kind_of? String or @data.size > 255
                     raise TypeError
+                end
+                if not (0..0xff).include? @data.size
+                    raise ArgumentError
                 end
             else
                 @data = ""

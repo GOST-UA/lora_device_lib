@@ -100,8 +100,7 @@ void LoraAES_init(struct lora_aes_ctx *ctx, const uint8_t *key)
     uint8_t *k;
     uint8_t ks;
     uint8_t i = 1U;
-    const enum aes_key_size keySize = AES_KEY_128;
-
+    
     static const uint8_t rcon[] = {
         0x8dU, 0x01U, 0x02U, 0x04U, 0x08U, 0x10U, 0x20U, 0x40U, 0x80U, 0x1bU, 0x36U
     };
@@ -109,30 +108,12 @@ void LoraAES_init(struct lora_aes_ctx *ctx, const uint8_t *key)
     LORA_ASSERT(ctx != NULL)
     LORA_ASSERT(key != NULL)
 
-    switch(keySize){
-    case AES_KEY_128:
-        ctx->r = 10U;
-        b = 176U;
-        break;
+    ctx->r = 10U;
+    b = 176U;
 
-    case AES_KEY_192:
-        ctx->r = 12U;
-        b = 208U;
-        break;
-
-    case AES_KEY_256:
-        ctx->r = 14U;
-        b = 240U;
-        break;         
-
-    default:
-        /* impossible */
-        break;
-    }
-
-    (void)memcpy(ctx->k, key, (size_t)keySize);
+    (void)memcpy(ctx->k, key, 16U);
     k = ctx->k;    
-    ks = (uint8_t)keySize;
+    ks = 16U;
     p = ks;
 
     /* Rijndael key schedule */
@@ -149,35 +130,6 @@ void LoraAES_init(struct lora_aes_ctx *ctx, const uint8_t *key)
 
             k[p] = k[p - 4U] ^ k[p - ks];
             p++;
-        }
-
-        if(p < b){
-            
-            if(keySize == AES_KEY_192){
-
-                for(j=0U; j < 8U; j++){
-
-                    k[p] = k[p - 4U] ^ k[p - ks];
-                    p++;
-                }
-            }
-            else{
-
-                if(keySize == AES_KEY_256){
-
-                    for(j=0U; j < 4U; j++){
-
-                        k[p] = sbox[ k[p - 4U] ] ^ k[p - ks];
-                        p++;
-                    }
-
-                    for(j=0U; j < 12U; j++){
-
-                        k[p] = k[p - 4U] ^ k[p - ks];
-                        p++;
-                    }
-                }
-            }
         }
 
         i++;

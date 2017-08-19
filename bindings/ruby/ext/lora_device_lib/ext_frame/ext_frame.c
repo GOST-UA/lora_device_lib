@@ -115,7 +115,7 @@ static VALUE _decode(int argc, VALUE *argv, VALUE self)
         keys = rb_hash_new();
     }
     
-    if(rb_hash_aref(keys, ID2SYM(rb_intern("nwkSKey")))){
+    if(rb_hash_aref(keys, ID2SYM(rb_intern("nwkSKey"))) != Qnil){
         
         nwkSKey = rb_hash_aref(keys, ID2SYM(rb_intern("nwkSKey")));
     }
@@ -124,7 +124,7 @@ static VALUE _decode(int argc, VALUE *argv, VALUE self)
         nwkSKey = defaultKey;
     }
     
-    if(rb_hash_aref(keys, ID2SYM(rb_intern("appSKey")))){
+    if(rb_hash_aref(keys, ID2SYM(rb_intern("appSKey"))) != Qnil){
         
         appSKey = rb_hash_aref(keys, ID2SYM(rb_intern("appSKey")));
     }
@@ -133,7 +133,7 @@ static VALUE _decode(int argc, VALUE *argv, VALUE self)
         appSKey = defaultKey;
     }
     
-    if(rb_hash_aref(keys, ID2SYM(rb_intern("appKey")))){
+    if(rb_hash_aref(keys, ID2SYM(rb_intern("appKey"))) != Qnil){
         
         appKey = rb_hash_aref(keys, ID2SYM(rb_intern("appKey")));
     }
@@ -354,8 +354,7 @@ static VALUE _encode_data(VALUE self)
     uint8_t len;
     
     struct lora_frame f;
-    
-    
+        
     VALUE nwkSKey;
     VALUE appSKey;
     VALUE original;
@@ -400,8 +399,6 @@ static VALUE _encode_data(VALUE self)
         
         f.type = type;
         
-#if 0
-        
         f.fields.data.devAddr = NUM2UINT(devAddr);
         f.fields.data.counter = NUM2UINT(counter);
         f.fields.data.ack = (ack == Qtrue) ? true : false;
@@ -415,8 +412,10 @@ static VALUE _encode_data(VALUE self)
         f.fields.data.data = (data != Qnil) ? (uint8_t *)RSTRING_PTR(data) : NULL;
         f.fields.data.dataLen = (data != Qnil) ? RSTRING_LEN(data) : 0U;
         f.fields.data.port = (port != Qnil) ? NUM2UINT(port) : 0U;
-#endif            
-        len = Frame_encode((f.fields.data.port == 0) ? RSTRING_PTR(nwkSKey) : RSTRING_PTR(appSKey), &f, out, sizeof(out));
+
+        const uint8_t k[] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+
+        len = Frame_encode(k, &f, out, sizeof(out));
         
         assert(len != 0U);
         

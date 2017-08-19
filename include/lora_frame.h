@@ -99,10 +99,6 @@ enum lora_frame_result {
     LORA_FRAME_MIC      /**< frame format is OK but MIC check failed */
 };
 
-/* globals ************************************************************/
-
-extern const size_t LORA_PHYPAYLOAD_OVERHEAD;
-
 /* function prototypes ************************************************/
 
 /** encode a frame

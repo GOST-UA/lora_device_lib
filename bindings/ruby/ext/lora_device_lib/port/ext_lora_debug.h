@@ -3,7 +3,7 @@
 
 #include <ruby.h>
 
-/* LORA_ERROR will log as 'info' */
+/* LORA_ERROR will log as 'error' */
 #define LORA_ERROR(...) \
     do{\
         VALUE args[] = {\
@@ -13,7 +13,7 @@
             rb_sprintf(__VA_ARGS__)\
         };\
         VALUE msg = rb_str_format(sizeof(args)/sizeof(*args), args, rb_str_new_cstr("%s: %u: %s(): %s"));\
-        rb_funcall(rb_const_get(rb_const_get(rb_cObject, rb_intern("LDL")), rb_intern("Logger")), rb_intern("log_error"), 1, msg);\
+        rb_funcall(rb_const_get(rb_const_get(rb_cObject, rb_intern("LoraDeviceLib")), rb_intern("Logger")), rb_intern("error"), 1, msg);\
     }while(0);
 
 /* LORA_MESSAGE will log as 'info' */
@@ -25,7 +25,7 @@
             rb_sprintf(__VA_ARGS__)\
         };\
         VALUE msg = rb_str_format(sizeof(args)/sizeof(*args), args, rb_str_new_cstr("%s: %s(): %s"));\
-        rb_funcall(rb_const_get(rb_const_get(rb_cObject, rb_intern("LDL")), rb_intern("Logger")), rb_intern("info"), 1, msg);\
+        rb_funcall(rb_const_get(rb_const_get(rb_cObject, rb_intern("LoraDeviceLib")), rb_intern("Logger")), rb_intern("info"), 1, msg);\
     }while(0);
 
 /* LORA_ASSERT will raise a LoraDeviceLib::LoraAssert */
@@ -38,7 +38,7 @@
             rb_str_new_cstr(#X)\
         };\
         VALUE msg = rb_str_format(sizeof(args)/sizeof(*args), args, rb_str_new_cstr("%s: %u: %s(): assertion failed: %s"));\
-        VALUE ex = rb_funcall(rb_const_get(rb_const_get(rb_cObject, rb_intern("LoraDeviceLib")), rb_intern("LoraError")), rb_intern("new"), 1, msg);\
+        VALUE ex = rb_funcall(rb_const_get(rb_const_get(rb_cObject, rb_intern("LoraDeviceLib")), rb_intern("LoraAssert")), rb_intern("new"), 1, msg);\
         rb_funcall(rb_mKernel, rb_intern("raise"), 1, ex);\
     }
 

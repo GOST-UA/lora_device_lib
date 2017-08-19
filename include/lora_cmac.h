@@ -48,7 +48,7 @@ struct lora_cmac_ctx {
 
     const struct lora_aes_ctx *aes_ctx;
     uint8_t m[16U];
-    uint8_t k[16U];
+    uint8_t x[16U];
     uint32_t size;
 };
 
@@ -56,7 +56,7 @@ struct lora_cmac_ctx {
 
 void LoraCMAC_init(struct lora_cmac_ctx *ctx, const struct lora_aes_ctx *aes_ctx);
 void LoraCMAC_update(struct lora_cmac_ctx *ctx, const void *data, uint8_t len);
-void LoraCMAC_finish(struct lora_cmac_ctx *ctx, void *out, size_t outMax);
+void LoraCMAC_finish(const struct lora_cmac_ctx *ctx, void *out, uint8_t outMax);
 
 #ifdef __cplusplus
 }
