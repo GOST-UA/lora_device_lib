@@ -3,14 +3,14 @@ require 'rake/extensiontask'
 
 Rake::ExtensionTask.new  do |ext|
     ext.name = "ext_ldl"
-    ext.ext_dir = "ext/lora_device_lib/ext_ldl"
-    ext.lib_dir = "lib/lora_device_lib"
+    ext.ext_dir = "ext/ldl/ext_mac"
+    ext.lib_dir = "lib/ldl"
 end
 
 Rake::ExtensionTask.new  do |ext|
     ext.name = "ext_frame"
-    ext.ext_dir = "ext/lora_device_lib/ext_frame"
-    ext.lib_dir = "lib/lora_device_lib"
+    ext.ext_dir = "ext/ldl/ext_frame"
+    ext.lib_dir = "lib/ldl"
 end
 
 Rake::TestTask.new do |t|

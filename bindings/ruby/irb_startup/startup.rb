@@ -1,3 +1,3 @@
-require 'lora_device_lib'
+require 'ldl'
 
-include LoraDeviceLib
+include LDL

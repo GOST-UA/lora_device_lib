@@ -82,7 +82,7 @@ void Event_tick(struct lora_event *self)
     }
     
     /* io events */
-    for(i=0U; i < sizeof(self->onInput)/sizeof(*self->onInput); i++){
+    for(i=0U; i < sizeof(self->onInput)/sizeof(struct on_input); i++){
         
         if((self->onInput[i].handler != NULL) && self->onInput[i].state){
             
@@ -169,7 +169,7 @@ void Event_cancel(struct lora_event *self, void **event)
     
     if((event != NULL) && (*event != NULL)){
         
-        for(i=0U; i < sizeof(self->onInput)/sizeof(*self->onInput); i++){
+        for(i=0U; i < sizeof(self->onInput)/sizeof(struct on_input); i++){
                 
             if(*event == &self->onInput[i]){
                 
@@ -215,5 +215,24 @@ void Event_cancel(struct lora_event *self, void **event)
 
 uint64_t Event_timeUntilNextEvent(struct lora_event *self)
 {
-    return UINT64_MAX;
+    uint64_t retval;
+    uint64_t time;
+        
+    retval = UINT64_MAX;
+    
+    if(self->head){
+        
+        time = System_getTime();
+        
+        if(self->head->time > time){
+         
+            retval = self->head->time - time;
+        }
+        else{
+            
+            retval = 0U;
+        }        
+    }
+    
+    return retval;
 }

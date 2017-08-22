@@ -179,7 +179,7 @@ bool MAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *d
 
 bool MAC_join(struct lora_mac *self)
 {
-    bool retval;
+    bool retval = false;
 
     if(!self->personalised){
     

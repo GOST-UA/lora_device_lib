@@ -45,6 +45,7 @@ struct lora_radio {
     const struct lora_board *board;
     void *eventReceiver;
     radioEventCB eventHandler;
+    uint8_t dio_mapping1;
 };
 
 struct lora_radio_tx_setting {

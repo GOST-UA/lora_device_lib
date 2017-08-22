@@ -1,9 +1,9 @@
 require 'minitest/autorun'
-require 'lora_device_lib'
+require 'ldl'
 
 class TestFrame < Minitest::Test
     
-    include LoraDeviceLib
+    include LDL
 
     def test_unconfirmedUp
     

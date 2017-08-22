@@ -89,6 +89,10 @@ bool Radio_transmit(struct lora_radio *self, const struct lora_radio_tx_setting 
                 writeReg(self, RegIrqFlags, 0xff);      // clear all interrupts
                 writeReg(self, RegIrqFlagsMask, 0xf7U); // unmask TX_DONE interrupt                    
                 writeReg(self, RegDioMapping1, 0x01U);   // raise  DIO0 on TX_DONE
+                
+                self->dio_mapping1 &= ~0x3U;
+                self->dio_mapping1 |= 0x1U;
+                 
                      
                 setFreq(self, settings->freq);              // set carrier frequency
     
@@ -129,6 +133,9 @@ bool Radio_receive(struct lora_radio *self, const struct lora_radio_rx_setting *
             writeReg(self, RegIrqFlags, 0xff);          // clear all interrupts
             writeReg(self, RegIrqFlagsMask, 0xf7U);     // unmask TX_DONE interrupt                    
             writeReg(self, RegDioMapping1, 0x00U);      // DIO0 (RX_TIMEOUT) DIO1 (RX_DONE)
+                
+            self->dio_mapping1 &= ~0x3U;
+            self->dio_mapping1 |= 0x2U;
                  
             setFreq(self, settings->freq);              // set carrier frequency
             
@@ -235,10 +242,33 @@ void Radio_interrupt(struct lora_radio *self, uint8_t n, uint64_t time)
     if(self->eventHandler != NULL){
     
         switch(n){
-        case 0U:    
-            self->eventHandler(self->eventReceiver, LORA_RADIO_TX_COMPLETE, time);
+        case 0U:  
+        
+            switch(self->dio_mapping1){
+            case 0U:
+                self->eventHandler(self->eventReceiver, LORA_RADIO_RX_READY, time);
+                break;
+            case 1:
+                self->eventHandler(self->eventReceiver, LORA_RADIO_TX_COMPLETE, time);
+                break;
+            default:
+                /* do nothing */
+                break;
+            }         
             break;
+            
         case 1U:
+        
+            switch(self->dio_mapping1){
+            case 0U:
+                self->eventHandler(self->eventReceiver, LORA_RADIO_RX_TIMEOUT, time);
+                break;
+            default:
+                /* do nothing */
+                break;
+            }         
+            break;
+        
         case 2U:
         case 3U:
         default:
