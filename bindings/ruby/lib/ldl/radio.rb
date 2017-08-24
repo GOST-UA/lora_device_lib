@@ -3,18 +3,21 @@ module LDL
     class Radio
     
         def initialize(mac)
+            super
             @mac = mac
             @rx = Queue.new
         end
     
         def resetHardware
+            true
         end
     
-        def transmit(**settings)
+        def transmit(data, **settings)
             Thread.new do
                 sleep interval
                 # do event
             end
+            true
         end
         
         def receive
@@ -22,13 +25,11 @@ module LDL
                 sleep random_interval
                 # do event
             end
+            true
         end
         
-        def collect            
-        end
-        
-        def random
-            rand(0..255)
+        def collect
+            true
         end
         
         def sleep

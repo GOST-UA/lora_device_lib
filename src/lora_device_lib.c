@@ -24,9 +24,10 @@
 
 #include <string.h>
 
-bool ldl_init(struct ldl *self, enum lora_region_id region_id, const struct lora_board *board)
+bool ldl_init(struct ldl *self, enum lora_region_id region_id, struct lora_radio *radio)
 {
     LORA_ASSERT(self != NULL)
+    LORA_ASSERT(radio != NULL)
     
     const struct lora_region *region;
     bool retval = false;
@@ -39,9 +40,7 @@ bool ldl_init(struct ldl *self, enum lora_region_id region_id, const struct lora
 
         ChannelList_init(&self->channels, region);
         Event_init(&self->events);
-        Radio_init(&self->radio, board);
-        MAC_init(&self->mac, &self->channels, &self->radio, &self->events);
-        
+        MAC_init(&self->mac, &self->channels, radio, &self->events);        
         retval = true;        
     }
     else{
@@ -102,7 +101,3 @@ void ldl_tick(struct ldl *self)
     Event_tick(&self->events);
 }
 
-void idl_interrupt(struct ldl *self, uint8_t n, uint64_t time)
-{
-    Radio_interrupt(&self->radio, n, time);
-}

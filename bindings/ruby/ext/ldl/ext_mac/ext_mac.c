@@ -25,8 +25,15 @@
 
 #include "lora_device_lib.h"
 
+static const uint8_t default_key[] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+static const uint8_t default_eui[] = "\x00\x00\x00\x00\x00\x00\x00\x00";
+
 static VALUE cLDL;
 static VALUE cMAC;
+static VALUE cEUI64;
+static VALUE cKey;
+static VALUE cError;
+static VALUE cRadio;
 
 static VALUE _ldl_initialize(int argc, VALUE *argv, VALUE self);
 static VALUE _ldl_initialize_copy(VALUE copy, VALUE orig);
@@ -42,11 +49,8 @@ static VALUE _ldl_setRateAndPower(VALUE self, VALUE rate, VALUE power);
 static VALUE _ldl_join(int argc, VALUE *argv, VALUE self);
 static VALUE _ldl_send_unconfirmed(int argc, VALUE *argv, VALUE self);
 static VALUE _ldl_send_confirmed(int argc, VALUE *argv, VALUE self);
-static VALUE _ldl_interrupt(VALUE self, VALUE n, VALUE time);
 
 static void _response(void *receiver, enum lora_mac_response_type type, const union lora_mac_response_arg *arg);
-
-static VALUE radio_rx(VALUE self, VALUE message);
 
 uint64_t System_getTime(void)
 {
@@ -57,11 +61,46 @@ void System_usleep(uint32_t interval)
 {
 }
 
-void Init_ext_lora_device_lib(void)
+void System_rand(uint8_t *data, size_t len)
 {
-    cLDL = rb_define_module("LoraDeviceLib");
     
-    cLDL = rb_define_class_under(cLDL, "LDL", rb_cObject);
+}
+
+void System_atomic_setPtr(void **receiver, void *value)
+{
+    *receiver = value;
+}
+
+void System_getAppEUI(void *owner, uint8_t *eui)
+{
+    VALUE self = (VALUE)owner;
+    
+    VALUE appEUI = rb_iv_get(self, "@appEUI");
+    
+    (void)memcpy(eui, RSTRING_PTR(rb_funcall(appEUI, rb_intern("bytes"), 0)), sizeof(default_eui));
+}
+
+void System_getDevEUI(void *owner, uint8_t *eui)
+{
+    VALUE self = (VALUE)owner;    
+    VALUE devEUI = rb_iv_get(self, "@devEUI");
+    
+    (void)memcpy(eui, RSTRING_PTR(rb_funcall(devEUI, rb_intern("bytes"), 0)), sizeof(default_eui));
+}
+
+void System_getAppKey(void *owner, uint8_t *key)
+{
+    VALUE self = (VALUE)owner;    
+    VALUE devEUI = rb_iv_get(self, "@appKey");
+    
+    (void)memcpy(key, RSTRING_PTR(rb_funcall(appKey, rb_intern("value"), 0)), sizeof(default_key));
+}
+
+void Init_ext_mac(void)
+{
+    cLDL = rb_define_module("LDL");
+    
+    cMAC = rb_define_class_under(cLDL, "MAC", rb_cObject);
     rb_define_alloc_func(cLDL, _ldl_alloc);
     
     rb_define_method(cMAC, "initialize", _ldl_initialize, 1);
@@ -78,55 +117,65 @@ void Init_ext_lora_device_lib(void)
     rb_define_method(cMAC, "send_unconfirmed", _ldl_send_unconfirmed, -1);
     rb_define_method(cMAC, "send_confirmed", _ldl_send_confirmed, -1);    
     
-    rb_define_method(cLDL, "radio_rx", radio_rx, 1);    
-}
-
-void Radio_init(struct lora_radio *self, const struct lora_board *board)
-{    
-    rb_iv_set(self, "@radio", );
+    cEUI64 = rb_const_get(cLDL, rb_intern("EUI64"));
+    cKey = rb_const_get(cLDL, rb_intern("Key"));
+    cError = rb_const_get(cLDL, rb_intern("LoraError"));
+    cRadio = rb_const_get(cLDL, rb_intern("Radio"));
 }
 
 uint32_t Radio_resetHardware(struct lora_radio *self)
 {
-    
-    
-    return 0U;
+    return NUM2UINT(rb_funcall((VALUE)self, rb_intern("resetHardware"), 0));
 }
 
 void Radio_sleep(struct lora_radio *self)
 {    
-    rb_funcall(rb_iv_get(self, "@radio"), rb_intern("receive")) == Qtrue);
+    rb_funcall((VALUE)self, rb_intern("sleep"), 0);
 }
 
-bool Radio_transmit(struct lora_radio *self, const struct lora_radio_setting *settings, const void *data, uint8_t len)
-{    
-    return(rb_funcall(rb_iv_get(self, "@radio"), rb_intern("transmit")) == Qtrue);
+bool Radio_transmit(struct lora_radio *self, const struct lora_radio_tx_setting *settings, const void *data, uint8_t len)
+{   
+    VALUE params = rb_hash_new();
+    
+    rb_hash_aset(params, ID2SYM(rb_intern("freq")), NUM2UINT(settings->freq)); 
+    rb_hash_aset(params, ID2SYM(rb_intern("preamble")), NUM2UINT(settings->preamble)); 
+    rb_hash_aset(params, ID2SYM(rb_intern("power")), NUM2INT(settings->power)); 
+    
+    rb_hash_aset(params, ID2SYM(rb_intern("bw")), NUM2INT(settings->bw)); 
+    rb_hash_aset(params, ID2SYM(rb_intern("sf")), NUM2INT(settings->sf)); 
+    rb_hash_aset(params, ID2SYM(rb_intern("cr")), NUM2INT(settings->cr)); 
+     
+    return rb_funcall((VALUE)self, rb_intern("transmit"), 2, rb_str_new(data, len), params) == Qtrue;
 }
 
-bool Radio_receive(struct lora_radio *self, bool continuous, const struct lora_radio_setting *settings)
-{    
-    return(rb_funcall(rb_iv_get(self, "@radio"), rb_intern("receive")) == Qtrue);
+bool Radio_receive(struct lora_radio *self, const struct lora_radio_rx_setting *settings)
+{   
+    VALUE params = rb_hash_new();
+    
+    rb_hash_aset(params, ID2SYM(rb_intern("freq")), NUM2UINT(settings->freq)); 
+    rb_hash_aset(params, ID2SYM(rb_intern("preamble")), NUM2UINT(settings->preamble)); 
+    rb_hash_aset(params, ID2SYM(rb_intern("timeout")), NUM2UINT(settings->timeout)); 
+    
+    rb_hash_aset(params, ID2SYM(rb_intern("bw")), NUM2INT(settings->bw)); 
+    rb_hash_aset(params, ID2SYM(rb_intern("sf")), NUM2INT(settings->sf)); 
+    rb_hash_aset(params, ID2SYM(rb_intern("cr")), NUM2INT(settings->cr)); 
+    
+    return rb_funcall((VALUE)self, rb_intern("receive"), 1, params) == Qtrue;
 }
 
 uint8_t Radio_collect(struct lora_radio *self, void *data, uint8_t max)
 {    
-    VALUE buffer = rb_iv_get(self, "@rx_buffer");
+    VALUE result = rb_funcall((VALUE)self, rb_intern("collect"), 0);
     
-    uint8_t read = (RSTRING_LEN(buffer) > max) ? max : (uint8_t)RSTRING_LEN(buffer);
+    uint8_t read = (RSTRING_LEN(result) > max) ? max : (uint8_t)RSTRING_LEN(result);
     
-    (void)memcpy(data, RSTRING_PTR(buffer), read);
+    (void)memcpy(data, RSTRING_PTR(result), read);
     
     return read;
 }
 
-void Radio_interrupt(struct lora_radio *self, uint8_t n, uint64_t time)
-{   
-     
-}
-
 void Radio_setEventHandler(struct lora_radio *self, void *receiver, radioEventCB cb)
-{
-    
+{    
 }
 
 static VALUE _ldl_alloc(VALUE klass)
@@ -141,61 +190,143 @@ static VALUE _ldl_alloc(VALUE klass)
  * - :eu_863_870
  * 
  * 
- * @param region [Symbol]
+ * @param region [Symbol] optional region code
+ * @param options [Hash] parameter hash
+ * 
+ * @option options [EUI64] :appEUI application identifier (defaults to 00-00-00-00-00-00-00-00)
+ * @option options [EUI64] :devEUI device identifier (defaults to 00-00-00-00-00-00-00-00)
+ * @option options [EUI64] :appKey application key (defaults to null key)
  * 
  * */
-static VALUE _ldl_initialize(VALUE self, VALUE region)
+static VALUE _ldl_initialize(int argc, VALUE *argv, VALUE self)
 {
-    struct ldl *this;    
-    enum lora_region_id region_id;
-    size_t i;
-    
-    Data_Get_Struct(self, struct ldl, this);
-    
-    ldl_setResponseHandler(this, (void *)self, _response);  
-    
     struct region_symbol_map {
         VALUE symbol;
         enum lora_region_id region;
     };
     
-    struct radio_symbol_map {
-        VALUE symbol;
-        enum lora_board board;        
-    };
-    
     struct region_symbol_map map[] = {
         {
             .symbol = ID2SYM(rb_intern("eu_863_870")),
-            .region_id = EU_863_870
+            .region = EU_863_870
         }        
     };
     
-    for(i=0U; i < sizeof(map)/sizeof(*map); i++){
+    struct ldl *this;    
+    enum lora_region_id region_id;
+    size_t i;
+    
+    VALUE region;
+    VALUE radio;
+    VALUE options;
+    VALUE appEUI;
+    VALUE devEUI;
+    VALUE appKey;
+    
+    Data_Get_Struct(self, struct ldl, this);
+    
+    (void)rb_scan_args(argc, argv, "10:", &radio, &options);
+    
+    if(region == Qnil){
         
-        if(map[i].symbol == region){
+        region = ID2SYM(rb_intern("eu_863_870"));
+    }
+    
+    if(options == Qnil){
+        
+        options = rb_hash_new();
+    }
+    
+    appEUI = rb_hash_aref(options, ID2SYM(rb_intern("appEUI")));
+    devEUI = rb_hash_aref(options, ID2SYM(rb_intern("devEUI")));
+    appKey = rb_hash_aref(options, ID2SYM(rb_intern("appKey")));
+    region = rb_hash_aref(options, ID2SYM(rb_intern("region")));
+    
+    if(rb_obj_is_kind_of(radio, cRadio) != Qnil){
+        
+        rb_raise(rb_eTypeError, "radio must be kind of Radio");
+    }
+    
+    if(region != Qnil){
+        
+        if(rb_obj_is_kind_of(region, rb_cSymbol) != Qtrue){
             
-            region_id = map[i].region_id;
-            break;
+            rb_raise(rb_eTypeError, "region must be kind of symbol");
+        }
+        
+        for(i=0U; i < sizeof(map)/sizeof(*map); i++){
+            
+            if(map[i].symbol == region){
+                
+                region = map[i].symbol;
+                break;
+            }
+        }
+        
+        if(i == sizeof(map)/sizeof(*map)){
+            
+            rb_raise(rb_eArgError, "invalid region");
         }
     }
+    else{
     
-    if(i == sizeof(map)/sizeof(*map)){
-        
-        rb_raise(rb_eTypeError, "invalid region")
+        region = ID2SYM(rb_intern("eu_863_870"));
     }
     
-    if(!ldl_init(this, region_id, NULL)){
+    if(!ldl_init(this, region_id, (struct lora_radio *)radio)){
         
-        rb_raise(rb_const_get(cLDL, rb_intern("LoraError")), "ldl_init() failed");
+        rb_raise(cError, "ldl_init() failed");
     }
+    
+    ldl_setResponseHandler(this, (void *)self, _response);
+    
+    rb_iv_set(self, "@radio", radio);
+    
+    if(appEUI != Qnil){
+        
+        if(rb_obj_is_kind_of(appEUI, cEUI64) != Qtrue){
+            
+            rb_raise(rb_eTypeError, "appEUI must be kind of EUI64");
+        }
+    }
+    else{
+    
+        appEUI = rb_funcall(cEUI64, rb_intern("new"), 1, rb_str_new((char *)default_eui, sizeof(default_eui)-1));
+    }
+    
+    if(devEUI != Qnil){
+        
+        if(rb_obj_is_kind_of(devEUI, cEUI64) != Qtrue){
+            
+            rb_raise(rb_eTypeError, "devEUI must be kind of EUI64");
+        }
+    }
+    else{
+    
+        devEUI = rb_funcall(cEUI64, rb_intern("new"), 1, rb_str_new((char *)default_eui, sizeof(default_eui)-1));
+    }
+    
+    if(appKey != Qnil){
+        
+        if(rb_obj_is_kind_of(appKey, cKey) != Qtrue){
+            
+            rb_raise(rb_eTypeError, "appKey must be kind of Key");
+        }
+    }
+    else{
+    
+        appKey = rb_funcall(cKey, rb_intern("new"), 1, rb_str_new((char *)default_key, sizeof(default_key)-1));
+    }
+    
+    rb_iv_set(self, "@appEUI", appEUI);
+    rb_iv_set(self, "@devEUI", devEUI);
+    rb_iv_set(self, "@appKey", appKey);
     
     rb_iv_set(self, "@tx_handler", Qnil);
     rb_iv_set(self, "@rx_handler", Qnil);
     rb_iv_set(self, "@join_handler", Qnil);
-    rb_iv_set(self, "@rx_queue", rb_funcall(rb_const_get(rb_cObject, rb_intern("Queue")), rb_intern("new"), 0));
     
-    rb_iv_set(self, "@radio_state", ID2SYM(rb_intern("sleep")));
+    rb_iv_set(self, "@rx_queue", rb_funcall(rb_const_get(rb_cObject, rb_intern("Queue")), rb_intern("new"), 0));
     
     return self;
 }
@@ -227,9 +358,9 @@ static VALUE _ldl_personalize(VALUE self, VALUE devAddr, VALUE nwkSKey, VALUE ap
     struct ldl *this;    
     Data_Get_Struct(self, struct ldl, this);
     
-    if(!ldl_personalize(this, (uint32_t)NUM2UINT(devAddr), RSTRING_PTR(nwkSKey), RSTRING_PTR(appSKey))){
+    if(!ldl_personalize(this, (uint32_t)NUM2UINT(devAddr), RSTRING_PTR(rb_funcall(nwkSKey, rb_intern("value"), 0)), RSTRING_PTR(rb_funcall(appSKey, rb_intern("value"), 0)))){
         
-        rb_raise(rb_const_get(cLDL, rb_intern("LoraError")), "ldl_personalize() failed");
+        rb_raise(cError, "ldl_personalize() failed");
     }
     
     return self;
@@ -242,7 +373,7 @@ static VALUE _ldl_addChannel(VALUE self, VALUE freq, VALUE chIndex)
     
     if(!ldl_addChannel(this, (uint32_t)NUM2UINT(freq), (uint8_t)NUM2UINT(chIndex))){
         
-        rb_raise(rb_const_get(cLDL, rb_intern("LoraError")), "ldl_addChannel() failed");    
+        rb_raise(cError, "ldl_addChannel() failed");    
     }
     
     return self;
@@ -265,7 +396,7 @@ static VALUE _ldl_maskChannel(VALUE self, VALUE chIndex)
     
     if(!ldl_maskChannel(this, (uint8_t)NUM2UINT(chIndex))){
         
-        rb_raise(rb_const_get(cLDL, rb_intern("LoraError")), "ldl_maskChannel() failed");
+        rb_raise(cError, "ldl_maskChannel() failed");
     }
     
     return self;
@@ -288,7 +419,7 @@ static VALUE _ldl_setRateAndPower(VALUE self, VALUE rate, VALUE power)
     
     if(!ldl_setRateAndPower(this, (uint8_t)NUM2UINT(rate), (uint8_t)NUM2UINT(power))){
         
-        rb_raise(rb_const_get(cLDL, rb_intern("LoraError")), "ldl_setRateAndPower() failed");
+        rb_raise(cError, "ldl_setRateAndPower() failed");
     }
     
     return self;
@@ -306,7 +437,7 @@ static VALUE _ldl_join(int argc, VALUE *argv, VALUE self)
     
     if(!ldl_join(this)){
         
-        rb_raise(rb_const_get(cLDL, rb_intern("LoraError")), "ldl_join() failed");
+        rb_raise(cError, "ldl_join() failed");
     }
     
     rb_iv_set(self, "@join_handler", handler);
@@ -327,7 +458,7 @@ static VALUE _ldl_send_unconfirmed(int argc, VALUE *argv, VALUE self)
     
     if(!ldl_send(this, false, NUM2UINT(port), RSTRING_PTR(data), RSTRING_LEN(data))){
         
-        rb_raise(rb_const_get(cLDL, rb_intern("LoraError")), "ldl_send() failed");
+        rb_raise(cError, "ldl_send() failed");
     }
     
     rb_iv_set(self, "@tx_handler", handler);
@@ -348,7 +479,7 @@ static VALUE _ldl_send_confirmed(int argc, VALUE *argv, VALUE self)
     
     if(ldl_send(this, true, NUM2UINT(port), RSTRING_PTR(data), RSTRING_LEN(data))){
     
-        rb_raise(rb_const_get(cLDL, rb_intern("LoraError")), "ldl_send() failed");
+        rb_raise(cError, "ldl_send() failed");
     }
     
     rb_iv_set(self, "@tx_handler", handler);
@@ -362,16 +493,6 @@ static VALUE _ldl_tick(VALUE self)
     Data_Get_Struct(self, struct ldl, this);
     
     ldl_tick(this);
-    
-    return self;
-}
-
-static VALUE _ldl_interrupt(VALUE self, VALUE n, VALUE time)
-{
-    struct ldl *this;    
-    Data_Get_Struct(self, struct ldl, this);
-    
-    idl_interrupt(this, NUM2UINT(n), NUM2UINT(time));    
     
     return self;
 }
@@ -422,9 +543,4 @@ static void _response(void *receiver, enum lora_mac_response_type type, const un
         rb_funcall(handler, rb_intern("call"), 1, type_to_sym[type]);
         break;
     }   
-}
-
-static VALUE radio_rx(VALUE self, VALUE message)
-{
-    // check if radio is waiting to rx
 }

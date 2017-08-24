@@ -5,7 +5,7 @@
 #include <stdbool.h>
 
 #include "cmocka.h"
-#include "lora_board.h"
+#include "lora_radio.h"
 #include "mock_board.h"
 
 void board_select(void *receiver, bool state)

@@ -5,6 +5,7 @@
 #include "cmocka.h"
 
 #include "lora_device_lib.h"
+#include "lora_radio_sx1272.h"
 
 static const uint8_t eui[] = "\x00\x00\x00\x00\x00\x00\x00\x00";
 static const uint8_t appKey[] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
@@ -13,12 +14,15 @@ static void test_init(void **user)
 {
     struct ldl self;
     struct lora_board board;
+    struct lora_radio radio;
+
+    Radio_init(&radio, &board);
 
     will_return(System_getAppEUI, eui);
     will_return(System_getDevEUI, eui);
     will_return(System_getAppKey, appKey);
     
-    ldl_init(&self, EU_863_870, &board);
+    ldl_init(&self, EU_863_870, &radio);
 }
 
 int main(void)

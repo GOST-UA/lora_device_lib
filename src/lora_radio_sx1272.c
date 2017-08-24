@@ -21,7 +21,6 @@
 
 #include "lora_debug.h"
 #include "lora_radio.h"
-#include "lora_board.h"
 #include "lora_system.h"
 #include "lora_radio_sx1272.h"
 #include <string.h>
@@ -46,8 +45,11 @@ static void setPower(struct lora_radio *self, int dbm);
 
 void Radio_init(struct lora_radio *self, const struct lora_board *board)
 {
+    LORA_ASSERT(self != NULL)
+    LORA_ASSERT(board != NULL)
+    
     (void)memset(self, 0, sizeof(*self));
-    self->board = board;
+    (void)memcpy(&self->board, board, sizeof(*board));
 }
 
 void Radio_setEventHandler(struct lora_radio *self, void *receiver, radioEventCB cb)
@@ -61,9 +63,9 @@ void Radio_setEventHandler(struct lora_radio *self, void *receiver, radioEventCB
 
 uint32_t Radio_resetHardware(struct lora_radio *self)
 {
-    self->board->reset(self->board->receiver, true);
+    self->board.reset(self->board.receiver, true);
     System_usleep(100U);
-    self->board->reset(self->board->receiver, false);
+    self->board.reset(self->board.receiver, false);
     
     return 10000U;  // should only take 5ms following reset but we want this to work on power up as well
 }
@@ -373,16 +375,16 @@ static void _write(struct lora_radio *self, uint8_t reg, const uint8_t *data, ui
 
     if(len > 0U){
 
-        self->board->select(self->board->receiver, true);
+        self->board.select(self->board.receiver, true);
 
-        self->board->write(self->board->receiver, reg | 0x80U);
+        self->board.write(self->board.receiver, reg | 0x80U);
 
         for(i=0; i < len; i++){
 
-            self->board->write(self->board->receiver, data[i]);
+            self->board.write(self->board.receiver, data[i]);
         }
 
-        self->board->select(self->board->receiver, false);
+        self->board.select(self->board.receiver, false);
     }
 }
 
@@ -392,15 +394,15 @@ static void _read(struct lora_radio *self, uint8_t reg, uint8_t *data, uint8_t l
 
     if(len > 0U){
 
-        self->board->select(self->board->receiver, true);
+        self->board.select(self->board.receiver, true);
 
-        self->board->write(self->board->receiver, reg & 0x7fU);
+        self->board.write(self->board.receiver, reg & 0x7fU);
 
         for(i=0U; i < len; i++){
 
-            data[i] = self->board->read(self->board->receiver);
+            data[i] = self->board.read(self->board.receiver);
         }
 
-        self->board->select(self->board->receiver, false);
+        self->board.select(self->board.receiver, false);
     }
 }

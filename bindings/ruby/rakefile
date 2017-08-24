@@ -2,7 +2,7 @@ require 'rake/testtask'
 require 'rake/extensiontask'
 
 Rake::ExtensionTask.new  do |ext|
-    ext.name = "ext_ldl"
+    ext.name = "ext_mac"
     ext.ext_dir = "ext/ldl/ext_mac"
     ext.lib_dir = "lib/ldl"
 end

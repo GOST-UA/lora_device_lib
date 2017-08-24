@@ -31,18 +31,16 @@ extern "C" {
 #include "lora_channel_list.h"
 #include "lora_radio.h"
 #include "lora_region.h"
-#include "lora_board.h"
 
 struct ldl {
     
     struct lora_mac mac;
     struct lora_channel_list channels;
-    struct lora_radio radio;    
     struct lora_event events;    
 };
 
 
-bool ldl_init(struct ldl *self, enum lora_region_id region_id, const struct lora_board *board);
+bool ldl_init(struct ldl *self, enum lora_region_id region_id, struct lora_radio *radio);
 
 bool ldl_personalize(struct ldl *self, uint32_t devAddr, const void *nwkSKey, const void *appSKey);
 
@@ -59,7 +57,6 @@ bool ldl_join(struct ldl *self);
 bool ldl_send(struct ldl *self, bool confirmed, uint8_t port, const void *data, uint8_t len);
 
 void ldl_tick(struct ldl *self);
-void ldl_interrupt(struct ldl *self, uint8_t n, uint64_t time);
 
 #ifdef __cplusplus
 }

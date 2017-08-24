@@ -4,8 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "lora_board.h"
-#include "lora_radio.h"
+#include "lora_radio_sx1272.h"
 
 struct mock_chip {
     

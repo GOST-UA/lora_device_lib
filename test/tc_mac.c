@@ -6,7 +6,7 @@
 
 #include "lora_mac.h"
 #include "lora_channel_list.h"
-#include "lora_radio.h"
+#include "lora_radio_sx1272.h"
 #include "lora_event.h"
 
 #include <string.h>

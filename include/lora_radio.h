@@ -41,12 +41,7 @@ enum lora_radio_event {
 
 typedef void (*radioEventCB)(void *receiver, enum lora_radio_event event, uint64_t time);
 
-struct lora_radio {
-    const struct lora_board *board;
-    void *eventReceiver;
-    radioEventCB eventHandler;
-    uint8_t dio_mapping1;
-};
+struct lora_radio;
 
 struct lora_radio_tx_setting {
     

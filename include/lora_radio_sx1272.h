@@ -22,6 +22,15 @@
 #ifndef LORA_RADIO_SX1272_H
 #define LORA_RADIO_SX1272_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "lora_radio.h"
+
+#include <stdint.h>
+#include <stdbool.h>
+
 enum lora_radio_sx1272_register {
     RegFifo=0x00,
     RegOpMode=0x01,
@@ -133,5 +142,25 @@ enum lora_radio_sx1272_register {
     RegFormerTemp=0x6C,
     RegBitRateFrac=0x70
 };
+
+struct lora_board {
+
+    void *receiver;
+    void (*select)(void *receiver, bool state);     /**< select the chip (this should also 'take' the resource if it's shared) */
+    void (*reset)(void *receiver, bool state);      /**< true will hold the device in reset */
+    void (*write)(void *receiver, uint8_t data);    /**< write a byte */
+    uint8_t (*read)(void *receiver);                /**< read a byte */
+};
+
+struct lora_radio {
+    struct lora_board board;
+    void *eventReceiver;
+    radioEventCB eventHandler;
+    uint8_t dio_mapping1;
+};
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
