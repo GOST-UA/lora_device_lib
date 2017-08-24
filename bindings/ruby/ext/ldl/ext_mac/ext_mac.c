@@ -29,7 +29,7 @@ static const uint8_t default_key[] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x
 static const uint8_t default_eui[] = "\x00\x00\x00\x00\x00\x00\x00\x00";
 
 static VALUE cLDL;
-static VALUE cMAC;
+static VALUE cExtMAC;
 static VALUE cEUI64;
 static VALUE cKey;
 static VALUE cError;
@@ -102,22 +102,22 @@ void Init_ext_mac(void)
 {
     cLDL = rb_define_module("LDL");
     
-    cMAC = rb_define_class_under(cLDL, "MAC", rb_cObject);
+    cExtMAC = rb_define_class_under(cLDL, "ExtMAC", rb_cObject);
     rb_define_alloc_func(cLDL, _ldl_alloc);
     
-    rb_define_method(cMAC, "initialize", _ldl_initialize, 1);
-    rb_define_method(cMAC, "initialize_copy", _ldl_initialize_copy, 1);
+    rb_define_method(cExtMAC, "initialize", _ldl_initialize, 1);
+    rb_define_method(cExtMAC, "initialize_copy", _ldl_initialize_copy, 1);
     
-    rb_define_method(cMAC, "personalize", _ldl_personalize, 3);
-    rb_define_method(cMAC, "tick", _ldl_tick, 0);
-    rb_define_method(cMAC, "addChannel", _ldl_addChannel, 2);
-    rb_define_method(cMAC, "removeChannel", _ldl_removeChannel, 1);
-    rb_define_method(cMAC, "maskChannel", _ldl_maskChannel, 1);
-    rb_define_method(cMAC, "unmaskChannel", _ldl_unmaskChannel, 1);
-    rb_define_method(cMAC, "setRateAndPower", _ldl_setRateAndPower, 2);
-    rb_define_method(cMAC, "join", _ldl_join, -1);
-    rb_define_method(cMAC, "send_unconfirmed", _ldl_send_unconfirmed, -1);
-    rb_define_method(cMAC, "send_confirmed", _ldl_send_confirmed, -1);    
+    rb_define_method(cExtMAC, "personalize", _ldl_personalize, 3);
+    rb_define_method(cExtMAC, "tick", _ldl_tick, 0);
+    rb_define_method(cExtMAC, "addChannel", _ldl_addChannel, 2);
+    rb_define_method(cExtMAC, "removeChannel", _ldl_removeChannel, 1);
+    rb_define_method(cExtMAC, "maskChannel", _ldl_maskChannel, 1);
+    rb_define_method(cExtMAC, "unmaskChannel", _ldl_unmaskChannel, 1);
+    rb_define_method(cExtMAC, "setRateAndPower", _ldl_setRateAndPower, 2);
+    rb_define_method(cExtMAC, "join", _ldl_join, -1);
+    rb_define_method(cExtMAC, "send_unconfirmed", _ldl_send_unconfirmed, -1);
+    rb_define_method(cExtMAC, "send_confirmed", _ldl_send_confirmed, -1);    
     
     cEUI64 = rb_const_get(cLDL, rb_intern("EUI64"));
     cKey = rb_const_get(cLDL, rb_intern("Key"));

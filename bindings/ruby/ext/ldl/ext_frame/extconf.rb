@@ -9,5 +9,5 @@ $VPATH << File.join(root_dir, "src")
 $INCFLAGS << " -I#{File.join(root_dir, "include")} -I#{port_dir}"
 $defs << " -DLORA_DEBUG_INCLUDE=\\\"ext_lora_debug.h\\\""
 
-create_makefile('lora_device_lib/ext_frame')
+create_makefile('ldl/ext_frame')
 
