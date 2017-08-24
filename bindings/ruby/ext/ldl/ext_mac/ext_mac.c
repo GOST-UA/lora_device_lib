@@ -63,12 +63,14 @@ void System_usleep(uint32_t interval)
 
 void System_rand(uint8_t *data, size_t len)
 {
+    VALUE result = rb_random_bytes(rb_str_new2(""), len);
     
+    (void)memcpy(data, RSTRING_PTR(result), len);
 }
 
 void System_atomic_setPtr(void **receiver, void *value)
 {
-    *receiver = value;
+    *receiver = value;  //fixme
 }
 
 void System_getAppEUI(void *owner, uint8_t *eui)
@@ -91,7 +93,7 @@ void System_getDevEUI(void *owner, uint8_t *eui)
 void System_getAppKey(void *owner, uint8_t *key)
 {
     VALUE self = (VALUE)owner;    
-    VALUE devEUI = rb_iv_get(self, "@appKey");
+    VALUE appKey = rb_iv_get(self, "@appKey");
     
     (void)memcpy(key, RSTRING_PTR(rb_funcall(appKey, rb_intern("value"), 0)), sizeof(default_key));
 }
