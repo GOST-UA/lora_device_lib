@@ -34,7 +34,7 @@ LDL breaks the problem into standalone modules which can be mocked out during te
 
 LDL is intended to be driven from two tasks - an _iterrupt_ level task and a _mainloop_ level task.
 
-The _interrupt_ level task signals when IO events occur. It runs for a short time and never blocks. The _interrupt_ level task must *never*
+The _interrupt_ level task signals when IO events occur. It runs for a short time and never blocks. The _interrupt_ level task must never
 be interrupted by the _mainloop_ level task. 
 
 The _mainloop_ level task drives all other functionility from a single thread of execution. 

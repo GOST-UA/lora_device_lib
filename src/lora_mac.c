@@ -21,7 +21,6 @@
 
 #include "lora_mac.h"
 #include "lora_channel_list.h"
-#include "lora_radio.h"
 #include "lora_event.h"
 #include "lora_frame.h"
 #include "lora_debug.h"
@@ -53,8 +52,6 @@ static void collect(struct lora_mac *self);
 
 static void abandonSequence(struct lora_mac *self);
 
-static void radioEvent(void *receiver, enum lora_radio_event event, uint64_t time);
-
 static uint32_t calculateOnAirTime(const struct lora_mac *self, enum lora_signal_bandwidth bw, enum lora_spreading_factor sf, enum lora_coding_rate cr, uint8_t payloadLen);
 
 /* functions **********************************************************/
@@ -74,7 +71,7 @@ void MAC_init(struct lora_mac *self, struct lora_channel_list *channels, struct 
     
     const struct lora_region_default *defaults = Region_getDefaultSettings(ChannelList_region(self->channels));
     
-    Radio_setEventHandler(self->radio, self, radioEvent);
+    Radio_setEventHandler(self->radio, self, MAC_radioEvent);
 
     self->rx2_rate = defaults->rx2_rate;
     self->rx2_freq = defaults->rx2_freq;
@@ -241,6 +238,27 @@ bool MAC_personalize(struct lora_mac *self, uint32_t devAddr, const void *nwkSKe
     (void)memcpy(self->nwkSKey, nwkSKey, sizeof(self->nwkSKey));
     (void)memcpy(self->appSKey, appSKey, sizeof(self->appSKey));    
     return true;
+}
+
+void MAC_radioEvent(void *receiver, enum lora_radio_event event, uint64_t time)
+{
+    LORA_ASSERT(receiver != NULL)
+    
+    struct lora_mac *self = (struct lora_mac *)receiver;
+    
+    switch(event){
+    case LORA_RADIO_TX_COMPLETE:
+        Event_receive(self->events, EVENT_TX_COMPLETE, time);
+        break;
+    case LORA_RADIO_RX_READY:
+        Event_receive(self->events, EVENT_RX_READY, time);
+        break;
+    case LORA_RADIO_RX_TIMEOUT:
+        Event_receive(self->events, EVENT_RX_TIMEOUT, time);
+        break;
+    default:
+        break;
+    }
 }
 
 /* static functions ***************************************************/
@@ -661,27 +679,6 @@ static void abandonSequence(struct lora_mac *self)
     }
     
     self->state = IDLE;
-}
-
-static void radioEvent(void *receiver, enum lora_radio_event event, uint64_t time)
-{
-    LORA_ASSERT(receiver != NULL)
-    
-    struct lora_mac *self = (struct lora_mac *)receiver;
-    
-    switch(event){
-    case LORA_RADIO_TX_COMPLETE:
-        Event_receive(self->events, EVENT_TX_COMPLETE, time);
-        break;
-    case LORA_RADIO_RX_READY:
-        Event_receive(self->events, EVENT_RX_READY, time);
-        break;
-    case LORA_RADIO_RX_TIMEOUT:
-        Event_receive(self->events, EVENT_RX_TIMEOUT, time);
-        break;
-    default:
-        break;
-    }
 }
 
 static uint32_t calculateOnAirTime(const struct lora_mac *self, enum lora_signal_bandwidth bw, enum lora_spreading_factor sf, enum lora_coding_rate cr, uint8_t payloadLen)

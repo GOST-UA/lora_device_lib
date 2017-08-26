@@ -23,11 +23,11 @@
 #define LORA_MAC_H
 
 #include "lora_region.h"
+#include "lora_radio.h"
 
 #include <stdint.h>
 #include <stdbool.h>
 
-struct lora_radio;
 struct lora_event;
 struct lora_channeL_list;
 struct lora_mac;
@@ -223,5 +223,7 @@ bool MAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *d
 void MAC_setResponseHandler(struct lora_mac *self, void *receiver, lora_mac_response_fn cb);
 
 bool MAC_join(struct lora_mac *self);
+
+void MAC_radioEvent(void *receiver, enum lora_radio_event event, uint64_t time);
 
 #endif

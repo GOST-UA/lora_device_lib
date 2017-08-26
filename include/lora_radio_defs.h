@@ -50,17 +50,4 @@ enum lora_coding_rate {
     CR_8,       /**< 4/8 */
 };
 
-enum lora_erp_setting {
-    DBM_30,
-    DBM_28,
-    DBM_26,
-    DBM_20,
-    DBM_14,
-    DBM_11,
-    DBM_10,
-    DBM_8,
-    DBM_5,
-    DBM_2    
-};
-
 #endif

@@ -49,8 +49,13 @@ static VALUE _ldl_setRateAndPower(VALUE self, VALUE rate, VALUE power);
 static VALUE _ldl_join(int argc, VALUE *argv, VALUE self);
 static VALUE _ldl_send_unconfirmed(int argc, VALUE *argv, VALUE self);
 static VALUE _ldl_send_confirmed(int argc, VALUE *argv, VALUE self);
+static VALUE io_event(VALUE self, VALUE event, VALUE time);
 
 static void _response(void *receiver, enum lora_mac_response_type type, const union lora_mac_response_arg *arg);
+
+static VALUE bw_to_symbol(enum lora_signal_bandwidth bw);
+static VALUE sf_to_symbol(enum lora_spreading_factor sf);
+static VALUE cr_to_symbol(enum lora_coding_rate cr);
 
 uint64_t System_getTime(void)
 {
@@ -103,7 +108,7 @@ void Init_ext_mac(void)
     cLDL = rb_define_module("LDL");
     
     cExtMAC = rb_define_class_under(cLDL, "ExtMAC", rb_cObject);
-    rb_define_alloc_func(cLDL, _ldl_alloc);
+    rb_define_alloc_func(cExtMAC, _ldl_alloc);
     
     rb_define_method(cExtMAC, "initialize", _ldl_initialize, 1);
     rb_define_method(cExtMAC, "initialize_copy", _ldl_initialize_copy, 1);
@@ -118,10 +123,11 @@ void Init_ext_mac(void)
     rb_define_method(cExtMAC, "join", _ldl_join, -1);
     rb_define_method(cExtMAC, "send_unconfirmed", _ldl_send_unconfirmed, -1);
     rb_define_method(cExtMAC, "send_confirmed", _ldl_send_confirmed, -1);    
+    rb_define_method(cExtMAC, "io_event", io_event, 2);    
     
     cEUI64 = rb_const_get(cLDL, rb_intern("EUI64"));
     cKey = rb_const_get(cLDL, rb_intern("Key"));
-    cError = rb_const_get(cLDL, rb_intern("LoraError"));
+    cError = rb_const_get(cLDL, rb_intern("Error"));
     cRadio = rb_const_get(cLDL, rb_intern("Radio"));
 }
 
@@ -143,9 +149,9 @@ bool Radio_transmit(struct lora_radio *self, const struct lora_radio_tx_setting 
     rb_hash_aset(params, ID2SYM(rb_intern("preamble")), NUM2UINT(settings->preamble)); 
     rb_hash_aset(params, ID2SYM(rb_intern("power")), NUM2INT(settings->power)); 
     
-    rb_hash_aset(params, ID2SYM(rb_intern("bw")), NUM2INT(settings->bw)); 
-    rb_hash_aset(params, ID2SYM(rb_intern("sf")), NUM2INT(settings->sf)); 
-    rb_hash_aset(params, ID2SYM(rb_intern("cr")), NUM2INT(settings->cr)); 
+    rb_hash_aset(params, ID2SYM(rb_intern("bw")), bw_to_symbol(settings->bw)); 
+    rb_hash_aset(params, ID2SYM(rb_intern("sf")), sf_to_symbol(settings->sf)); 
+    rb_hash_aset(params, ID2SYM(rb_intern("cr")), cr_to_symbol(settings->cr)); 
      
     return rb_funcall((VALUE)self, rb_intern("transmit"), 2, rb_str_new(data, len), params) == Qtrue;
 }
@@ -158,9 +164,9 @@ bool Radio_receive(struct lora_radio *self, const struct lora_radio_rx_setting *
     rb_hash_aset(params, ID2SYM(rb_intern("preamble")), NUM2UINT(settings->preamble)); 
     rb_hash_aset(params, ID2SYM(rb_intern("timeout")), NUM2UINT(settings->timeout)); 
     
-    rb_hash_aset(params, ID2SYM(rb_intern("bw")), NUM2INT(settings->bw)); 
-    rb_hash_aset(params, ID2SYM(rb_intern("sf")), NUM2INT(settings->sf)); 
-    rb_hash_aset(params, ID2SYM(rb_intern("cr")), NUM2INT(settings->cr)); 
+    rb_hash_aset(params, ID2SYM(rb_intern("bw")), bw_to_symbol(settings->bw)); 
+    rb_hash_aset(params, ID2SYM(rb_intern("sf")), sf_to_symbol(settings->sf)); 
+    rb_hash_aset(params, ID2SYM(rb_intern("cr")), cr_to_symbol(settings->cr)); 
     
     return rb_funcall((VALUE)self, rb_intern("receive"), 1, params) == Qtrue;
 }
@@ -178,6 +184,7 @@ uint8_t Radio_collect(struct lora_radio *self, void *data, uint8_t max)
 
 void Radio_setEventHandler(struct lora_radio *self, void *receiver, radioEventCB cb)
 {    
+    rb_funcall((VALUE)self, rb_intern("set_mac"), 1, (VALUE)receiver);
 }
 
 static VALUE _ldl_alloc(VALUE klass)
@@ -545,4 +552,81 @@ static void _response(void *receiver, enum lora_mac_response_type type, const un
         rb_funcall(handler, rb_intern("call"), 1, type_to_sym[type]);
         break;
     }   
+}
+
+static VALUE bw_to_symbol(enum lora_signal_bandwidth bw)
+{
+    VALUE map[] = {
+        ID2SYM(rb_intern("bw_125")),
+        ID2SYM(rb_intern("bw_250")),
+        ID2SYM(rb_intern("bw_500")),
+        ID2SYM(rb_intern("bw_fsk")),
+    };
+    
+    return map[bw];
+}
+
+static VALUE sf_to_symbol(enum lora_spreading_factor sf)
+{
+    VALUE map[] = {
+        ID2SYM(rb_intern("sf_7")),
+        ID2SYM(rb_intern("sf_8")),
+        ID2SYM(rb_intern("sf_9")),
+        ID2SYM(rb_intern("sf_10")),
+        ID2SYM(rb_intern("sf_11")),
+        ID2SYM(rb_intern("sf_12")),
+        ID2SYM(rb_intern("sf_fsk")),
+    };
+    
+    return map[sf];
+}
+
+static VALUE cr_to_symbol(enum lora_coding_rate cr)
+{
+    VALUE map[] = {
+        ID2SYM(rb_intern("cr_5")),
+        ID2SYM(rb_intern("cr_6")),
+        ID2SYM(rb_intern("cr_7")),
+        ID2SYM(rb_intern("cr_8"))
+    };
+    
+    return map[cr];    
+}
+
+static VALUE io_event(VALUE self, VALUE event, VALUE time)
+{
+    size_t i;
+    struct ldl *this;    
+    Data_Get_Struct(self, struct ldl, this);
+    
+    struct {
+        
+        enum lora_radio_event event;
+        VALUE symbol;
+    }
+    map[] = {
+        {
+            .event = LORA_RADIO_TX_COMPLETE,
+            .symbol = ID2SYM(rb_intern("tx_complete"))
+        },
+        {
+            .event = LORA_RADIO_RX_READY,
+            .symbol = ID2SYM(rb_intern("rx_ready"))
+        },
+        {
+            .event = LORA_RADIO_RX_TIMEOUT,
+            .symbol = ID2SYM(rb_intern("rx_timeout"))
+        }
+    };
+    
+    for(i=0U; i < sizeof(map)/sizeof(*map); i++){
+        
+        if(map[i].symbol == event){
+    
+            MAC_radioEvent(this, map[i].event, NUM2ULL(time));
+            break;
+        }
+    }
+    
+    return self;
 }
