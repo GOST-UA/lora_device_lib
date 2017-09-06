@@ -1,11 +1,15 @@
 module LDL
+
+    # This module contains an implementation of the Semtech packet 
+    # forwarder protocol.
+    #
     module Semtech
     
         @token = rand(0..0xffff)
 
         # @return a message "token"
         def self.token
-            result = token.mod 0xffff
+            result = @token % 0xffff
             @token = @token.next
             result        
         end

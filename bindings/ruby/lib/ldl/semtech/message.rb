@@ -17,29 +17,38 @@ module LDL::Semtech
     
         def self.decode(msg)
         
-            iter = msg.unpack("Ca2Ca").each
+            iter = msg.unpack("CS>C").each
             
             version = iter.next
-            nonce = iter.next
+            iter.next
             type = iter.next
-            payload = iter.next
             
             if version != 2
-                raise
+                raise ArgumentError.new "unknown protocol version"
             end
             
-            if not (message_type = @subclasses.detect{|m|m.type == type})
-                raise
+            if klass = @subclasses.detect{|m|m.type == type}
+                klass.decode(msg)
+            else
+                raise ArgumentError.new "unknown message type"
             end
-            
-            message_type.decode(msg)            
             
         end
         
         attr_reader :token
         
+        def initialize(**params)
+            if params[:token]
+                raise TypeError unless params[:token].kind_of? Integer
+                raise ArgumentError unless Range.new(0, 0xffff).include? params[:token]
+                @token = params[:token]
+            else
+                @token = LDL::Semtech.token
+            end            
+        end
+        
         def encode
-            [VERSION, token, self.class.type].pack("Ca2C")
+            [VERSION, token, self.class.type].pack("CS>C")
         end
     
     end
