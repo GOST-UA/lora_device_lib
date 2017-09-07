@@ -23,7 +23,7 @@ module LDL::Semtech
             iter.next
             type = iter.next
             
-            if version != 2
+            if version != Message::VERSION
                 raise ArgumentError.new "unknown protocol version"
             end
             

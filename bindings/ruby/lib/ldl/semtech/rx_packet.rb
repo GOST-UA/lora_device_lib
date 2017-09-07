@@ -25,13 +25,10 @@ module LDL::Semtech
          size | number | RF packet payload size in bytes (unsigned integer)
          data | string | Base64 encoded RF packet payload, padded
 =end
-
-        def self.from_json(obj)
-            self.new
-        end
         
         attr_reader :time
         attr_reader :tmms
+        attr_reader :tmst
         attr_reader :freq
         attr_reader :chan
         attr_reader :rfch
@@ -39,16 +36,8 @@ module LDL::Semtech
         attr_reader :modu
         
         attr_reader :bw
-        attr_reader :sf
-        
-        def datr
-            if @modu == "FSK"
-                @dr
-            else
-                @datr
-            end
-        end
-        
+        attr_reader :sf        
+        attr_reader :datr        
         attr_reader :codr
         attr_reader :rssi
         attr_reader :lsnr
@@ -84,20 +73,22 @@ module LDL::Semtech
     
         def initialize(**param)
 
-            init = Proc.new do |iv_name, klass, default, &validation|
-                
+            init = Proc.new do |iv_name, klass, default|                
                 if param[iv_name]
                     raise TypeError unless param[iv_name].kind_of? klass                                        
-                    value = param[iv_name]                    
+                    if block_given?
+                        value = yield(param[iv_name])
+                    else
+                        value = param[iv_name]                    
+                    end
                     instance_variable_set("@#{iv_name}", value)
                 else
                     instance_variable_set("@#{iv_name}", default)        
-                end
-                
+                end                
             end
             
             init.call(:time, Time, Time.now) 
-            init.call(:freq, Numeric, 0) 
+            init.call(:freq, Numeric, 0)
             init.call(:chan, Integer, 0)
             init.call(:rfch, Integer, 0) 
             init.call(:stat, Symbol, :ok) do |value|
@@ -121,9 +112,13 @@ module LDL::Semtech
                     raise ArugmentError unless not(param[:datr].kind_of? Numeric)
                 end
             else
-                @datr = "SF7BW125"
-                @bw = 125000
-                @sf = 7
+                if modu == "LORA"            
+                    @datr = "SF7BW125"
+                    @bw = 125000
+                    @sf = 7
+                else
+                    @datar = 50000                
+                end
             end
             
             init.call(:codr, String, "4/5") do |value|
@@ -145,6 +140,7 @@ module LDL::Semtech
         def to_json
             {
                 :time => @time.iso8601,
+                :tmst => tmst,
                 :freq => freq,
                 :chan => chan,
                 :rfch => rfch,

@@ -17,7 +17,7 @@ module LDL::Semtech
             rxpk = nil
             stat = nil
             
-            if version != 2
+            if version != Message::VERSION
                 raise ArgumentError.new "unknown protocol version"
             end
             
@@ -68,7 +68,7 @@ module LDL::Semtech
             super(**params)
                                
             if params[:rxpk]
-                @rxpk = params[:obj]
+                @rxpk = params[:rxpk]
             else
                 @rxpk = []     
             end
@@ -94,13 +94,9 @@ module LDL::Semtech
             if stat
                 obj[:stat] = stat
             end
-            
-            result = ""
-            result << super
-            result << eui.bytes
-            result << obj.to_json
-            result
-            
+
+            [super, eui.bytes, obj.to_json].pack("a*a*a*")
+
         end
     
     end

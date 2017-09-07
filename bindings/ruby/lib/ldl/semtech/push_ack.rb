@@ -6,14 +6,14 @@ module LDL::Semtech
         
         def self.decode(msg)
             
-            iter = msg.unpack("Ca2Ca8").each
+            iter = msg.unpack("CS>Ca8").each
             
             version = iter.next
             token = iter.next
             type = iter.next
             eui = iter.next
             
-            if version != 2
+            if version != Message::VERSION
                 raise ArgumentError.new "unknown protocol version"
             end
             
@@ -24,7 +24,7 @@ module LDL::Semtech
             self.new(
                 version: version,
                 token: token,
-                eui: EUI64.new(eui)
+                eui: LDL::EUI64.new(eui)
             )
             
         end
@@ -36,7 +36,7 @@ module LDL::Semtech
             super(**params)
             
             if params[:eui]
-                raise TypeError unless params[:eui].kind_of? EUI64
+                raise TypeError unless params[:eui].kind_of? LDL::EUI64
                 @eui = params[:eui]                
             else
                 @eui = LDL::EUI64.new("00-00-00-00-00-00-00-00")

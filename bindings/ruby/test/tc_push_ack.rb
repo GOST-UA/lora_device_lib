@@ -27,9 +27,9 @@ class TestPushAck < Minitest::Test
         
         input = @state.encode
         
-        input = "\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00{\"rxpk\":[]}"
+        input = "\x02\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00{\"rxpk\":[]}"
         
-        decoded = Semtech::PushData.decode(input)
+        decoded = Semtech::PushAck.decode(input)
         
         assert_equal 0,  decoded.token
         assert_equal EUI64.new("00-00-00-00-00-00-00-00"), decoded.eui
