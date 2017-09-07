@@ -3,10 +3,10 @@ require 'ldl'
 
 class TestPushData < Minitest::Test
 
-    include LDL::Semtech
+    include LDL
 
     def setup
-        @state = PushData.new
+        @state = Semtech::PushData.new
     end
 
     def test_encode_default    
@@ -15,7 +15,7 @@ class TestPushData < Minitest::Test
         
         iter = out.unpack("CS>Ca8a*").each
         
-        assert_equal Message::VERSION, iter.next
+        assert_equal Semtech::Message::VERSION, iter.next
         iter.next
         
         assert_equal @state.class.type, iter.next
@@ -31,10 +31,10 @@ class TestPushData < Minitest::Test
         
         input = "\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00{\"rxpk\":[]}"
         
-        decoded = PushData.decode(input)
+        decoded = Semtech::PushData.decode(input)
         
         assert_equal 0,  decoded.token
-        assert_equal LDL::EUI64.new("00-00-00-00-00-00-00-00"), decoded.eui
+        assert_equal EUI64.new("00-00-00-00-00-00-00-00"), decoded.eui
         assert_nil decoded.stat
         
     end

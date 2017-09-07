@@ -1,16 +1,16 @@
 require 'minitest/autorun'
 require 'ldl'
 
-class TestRXPacket < Minitest::Test
+class TestTXPacket < Minitest::Test
 
     include LDL
 
     def setup
-        @state = Semtech::RXPacket.new
+        @state = Semtech::TXPacket.new
     end
 
     def test_to_json_default
-        @state.to_json
+        output = @state.to_json
     end
 
     def test_from_json

@@ -25,9 +25,8 @@ require_relative 'semtech/pull_ack'
 require_relative 'semtech/pull_resp'
 require_relative 'semtech/tx_ack'
 
-require_relative 'semtech/status'
+require_relative 'semtech/status_packet'
 require_relative 'semtech/rx_packet'
-require_relative 'semtech/tx_packet'
 require_relative 'semtech/tx_packet'
 require_relative 'semtech/tx_packet_ack'
 

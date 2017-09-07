@@ -23,18 +23,39 @@ module LDL::Semtech
          GPS_UNLOCKED | Rejected because GPS is unlocked, so GPS timestamp cannot be used
 =end
 
-        def self.from_json
-            self.new
+        ERROR = [
+            "NONE",
+            "TOO_LATE",
+            "COLLISION_PACKET",
+            "COLLISION_BEACON",
+            "TX_FREQ",
+            "TX_POWER",
+            "GPS_UNLOCKED"
+        ]
+
+        def self.from_json(msg)            
+            begin                            
+                self.new(error: msg["error"])                
+            rescue
+                raise ArgumentError
+            end
         end
     
+        attr_reader :error
+        
         def initialize(**param)
-            
-            
+            if param[:error]
+                raise TypeError unless param[:error].kind_of? String
+                raise RangeError unless ERROR.include? param[:error]
+                @error = param[:error]
+            else
+                @error = ERROR.first
+            end
         end
         
         def to_json
             {
-
+                :error => @error
             }.to_json
         end
     
