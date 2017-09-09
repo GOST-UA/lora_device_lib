@@ -209,6 +209,20 @@ static void test_Frame_decode_joinAccept_withCFList(void **user)
     assert_int_equal(FRAME_TYPE_JOIN_ACCEPT, f.type);    
 }
 
+static void test_Frame_decode_croftExample(void **user)
+{
+    const uint8_t key[] = {0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6, 0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C};
+    uint8_t input[] = "\x80\x8f\x77\xbb\x07\x00\x02\x00\x06\xbd\x33\x42\xa1\x9f\xcc\x3c\x8d\x6b\xcb\x5f\xdb\x05\x48\xdb\x4d\xc8\x50\x14\xae\xeb\xfe\xb\x54\xb1\xc9\x98\xde\xf5\x3e\x97\x9b\x70\x1d\xab\xb0\x45\x30\x0e\xf8\x69\x9c\x38\xfc\x1a\x34\xd5";
+    
+    struct lora_frame f;
+    
+    enum lora_frame_result result = Frame_decode(key, key, key, input, sizeof(input)-1U, &f);
+    
+    assert_int_equal(LORA_FRAME_OK, result);    
+    
+    assert_int_equal(FRAME_TYPE_DATA_CONFIRMED_UP, f.type);    
+}
+
 int main(void)
 {
     const struct CMUnitTest tests[] = {
@@ -223,6 +237,7 @@ int main(void)
         cmocka_unit_test(test_Frame_decode_joinReq),        
         cmocka_unit_test(test_Frame_decode_joinAccept),        
         cmocka_unit_test(test_Frame_decode_joinAccept_withCFList),                
+        cmocka_unit_test(test_Frame_decode_croftExample),                
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);
