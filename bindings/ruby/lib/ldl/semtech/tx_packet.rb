@@ -156,7 +156,7 @@ module LDL::Semtech
                 :ipol => ipol,
                 :prea => prea,
                 :size => size,
-                :data => Base64.encode64(@data),
+                :data => Base64.strict_encode64(@data),
                 :ncrc => ncrc
             }.to_json
         end

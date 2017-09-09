@@ -171,7 +171,7 @@ module LDL::Semtech
                 :rssi => rssi,
                 :lsnr => lsnr,
                 :size => size,
-                :data => Base64.encode64(@data)
+                :data => Base64.strict_encode64(@data)
             }.to_json
         end
     
