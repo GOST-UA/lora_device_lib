@@ -255,15 +255,15 @@ enum lora_frame_result Frame_decode(const void *appKey, const void *nwkSKey, con
         return LORA_FRAME_BAD;
     }
 
-    if(ptr[pos] >= sizeof(types)/sizeof(*types)){
-
-        LORA_ERROR("unknown frame type")
-        return LORA_FRAME_BAD;
-    }
-
     if((ptr[pos] & 0x1fU) != 0x0U){
         
         LORA_ERROR("unsupported MHDR")
+        return LORA_FRAME_BAD;
+    }
+    
+    if((ptr[pos] >> 5) >= sizeof(types)/sizeof(*types)){
+
+        LORA_ERROR("unknown frame type")
         return LORA_FRAME_BAD;
     }
 

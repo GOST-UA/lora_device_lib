@@ -13,7 +13,7 @@
 static void test_Frame_data_encode_empty(void **user)
 {
     uint32_t devAddr = 0U;
-    const uint8_t expected[] = "\x02\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00";
+    const uint8_t expected[] = "\x40\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00";
     const uint8_t dummyKey[] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
     struct lora_frame input;
     (void)memset(&input, 0, sizeof(input));
@@ -33,7 +33,7 @@ static void test_Frame_data_encode_empty(void **user)
 static void test_Frame_data_decode_empty(void **user)
 {
     uint32_t devAddr = 0U;
-    uint8_t input[] = "\x02\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00";
+    uint8_t input[] = "\x40\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00";
     const uint8_t dummyKey[] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
     struct lora_frame expected;
     struct lora_frame output;
