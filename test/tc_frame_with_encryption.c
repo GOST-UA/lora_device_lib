@@ -124,6 +124,32 @@ static void test_Frame_encode_joinAccept_withCFList(void **user)
     assert_memory_equal(expected, buffer, retval);    
 }
 
+static void test_Frame_encode_croftExample(void **user)
+{
+    uint8_t retval;
+    uint8_t buffer[UINT8_MAX];
+    const uint8_t payload[] = "{\"name\":\"Turiphro\",\"count\":13,\"water\":true}";
+    const uint8_t key[] = {0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6, 0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C};
+    const uint8_t expected[] = "\x80\x8f\x77\xbb\x07\x00\x02\x00\x06\xbd\x33\x42\xa1\x9f\xcc\x3c\x8d\x6b\xcb\x5f\xdb\x05\x48\xdb\x4d\xc8\x50\x14\xae\xeb\xfe\xb\x54\xb1\xc9\x98\xde\xf5\x3e\x97\x9b\x70\x1d\xab\xb0\x45\x30\x0e\xf8\x69\x9c\x38\xfc\x1a\x34\xd5";
+    
+    struct lora_frame f;
+    
+    (void)memset(&f, 0, sizeof(f));
+    
+    f.type = FRAME_TYPE_DATA_CONFIRMED_UP;
+    f.fields.data.devAddr = 0x07BB778F;
+    f.fields.data.counter = 2;
+    f.fields.data.port = 6;
+    f.fields.data.data = payload;
+    f.fields.data.dataLen = sizeof(payload)-1;
+    
+    retval = Frame_encode(key, &f, buffer, sizeof(buffer));
+    
+    assert_int_equal(sizeof(expected)-1U, retval);
+    
+    assert_memory_equal(expected, buffer, retval);    
+}
+
 static void test_Frame_decode_unconfirmedUp(void **user)
 {
     const uint8_t data[] = "hello world";
@@ -231,6 +257,7 @@ int main(void)
         cmocka_unit_test(test_Frame_encode_joinReq),        
         cmocka_unit_test(test_Frame_encode_joinAccept),        
         cmocka_unit_test(test_Frame_encode_joinAccept_withCFList),        
+        cmocka_unit_test(test_Frame_encode_croftExample),        
         
         cmocka_unit_test(test_Frame_decode_unconfirmedUp),        
         cmocka_unit_test(test_Frame_decode_unconfirmedUp_withOpts),        
