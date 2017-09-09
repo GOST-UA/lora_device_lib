@@ -5,9 +5,9 @@ module LDL
         attr_reader :value
     
         def initialize(value)
-            if !value.kind_of? String or value.size != 16
-                raise TypeError
-            end
+            raise TypeError unless value.kind_of? String
+            puts value.size
+            raise ArgumentEror unless value.size == 16
             @value = value
         end
     

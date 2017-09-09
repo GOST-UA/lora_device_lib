@@ -64,7 +64,7 @@ uint8_t Frame_encode(const void *key, const struct lora_frame *f, uint8_t *out, 
 
             if((size <= 0xffU) && ((uint8_t)size <= max)){
 
-                out[pos] = (uint8_t)f->type;
+                out[pos] = ((uint8_t)f->type) << 5;
                 pos++;
                 
                 out[pos] = (uint8_t)f->fields.data.devAddr;
@@ -129,7 +129,7 @@ uint8_t Frame_encode(const void *key, const struct lora_frame *f, uint8_t *out, 
             
                 struct lora_aes_ctx aes_ctx;
             
-                out[pos] = (uint8_t)f->type;
+                out[pos] = ((uint8_t)f->type) << 5;
                 pos++;
                 
                 out[pos] = (uint8_t)f->fields.joinAccept.appNonce;
@@ -199,7 +199,7 @@ uint8_t Frame_encode(const void *key, const struct lora_frame *f, uint8_t *out, 
     
         if(max >= 23U){
     
-            out[pos] = (uint8_t)f->type;
+            out[pos] = ((uint8_t)f->type) << 5;
             pos++;
             
             swapEUI(&out[pos], f->fields.joinRequest.appEUI);
@@ -261,7 +261,13 @@ enum lora_frame_result Frame_decode(const void *appKey, const void *nwkSKey, con
         return LORA_FRAME_BAD;
     }
 
-    f->type = types[ptr[pos]];
+    if((ptr[pos] & 0x1fU) != 0x0U){
+        
+        LORA_ERROR("unsupported MHDR")
+        return LORA_FRAME_BAD;
+    }
+
+    f->type = types[(ptr[pos] >> 5)];
     pos++;    
 
     switch(f->type){
@@ -612,8 +618,12 @@ static void swapEUI(uint8_t *out, const uint8_t *in)
 
 static void swapMIC(uint8_t *out, const uint8_t *in)
 {
+#if 1
+    (void)memcpy(out, in, 4);
+#else
     out[0] = in[3];
     out[1] = in[2];
     out[2] = in[1];
     out[3] = in[0];
+#endif
 }

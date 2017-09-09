@@ -68,6 +68,7 @@ module LDL::Semtech
             super(**params)
                                
             if params[:rxpk]
+                raise TypeError unless params[:rxpk].kind_of? Array
                 @rxpk = params[:rxpk]
             else
                 @rxpk = []     

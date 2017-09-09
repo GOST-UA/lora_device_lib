@@ -199,6 +199,29 @@ static void Frame_encode_joinAccept_withCFList(void)
     print_hex(__FUNCTION__, buffer, retval);
 }
 
+static void Frame_encode_croft_example(void)
+{
+    uint8_t retval;
+    uint8_t buffer[UINT8_MAX];
+    const uint8_t payload[] = "{\"name\":\"Turiphro\",\"count\":13,\"water\":true}";
+    const uint8_t key[] = "\x2B\x7E\x15\x16\x28\xAE\xD2\xA6\xAB\xF7\x15\x88\x09\xCF\x4F\x3C";
+    
+    struct lora_frame f;
+    
+    (void)memset(&f, 0, sizeof(f));
+    
+    f.type = FRAME_TYPE_DATA_CONFIRMED_UP;
+    f.fields.data.devAddr = 0x07BB778F;
+    f.fields.data.counter = 2;
+    f.fields.data.port = 6;
+    f.fields.data.data = payload;
+    f.fields.data.dataLen = sizeof(payload)-1;
+    
+    retval = Frame_encode(key, &f, buffer, sizeof(buffer));
+    
+    print_hex(__FUNCTION__, buffer, retval);
+}
+
 int main(int argc, const char **argv)
 {
     Frame_encode_joinAccept();
@@ -209,6 +232,7 @@ int main(int argc, const char **argv)
     Frame_encode_unconfirmedUp_withOpts();
     Frame_encode_unconfirmedUp_withOpts_upCount();
     Frame_encode_unconfirmedUp_empty();
+    Frame_encode_croft_example();
     
     exit(EXIT_SUCCESS);
 }

@@ -63,6 +63,12 @@ module LDL::Semtech
                     time = nil
                 end
             
+                if msg["stat"]
+                    state = stat_to_sym(msg["stat"])
+                else
+                    stat = nil
+                end
+            
                 self.new(
                     time: time,
                     tmms: msg["tmms"],
@@ -88,7 +94,7 @@ module LDL::Semtech
 
             init = Proc.new do |iv_name, klass, default|                
                 if param[iv_name]
-                    raise TypeError unless param[iv_name].kind_of? klass                                        
+                    raise TypeError unless klass.nil? or param[iv_name].kind_of? klass                                        
                     if block_given?
                         value = yield(param[iv_name])
                     else
@@ -101,6 +107,7 @@ module LDL::Semtech
             end
             
             init.call(:time, Time, Time.now) 
+            init.call(:tmst, Integer, 0) 
             init.call(:freq, Numeric, 868.10)
             init.call(:chan, Integer, 0)
             init.call(:rfch, Integer, 0) 
@@ -154,10 +161,10 @@ module LDL::Semtech
             {
                 :time => @time.iso8601,
                 :tmst => tmst,
-                :freq => freq,
                 :chan => chan,
                 :rfch => rfch,
-                :stat => stat,
+                :freq => freq,                
+                :stat => self.class.sym_to_stat(stat),
                 :modu => modu,
                 :datr => datr,
                 :codr => codr,
@@ -168,6 +175,31 @@ module LDL::Semtech
             }.to_json
         end
     
+        def self.sym_to_stat(s)
+            case s
+            when :ok
+                1
+            when :fail
+                -1
+            when :nocrc
+                0
+            else
+                raise
+            end
+        end
+        
+        def self.stat_to_sym(s)
+            case s
+            when 1
+                :ok
+            when -1
+                :fail
+            when 0
+                :nocrc
+            else
+                raise
+            end
+        end
     end
     
 end
