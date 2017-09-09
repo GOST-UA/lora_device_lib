@@ -25,7 +25,7 @@ module LDL::Semtech
          ncrc | bool | If true, disable the CRC of the physical layer (optional)
 =end
     
-        def self.from_json
+        def self.from_h(msg)
             begin
                 self.new(
                     imme: msg["imme"],
@@ -141,7 +141,7 @@ module LDL::Semtech
             
         end
         
-        def to_json
+        def to_json(options={})
             {
                 :imme => imme,
                 :tmst => tmst,

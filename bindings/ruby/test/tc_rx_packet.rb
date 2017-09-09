@@ -13,7 +13,9 @@ class TestRXPacket < Minitest::Test
         @state.to_json
     end
 
-    def test_from_json
+    def test_from_h
+        input = {}        
+        Semtech::RXPacket.from_h(input)
     end
     
 end

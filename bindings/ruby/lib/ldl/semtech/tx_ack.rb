@@ -33,7 +33,7 @@ module LDL::Semtech
                     raise ArgumentError.new "root must contain the key 'txpk_ack'"
                 end
                 
-                txpk_ack = root["txpk_ack"].map{|p|TXPacketAck.from_json(root["txpk_ack"])}
+                txpk_ack = root["txpk_ack"].map{|p|TXPacketAck.from_h(root["txpk_ack"])}
                 
             rescue           
                 ArgumentError.new "payload is not valid"            

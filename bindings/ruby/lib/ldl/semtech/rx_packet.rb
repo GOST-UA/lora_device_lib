@@ -48,10 +48,23 @@ module LDL::Semtech
     
         attr_reader :data
     
-        def self.from_json
+        def self.from_h(msg)
             begin
+            
+                if msg["data"]
+                    data = Base64.decode64(msg["data"])
+                else
+                    data = ""
+                end
+                
+                if msg["time"]
+                    time = Time.parse(msg["time"])
+                else
+                    time = nil
+                end
+            
                 self.new(
-                    time: Time.parse(msg["time"]),
+                    time: time,
                     tmms: msg["tmms"],
                     tmst: msg["tmst"],
                     freq: msg["freq"],
@@ -64,7 +77,7 @@ module LDL::Semtech
                     rssi: msg["rssi"],
                     lsnr: msg["lsnr"],
                     size: msg["size"],
-                    data: Base64.decode64(msg["data"])
+                    data: data
                 )                    
             rescue
                 raise ArgumentError
@@ -88,7 +101,7 @@ module LDL::Semtech
             end
             
             init.call(:time, Time, Time.now) 
-            init.call(:freq, Numeric, 0)
+            init.call(:freq, Numeric, 868.10)
             init.call(:chan, Integer, 0)
             init.call(:rfch, Integer, 0) 
             init.call(:stat, Symbol, :ok) do |value|
@@ -137,7 +150,7 @@ module LDL::Semtech
             
         end
         
-        def to_json
+        def to_json(options={})
             {
                 :time => @time.iso8601,
                 :tmst => tmst,

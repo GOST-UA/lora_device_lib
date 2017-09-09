@@ -20,10 +20,17 @@ module LDL::Semtech
          txnb | number | Number of packets emitted (unsigned integer)
 =end
 
-        def self.from_json(msg)
+        def self.from_h(msg)
             begin
+            
+                if msg["time"]
+                    time = Time.parse(msg["time"])
+                else
+                    time = nil
+                end
+            
                 self.new(
-                    time: Time.parse(msg["time"]),
+                    time: time,
                     lati: msg["lati"],
                     long: msg["long"],
                     alti: msg["alti"],
@@ -77,7 +84,7 @@ module LDL::Semtech
             
         end
         
-        def to_json
+        def to_json(options={})
             {
                 :time => @time.iso8601,
                 :lati => @lati,

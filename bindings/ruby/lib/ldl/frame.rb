@@ -78,7 +78,20 @@ module LDL
         attr_reader :rxDelay
         attr_reader :cfList
         attr_reader :appNonce
-    
+
+
+        # @param param [Hash] parameters
+        #
+        # @option param [String] :original original message (if decoded)
+        # @option param [Key] :appKey
+        # @option param [Integer] :netID
+        # @option param [Integer] :devAddr
+        # @option param [Integer] :rx1DataRateOffset
+        # @option param [Integer] :rx2DataRate
+        # @option param [Integer] :rx2Delay
+        # @option param [String] :cfList
+        # @option param [Integer] :appNonce
+        #
         def initialize(**param)
             
             @original = param[:original]
@@ -188,6 +201,22 @@ module LDL
         attr_reader :data
         attr_reader :port
         
+        # @param param [Hash] parameters
+        #
+        # @option param [String] :original
+        # @option param [Key] :nwkSKey
+        # @option param [Key] :appSKey
+        # @option param [Integer] :counter
+        # @option param [Integer] :devAddr
+        # @option param [true,false] :ack
+        # @option param [true,false] :adr
+        # @option param [true,false] :adrAckReq
+        # @option param [true,false] :pending
+        # @option param [String] :opts
+        # @option param [String] :data
+        # @option param [Integer] :port
+        #
+        #
         def initialize(**param)
             
             if self.class == DataFrame

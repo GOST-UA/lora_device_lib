@@ -38,11 +38,11 @@ module LDL::Semtech
                 end
                 
                 if root["rxpk"]
-                    rxpk = root["rxpk"].map{|p|RXPacket.from_json(root["rxpk"])}
+                    rxpk = root["rxpk"].map{|p|RXPacket.from_h(root["rxpk"])}
                 end
                 
                 if root["stat"]
-                    stat = Status.from_json(root["stat"])
+                    stat = Status.from_h(root["stat"])
                 end
                 
             rescue           
@@ -94,6 +94,8 @@ module LDL::Semtech
             if stat
                 obj[:stat] = stat
             end
+
+            obj.to_json
 
             [super, eui.bytes, obj.to_json].pack("a*a*a*")
 

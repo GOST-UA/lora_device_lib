@@ -33,7 +33,7 @@ module LDL::Semtech
             "GPS_UNLOCKED"
         ]
 
-        def self.from_json(msg)            
+        def self.from_h(msg)            
             begin                            
                 self.new(error: msg["error"])                
             rescue
@@ -53,7 +53,7 @@ module LDL::Semtech
             end
         end
         
-        def to_json
+        def to_json(options={})
             {
                 :error => @error
             }.to_json

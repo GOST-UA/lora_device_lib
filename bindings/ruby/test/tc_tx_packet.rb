@@ -13,7 +13,9 @@ class TestTXPacket < Minitest::Test
         output = @state.to_json
     end
 
-    def test_from_json
+    def test_from_h
+        input = {}
+        Semtech::TXPacket.from_h(input)
     end
     
 end

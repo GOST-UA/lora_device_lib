@@ -13,7 +13,9 @@ class TestStatusPacket < Minitest::Test
         @state.to_json
     end
 
-    def test_from_json
+    def test_from_h
+        input = {}        
+        Semtech::StatusPacket.from_h(input)
     end
     
 end
