@@ -179,8 +179,10 @@ static VALUE _decode(int argc, VALUE *argv, VALUE self)
         
         rb_raise(rb_eTypeError, ":appKey parameter must be kind_of Key");
     }
+    
+    VALUE mutable = rb_str_new(RSTRING_PTR(input), RSTRING_LEN(input));
         
-    result = Frame_decode(RSTRING_PTR(rb_funcall(appKey, rb_intern("value"), 0)), RSTRING_PTR(rb_funcall(nwkSKey, rb_intern("value"), 0)), RSTRING_PTR(rb_funcall(appSKey, rb_intern("value"), 0)), RSTRING_PTR(input), RSTRING_LEN(input), &f);
+    result = Frame_decode(RSTRING_PTR(rb_funcall(appKey, rb_intern("value"), 0)), RSTRING_PTR(rb_funcall(nwkSKey, rb_intern("value"), 0)), RSTRING_PTR(rb_funcall(appSKey, rb_intern("value"), 0)), RSTRING_PTR(mutable), RSTRING_LEN(mutable), &f);
     
     if(result == LORA_FRAME_BAD){
         
@@ -188,12 +190,14 @@ static VALUE _decode(int argc, VALUE *argv, VALUE self)
     }
     
     param = rb_hash_new();
+        
+    rb_hash_aset(param, ID2SYM(rb_intern("original")), input);      
     
-    rb_hash_aset(param, ID2SYM(rb_intern("result")), (result == LORA_FRAME_OK) ? ID2SYM(rb_intern(":ok")) : ID2SYM(rb_intern(":mic_failure")));
+    rb_hash_aset(param, ID2SYM(rb_intern("result")), (result == LORA_FRAME_OK) ? ID2SYM(rb_intern("ok")) : ID2SYM(rb_intern("mic_failure")));
 
     klass = frameTypeToKlass(f.type);
     
-    rb_hash_aset(param, ID2SYM(rb_intern("original")), input);      
+    
     
     switch(f.type){
     default:
@@ -438,9 +442,7 @@ static VALUE _encode_data(VALUE self)
         f.fields.data.dataLen = (data != Qnil) ? RSTRING_LEN(data) : 0U;
         f.fields.data.port = (port != Qnil) ? NUM2UINT(port) : 0U;
 
-        const uint8_t k[] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
-
-        len = Frame_encode(k, &f, out, sizeof(out));
+        len = Frame_encode((f.fields.data.port == 0) ? RSTRING_PTR(nwkSKey) : RSTRING_PTR(appSKey), &f, out, sizeof(out));
         
         assert(len != 0U);
         

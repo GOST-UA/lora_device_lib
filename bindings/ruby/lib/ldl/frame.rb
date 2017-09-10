@@ -19,6 +19,8 @@ module LDL
         attr_reader :appEUI
         attr_reader :devEUI
         attr_reader :devNonce
+        
+        attr_reader :result
     
         def initialize(**param)
             
@@ -27,6 +29,8 @@ module LDL
             @appEUI = param[:appEUI]
             @devEUI = param[:devEUI]
             @devNonce = param[:devNonce]
+            
+            @result = param[:result]
                         
             if @appKey
                 if !@appKey.kind_of? Key
@@ -78,6 +82,8 @@ module LDL
         attr_reader :rxDelay
         attr_reader :cfList
         attr_reader :appNonce
+        
+        attr_reader :result
 
 
         # @param param [Hash] parameters
@@ -103,6 +109,7 @@ module LDL
             @rxDelay = param[:rxDelay]
             @cfList = param[:cfList]
             @appNonce = param[:appNonce]
+            @result = param[:result]
             
             if @appKey
                 if !@appKey.kind_of? Key
@@ -201,6 +208,8 @@ module LDL
         attr_reader :data
         attr_reader :port
         
+        attr_reader :result
+        
         # @param param [Hash] parameters
         #
         # @option param [String] :original
@@ -229,6 +238,8 @@ module LDL
             @appSKey = param[:appSKey]
             @counter = param[:counter]
             @devAddr = param[:devAddr]
+            
+            @result = param[:result]
             
             @ack = ( param[:ack] ? true : false )
             @adr = ( param[:adr] ? true : false )

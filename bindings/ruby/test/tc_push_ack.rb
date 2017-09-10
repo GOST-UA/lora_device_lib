@@ -13,13 +13,12 @@ class TestPushAck < Minitest::Test
         
         out = @state.encode    
         
-        iter = out.unpack("CS>Ca8").each
+        iter = out.unpack("CS>C").each
         
         assert_equal Semtech::Message::VERSION, iter.next
         iter.next
         
         assert_equal @state.class.type, iter.next
-        assert_equal "\x00\x00\x00\x00\x00\x00\x00\x00", iter.next        
         
     end
     
@@ -32,7 +31,6 @@ class TestPushAck < Minitest::Test
         decoded = Semtech::PushAck.decode(input)
         
         assert_equal 0,  decoded.token
-        assert_equal EUI64.new("00-00-00-00-00-00-00-00"), decoded.eui
         
     end
 

@@ -204,7 +204,8 @@ static void Frame_encode_croft_example(void)
     uint8_t retval;
     uint8_t buffer[UINT8_MAX];
     const uint8_t payload[] = "{\"name\":\"Turiphro\",\"count\":13,\"water\":true}";
-    const uint8_t key[] = "\x2B\x7E\x15\x16\x28\xAE\xD2\xA6\xAB\xF7\x15\x88\x09\xCF\x4F\x3C";
+    //const uint8_t key[] = "\x2B\x7E\x15\x16\x28\xAE\xD2\xA6\xAB\xF7\x15\x88\x09\xCF\x4F\x3C";
+    const uint8_t key[] = {0x2B,0x7E,0x15,0x16,0x28,0xAE,0xD2,0xA6,0xAB,0xF7,0x15,0x88,0x09,0xCF,0x4F,0x3C};
     
     struct lora_frame f;
     
