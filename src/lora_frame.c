@@ -36,7 +36,6 @@ static void cmacMessage(const uint8_t *key, uint8_t *msg, uint8_t len, uint8_t *
 static void xor128(uint8_t *acc, const uint8_t *op);
 /* LoraWAN treats EUIs as ordered multibyte fields so their order needs to be swapped (heh) */
 static void swapEUI(uint8_t *out, const uint8_t *in);
-static void swapMIC(uint8_t *out, const uint8_t *in);
 
 /* functions **********************************************************/
 
@@ -107,7 +106,7 @@ uint8_t Frame_encode(const void *key, const struct lora_frame *f, uint8_t *out, 
 
                 cmacData(f->type, key, f->fields.data.devAddr, f->fields.data.counter, out, pos, mic);
 
-                swapMIC(&out[pos], mic);
+                (void)memcpy(&out[pos], mic, sizeof(mic));
                 pos += (uint8_t)sizeof(mic);
             }
             else{
@@ -173,7 +172,7 @@ uint8_t Frame_encode(const void *key, const struct lora_frame *f, uint8_t *out, 
                 
                 cmacMessage(key, out, pos, mic);
                 
-                swapMIC(&out[pos], mic);
+                (void)memcpy(&out[pos], mic, sizeof(mic));
                 pos += (uint8_t)sizeof(mic);
                 
                 LoraAES_init(&aes_ctx, key);
@@ -215,7 +214,7 @@ uint8_t Frame_encode(const void *key, const struct lora_frame *f, uint8_t *out, 
             
             cmacMessage(key, out, pos, mic);
             
-            swapMIC(&out[pos], mic);
+            (void)memcpy(&out[pos], mic, sizeof(mic));
             pos += (uint8_t)sizeof(mic);
         }
         else{
@@ -293,7 +292,7 @@ enum lora_frame_result Frame_decode(const void *appKey, const void *nwkSKey, con
         
         cmacMessage(appKey, ptr, pos, ourMIC);
         
-        swapMIC(mic, &ptr[pos]);
+        (void)memcpy(mic, &ptr[pos], sizeof(mic));
         pos += (uint8_t)sizeof(mic);
         
         if(memcmp(ourMIC, mic, sizeof(mic)) != 0){
@@ -366,7 +365,7 @@ enum lora_frame_result Frame_decode(const void *appKey, const void *nwkSKey, con
         
         cmacMessage(appKey, ptr, pos, ourMIC);
         
-        swapMIC(mic, &ptr[pos]);
+        (void)memcpy(mic, &ptr[pos], sizeof(mic));
         pos += (uint8_t)sizeof(mic);
         
         if(memcmp(ourMIC, mic, sizeof(mic)) != 0){
@@ -444,7 +443,7 @@ enum lora_frame_result Frame_decode(const void *appKey, const void *nwkSKey, con
 
         cmacData(f->type, key, f->fields.data.devAddr, f->fields.data.counter, ptr, pos, ourMIC);
 
-        swapMIC(mic, &ptr[pos]);
+        (void)memcpy(mic, &ptr[pos], sizeof(mic));
         
         if(memcmp(ourMIC, mic, sizeof(mic)) != 0){
 
@@ -614,16 +613,4 @@ static void swapEUI(uint8_t *out, const uint8_t *in)
     out[5] = in[2];
     out[6] = in[1];
     out[7] = in[0];
-}
-
-static void swapMIC(uint8_t *out, const uint8_t *in)
-{
-#if 1
-    (void)memcpy(out, in, 4);
-#else
-    out[0] = in[3];
-    out[1] = in[2];
-    out[2] = in[1];
-    out[3] = in[0];
-#endif
 }
