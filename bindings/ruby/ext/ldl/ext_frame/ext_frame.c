@@ -182,22 +182,21 @@ static VALUE _decode(int argc, VALUE *argv, VALUE self)
     
     VALUE mutable = rb_str_new(RSTRING_PTR(input), RSTRING_LEN(input));
         
-    result = Frame_decode(RSTRING_PTR(rb_funcall(appKey, rb_intern("value"), 0)), RSTRING_PTR(rb_funcall(nwkSKey, rb_intern("value"), 0)), RSTRING_PTR(rb_funcall(appSKey, rb_intern("value"), 0)), RSTRING_PTR(mutable), RSTRING_LEN(mutable), &f);
-    
-    if(result == LORA_FRAME_BAD){
-        
+    switch(Frame_decode(RSTRING_PTR(rb_funcall(appKey, rb_intern("value"), 0)), RSTRING_PTR(rb_funcall(nwkSKey, rb_intern("value"), 0)), RSTRING_PTR(rb_funcall(appSKey, rb_intern("value"), 0)), RSTRING_PTR(mutable), RSTRING_LEN(mutable), &f)){
+    case LORA_FRAME_OK:
+        break;    
+    case LORA_FRAME_MIC:
+        rb_funcall(rb_cObject, rb_intern("raise"), 1, rb_funcall(cError, rb_intern("new"), 1, rb_str_new2("invalid MIC")));
+        break;
+    case LORA_FRAME_BAD:
+    default:
         rb_funcall(rb_cObject, rb_intern("raise"), 1, rb_funcall(cError, rb_intern("new"), 1, rb_str_new2("bad frame")));
+        break;
     }
     
     param = rb_hash_new();
-        
-    rb_hash_aset(param, ID2SYM(rb_intern("original")), input);      
-    
-    rb_hash_aset(param, ID2SYM(rb_intern("result")), (result == LORA_FRAME_OK) ? ID2SYM(rb_intern("ok")) : ID2SYM(rb_intern("mic_failure")));
 
     klass = frameTypeToKlass(f.type);
-    
-    
     
     switch(f.type){
     default:
@@ -282,7 +281,6 @@ static VALUE _encode_join_req(VALUE self)
     struct lora_frame f;
     
     VALUE appKey;
-    VALUE original;
     VALUE retval;
     
     VALUE appEUI;
@@ -292,29 +290,21 @@ static VALUE _encode_join_req(VALUE self)
     (void)memset(&f, 0, sizeof(f));
     
     appKey = rb_iv_get(self, "@appKey");    
-    original = rb_iv_get(self, "@original");
     appEUI = rb_iv_get(self, "@appEUI");
     devEUI = rb_iv_get(self, "@devEUI");
     devNonce = rb_iv_get(self, "@devNonce");
+        
+    f.type = FRAME_TYPE_JOIN_REQ;
+    f.fields.joinRequest.devNonce = NUM2UINT(devNonce);            
+    (void)memcpy(f.fields.joinRequest.appEUI, RSTRING_PTR(appEUI), sizeof(f.fields.joinRequest.appEUI));
+    (void)memcpy(f.fields.joinRequest.appEUI, RSTRING_PTR(devEUI), sizeof(f.fields.joinRequest.devEUI));
+            
+    len = Frame_encode(RSTRING_PTR(rb_funcall(appKey, rb_intern("value"), 0)), &f, out, sizeof(out));
     
-    if(original != Qnil){
-        
-        retval = original;
-    }
-    else{
-
-        f.type = FRAME_TYPE_JOIN_REQ;
-        f.fields.joinRequest.devNonce = NUM2UINT(devNonce);            
-        (void)memcpy(f.fields.joinRequest.appEUI, RSTRING_PTR(appEUI), sizeof(f.fields.joinRequest.appEUI));
-        (void)memcpy(f.fields.joinRequest.appEUI, RSTRING_PTR(devEUI), sizeof(f.fields.joinRequest.devEUI));
-                
-        len = Frame_encode(RSTRING_PTR(rb_funcall(appKey, rb_intern("value"), 0)), &f, out, sizeof(out));
-        
-        assert(len != 0U);
-        
-        retval = rb_str_new((char *)out, len);
-    }
+    assert(len != 0U);
     
+    retval = rb_str_new((char *)out, len);
+        
     return retval;
 }
 
@@ -326,7 +316,6 @@ static VALUE _encode_join_accept(VALUE self)
     struct lora_frame f;
     
     VALUE appKey;
-    VALUE original;
     VALUE retval;
     VALUE rx1DataRateOffset;
     VALUE rx2DataRate;
@@ -339,7 +328,6 @@ static VALUE _encode_join_accept(VALUE self)
     (void)memset(&f, 0, sizeof(f));
     
     appKey = rb_iv_get(self, "@appKey");
-    original = rb_iv_get(self, "@original");
     rx1DataRateOffset = rb_iv_get(self, "@rx1DataRateOffset");
     rx2DataRate = rb_iv_get(self, "@rx2DataRate");
     rxDelay = rb_iv_get(self, "@rxDelay");
@@ -347,30 +335,24 @@ static VALUE _encode_join_accept(VALUE self)
     appNonce = rb_iv_get(self, "@appNonce");
     netID = rb_iv_get(self, "@netID");
     devAddr = rb_iv_get(self, "@devAddr");
+        
+    assert(RSTRING_LEN(cfList) <= sizeof(f.fields.joinAccept.cfList));
     
-    if(original != Qnil){
-        
-        retval = original;
-    }
-    else{
-        
-        assert(RSTRING_LEN(cfList) <= sizeof(f.fields.joinAccept.cfList));
-        
-        f.type = FRAME_TYPE_JOIN_REQ;
-        f.fields.joinAccept.rx1DataRateOffset = NUM2UINT(rx1DataRateOffset);
-        f.fields.joinAccept.rx2DataRate = NUM2UINT(rx2DataRate);
-        f.fields.joinAccept.rxDelay = NUM2UINT(rxDelay);
-        (void)memcpy(f.fields.joinAccept.cfList, RSTRING_PTR(cfList), RSTRING_LEN(cfList));
-        f.fields.joinAccept.appNonce = NUM2UINT(appNonce);
-        f.fields.joinAccept.netID = NUM2UINT(netID);
-        f.fields.joinAccept.devAddr = NUM2UINT(devAddr);
-        
-        len = Frame_encode(RSTRING_PTR(rb_funcall(appKey, rb_intern("value"), 0)), &f, out, sizeof(out));
-        
-        assert(len != 0U);
-        
-        retval = rb_str_new((char *)out, len);        
-    }
+    f.type = FRAME_TYPE_JOIN_REQ;
+    f.fields.joinAccept.rx1DataRateOffset = NUM2UINT(rx1DataRateOffset);
+    f.fields.joinAccept.rx2DataRate = NUM2UINT(rx2DataRate);
+    f.fields.joinAccept.rxDelay = NUM2UINT(rxDelay);
+    (void)memcpy(f.fields.joinAccept.cfList, RSTRING_PTR(cfList), RSTRING_LEN(cfList));
+    f.fields.joinAccept.appNonce = NUM2UINT(appNonce);
+    f.fields.joinAccept.netID = NUM2UINT(netID);
+    f.fields.joinAccept.devAddr = NUM2UINT(devAddr);
+    
+    len = Frame_encode(RSTRING_PTR(rb_funcall(appKey, rb_intern("value"), 0)), &f, out, sizeof(out));
+    
+    assert(len != 0U);
+    
+    retval = rb_str_new((char *)out, len);        
+    
         
     return retval;
 }
@@ -386,7 +368,6 @@ static VALUE _encode_data(VALUE self)
         
     VALUE nwkSKey;
     VALUE appSKey;
-    VALUE original;
     VALUE ack;
     VALUE adr;
     VALUE adrAckReq;
@@ -401,53 +382,45 @@ static VALUE _encode_data(VALUE self)
     (void)memset(&f, 0, sizeof(f));
     
     (void)klassToFrameType(rb_funcall(self, rb_intern("class"), 0), &type);
-    
-    original = rb_iv_get(self, "@original");
-    
-    if(original != Qnil){
-        
-        retval = original;
-    }
-    else{
-    
-        nwkSKey = rb_funcall(rb_iv_get(self, "@nwkSKey"), rb_intern("value"), 0);
-        appSKey = rb_funcall(rb_iv_get(self, "@appSKey"), rb_intern("value"), 0);
-            
-        data = rb_iv_get(self, "@data");
-        port = rb_iv_get(self, "@port");
-        opts = rb_iv_get(self, "@opts");
-        
-        ack = rb_iv_get(self, "@ack");
-        adr = rb_iv_get(self, "@adr");
-        adrAckReq = rb_iv_get(self, "@adrAckReq");
-        pending = rb_iv_get(self, "@pending");
-        
-        devAddr = rb_iv_get(self, "@devAddr");
-        
-        counter = rb_iv_get(self, "@counter");
-        
-        f.type = type;
-        
-        f.fields.data.devAddr = NUM2UINT(devAddr);
-        f.fields.data.counter = NUM2UINT(counter);
-        f.fields.data.ack = (ack == Qtrue) ? true : false;
-        f.fields.data.adr = (adr == Qtrue) ? true : false;
-        f.fields.data.adrAckReq = (adrAckReq == Qtrue) ? true : false;
-        f.fields.data.pending = (pending == Qtrue) ? true : false;
-        
-        f.fields.data.opts = (opts != Qnil) ? (uint8_t *)RSTRING_PTR(opts) : NULL;
-        f.fields.data.optsLen = (opts != Qnil) ? RSTRING_LEN(opts) : 0U;             
-        
-        f.fields.data.data = (data != Qnil) ? (uint8_t *)RSTRING_PTR(data) : NULL;
-        f.fields.data.dataLen = (data != Qnil) ? RSTRING_LEN(data) : 0U;
-        f.fields.data.port = (port != Qnil) ? NUM2UINT(port) : 0U;
 
-        len = Frame_encode((f.fields.data.port == 0) ? RSTRING_PTR(nwkSKey) : RSTRING_PTR(appSKey), &f, out, sizeof(out));
+    
+    nwkSKey = rb_funcall(rb_iv_get(self, "@nwkSKey"), rb_intern("value"), 0);
+    appSKey = rb_funcall(rb_iv_get(self, "@appSKey"), rb_intern("value"), 0);
         
-        assert(len != 0U);
-        
-        retval = rb_str_new((char *)out, len);
-    }
+    data = rb_iv_get(self, "@data");
+    port = rb_iv_get(self, "@port");
+    opts = rb_iv_get(self, "@opts");
+    
+    ack = rb_iv_get(self, "@ack");
+    adr = rb_iv_get(self, "@adr");
+    adrAckReq = rb_iv_get(self, "@adrAckReq");
+    pending = rb_iv_get(self, "@pending");
+    
+    devAddr = rb_iv_get(self, "@devAddr");
+    
+    counter = rb_iv_get(self, "@counter");
+    
+    f.type = type;
+    
+    f.fields.data.devAddr = NUM2UINT(devAddr);
+    f.fields.data.counter = NUM2UINT(counter);
+    f.fields.data.ack = (ack == Qtrue) ? true : false;
+    f.fields.data.adr = (adr == Qtrue) ? true : false;
+    f.fields.data.adrAckReq = (adrAckReq == Qtrue) ? true : false;
+    f.fields.data.pending = (pending == Qtrue) ? true : false;
+    
+    f.fields.data.opts = (opts != Qnil) ? (uint8_t *)RSTRING_PTR(opts) : NULL;
+    f.fields.data.optsLen = (opts != Qnil) ? RSTRING_LEN(opts) : 0U;             
+    
+    f.fields.data.data = (data != Qnil) ? (uint8_t *)RSTRING_PTR(data) : NULL;
+    f.fields.data.dataLen = (data != Qnil) ? RSTRING_LEN(data) : 0U;
+    f.fields.data.port = (port != Qnil) ? NUM2UINT(port) : 0U;
+
+    len = Frame_encode((f.fields.data.port == 0) ? RSTRING_PTR(nwkSKey) : RSTRING_PTR(appSKey), &f, out, sizeof(out));
+    
+    assert(len != 0U);
+    
+    retval = rb_str_new((char *)out, len);
     
     return retval;
 }

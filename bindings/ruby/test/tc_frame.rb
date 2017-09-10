@@ -31,8 +31,6 @@ class TestFrame < Minitest::Test
             appSKey: key, 
         )
         
-        assert_equal :ok, decoded.result
-        
         output = decoded.encode
         
         assert_equal expected, output
@@ -60,8 +58,6 @@ class TestFrame < Minitest::Test
             nwkSKey: key, 
             appSKey: key, 
         )
-        
-        assert_equal :ok, decoded.result
         
     end
 

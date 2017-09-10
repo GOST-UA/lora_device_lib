@@ -14,23 +14,16 @@ module LDL
         
         attr_reader :appKey
         
-        attr_reader :original
-        
         attr_reader :appEUI
         attr_reader :devEUI
         attr_reader :devNonce
         
-        attr_reader :result
-    
         def initialize(**param)
             
-            @original = param[:original]
             @appKey = param[:appKey]
             @appEUI = param[:appEUI]
             @devEUI = param[:devEUI]
             @devNonce = param[:devNonce]
-            
-            @result = param[:result]
                         
             if @appKey
                 if !@appKey.kind_of? Key
@@ -71,10 +64,7 @@ module LDL
     end
     class JoinAccept < Frame
     
-        attr_reader :appKey
-        
-        attr_reader :original
-        
+        attr_reader :appKey            
         attr_reader :netID
         attr_reader :devAddr
         attr_reader :rx1DataRateOffset
@@ -82,13 +72,10 @@ module LDL
         attr_reader :rxDelay
         attr_reader :cfList
         attr_reader :appNonce
-        
-        attr_reader :result
 
 
         # @param param [Hash] parameters
         #
-        # @option param [String] :original original message (if decoded)
         # @option param [Key] :appKey
         # @option param [Integer] :netID
         # @option param [Integer] :devAddr
@@ -100,7 +87,6 @@ module LDL
         #
         def initialize(**param)
             
-            @original = param[:original]
             @appKey = param[:appKey]
             @netID = param[:netID]
             @devAddr = param[:devAddr]
@@ -109,7 +95,6 @@ module LDL
             @rxDelay = param[:rxDelay]
             @cfList = param[:cfList]
             @appNonce = param[:appNonce]
-            @result = param[:result]
             
             if @appKey
                 if !@appKey.kind_of? Key
@@ -198,21 +183,16 @@ module LDL
         attr_reader :appSKey
         attr_reader :nwkSKey
         
-        attr_reader :original
-        
         attr_reader :ack
         attr_reader :adr
         attr_reader :adrAckReq
         attr_reader :pending
         attr_reader :opts
         attr_reader :data
-        attr_reader :port
-        
-        attr_reader :result
+        attr_reader :port    
         
         # @param param [Hash] parameters
         #
-        # @option param [String] :original
         # @option param [Key] :nwkSKey
         # @option param [Key] :appSKey
         # @option param [Integer] :counter
@@ -232,14 +212,10 @@ module LDL
                 raise "#{self.class} is an abstract class"
             end
             
-            @original = param[:original]
-            
             @nwkSKey = param[:nwkSKey]
             @appSKey = param[:appSKey]
             @counter = param[:counter]
-            @devAddr = param[:devAddr]
-            
-            @result = param[:result]
+            @devAddr = param[:devAddr]            
             
             @ack = ( param[:ack] ? true : false )
             @adr = ( param[:adr] ? true : false )
@@ -322,6 +298,18 @@ module LDL
             end
         
         end    
+    end
+    
+    class UnconfirmedUp < DataFrame
+    end
+    
+    class ConfirmedUp < DataFrame
+    end
+    
+    class UnconfirmedDown < DataFrame
+    end
+    
+    class ConfirmedDown < DataFrame
     end
     
 end
