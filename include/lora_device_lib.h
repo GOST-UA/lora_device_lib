@@ -32,7 +32,7 @@ extern "C" {
 #include "lora_radio.h"
 #include "lora_region.h"
 
-struct ldl {
+struct lora_device_lib {
     
     struct lora_mac mac;
     struct lora_channel_list channels;
@@ -40,23 +40,23 @@ struct ldl {
 };
 
 
-bool ldl_init(struct ldl *self, enum lora_region_id region_id, struct lora_radio *radio);
+bool LDL_init(struct lora_device_lib *self, enum lora_region_id region_id, struct lora_radio *radio);
 
-bool ldl_personalize(struct ldl *self, uint32_t devAddr, const void *nwkSKey, const void *appSKey);
+bool LDL_personalize(struct lora_device_lib *self, uint32_t devAddr, const void *nwkSKey, const void *appSKey);
 
-bool ldl_addChannel(struct ldl *self, uint32_t freq, uint8_t chIndex);
-void ldl_removeChannel(struct ldl *self, uint8_t chIndex);
-bool ldl_maskChannel(struct ldl *self, uint8_t chIndex);
-void ldl_unmaskChannel(struct ldl *self, uint8_t chIndex);
+bool LDL_addChannel(struct lora_device_lib *self, uint32_t freq, uint8_t chIndex);
+void LDL_removeChannel(struct lora_device_lib *self, uint8_t chIndex);
+bool LDL_maskChannel(struct lora_device_lib *self, uint8_t chIndex);
+void LDL_unmaskChannel(struct lora_device_lib *self, uint8_t chIndex);
 
-bool ldl_setRateAndPower(struct ldl *self, uint8_t rate, uint8_t power);
+bool LDL_setRateAndPower(struct lora_device_lib *self, uint8_t rate, uint8_t power);
 
-void ldl_setResponseHandler(struct ldl *self, void *receiver, lora_mac_response_fn cb);
+void LDL_setResponseHandler(struct lora_device_lib *self, void *receiver, lora_mac_response_fn cb);
 
-bool ldl_join(struct ldl *self);
-bool ldl_send(struct ldl *self, bool confirmed, uint8_t port, const void *data, uint8_t len);
+bool LDL_join(struct lora_device_lib *self);
+bool LDL_send(struct lora_device_lib *self, bool confirmed, uint8_t port, const void *data, uint8_t len);
 
-void ldl_tick(struct ldl *self);
+void LDL_tick(struct lora_device_lib *self);
 
 #ifdef __cplusplus
 }

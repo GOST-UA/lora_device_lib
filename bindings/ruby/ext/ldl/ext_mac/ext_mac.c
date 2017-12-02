@@ -35,20 +35,20 @@ static VALUE cKey;
 static VALUE cError;
 static VALUE cRadio;
 
-static VALUE _ldl_initialize(int argc, VALUE *argv, VALUE self);
-static VALUE _ldl_initialize_copy(VALUE copy, VALUE orig);
-static VALUE _ldl_alloc(VALUE klass);
+static VALUE initialize(int argc, VALUE *argv, VALUE self);
+static VALUE initialize_copy(VALUE copy, VALUE orig);
+static VALUE alloc_state(VALUE klass);
 
-static VALUE _ldl_personalize(VALUE self, VALUE devAddr, VALUE nwkSKey, VALUE appSKey);
-static VALUE _ldl_tick(VALUE self);
-static VALUE _ldl_addChannel(VALUE self, VALUE freq, VALUE chIndex);
-static VALUE _ldl_removeChannel(VALUE self, VALUE chIndex);
-static VALUE _ldl_maskChannel(VALUE self, VALUE chIndex);
-static VALUE _ldl_unmaskChannel(VALUE self, VALUE chIndex);
-static VALUE _ldl_setRateAndPower(VALUE self, VALUE rate, VALUE power);
-static VALUE _ldl_join(int argc, VALUE *argv, VALUE self);
-static VALUE _ldl_send_unconfirmed(int argc, VALUE *argv, VALUE self);
-static VALUE _ldl_send_confirmed(int argc, VALUE *argv, VALUE self);
+static VALUE personalize(VALUE self, VALUE devAddr, VALUE nwkSKey, VALUE appSKey);
+static VALUE tick(VALUE self);
+static VALUE addChannel(VALUE self, VALUE freq, VALUE chIndex);
+static VALUE removeChannel(VALUE self, VALUE chIndex);
+static VALUE maskChannel(VALUE self, VALUE chIndex);
+static VALUE unmaskChannel(VALUE self, VALUE chIndex);
+static VALUE setRateAndPower(VALUE self, VALUE rate, VALUE power);
+static VALUE join(int argc, VALUE *argv, VALUE self);
+static VALUE send_unconfirmed(int argc, VALUE *argv, VALUE self);
+static VALUE send_confirmed(int argc, VALUE *argv, VALUE self);
 static VALUE io_event(VALUE self, VALUE event, VALUE time);
 
 static void _response(void *receiver, enum lora_mac_response_type type, const union lora_mac_response_arg *arg);
@@ -112,21 +112,21 @@ void Init_ext_mac(void)
     cLDL = rb_define_module("LDL");
     
     cExtMAC = rb_define_class_under(cLDL, "ExtMAC", rb_cObject);
-    rb_define_alloc_func(cExtMAC, _ldl_alloc);
+    rb_define_alloc_func(cExtMAC, alloc_state);
     
-    rb_define_method(cExtMAC, "initialize", _ldl_initialize, 1);
-    rb_define_method(cExtMAC, "initialize_copy", _ldl_initialize_copy, 1);
+    rb_define_method(cExtMAC, "initialize", initialize, 1);
+    rb_define_method(cExtMAC, "initialize_copy", initialize_copy, 1);
     
-    rb_define_method(cExtMAC, "personalize", _ldl_personalize, 3);
-    rb_define_method(cExtMAC, "tick", _ldl_tick, 0);
-    rb_define_method(cExtMAC, "addChannel", _ldl_addChannel, 2);
-    rb_define_method(cExtMAC, "removeChannel", _ldl_removeChannel, 1);
-    rb_define_method(cExtMAC, "maskChannel", _ldl_maskChannel, 1);
-    rb_define_method(cExtMAC, "unmaskChannel", _ldl_unmaskChannel, 1);
-    rb_define_method(cExtMAC, "setRateAndPower", _ldl_setRateAndPower, 2);
-    rb_define_method(cExtMAC, "join", _ldl_join, -1);
-    rb_define_method(cExtMAC, "send_unconfirmed", _ldl_send_unconfirmed, -1);
-    rb_define_method(cExtMAC, "send_confirmed", _ldl_send_confirmed, -1);    
+    rb_define_method(cExtMAC, "personalize", personalize, 3);
+    rb_define_method(cExtMAC, "tick", tick, 0);
+    rb_define_method(cExtMAC, "addChannel", addChannel, 2);
+    rb_define_method(cExtMAC, "removeChannel", removeChannel, 1);
+    rb_define_method(cExtMAC, "maskChannel", maskChannel, 1);
+    rb_define_method(cExtMAC, "unmaskChannel", unmaskChannel, 1);
+    rb_define_method(cExtMAC, "setRateAndPower", setRateAndPower, 2);
+    rb_define_method(cExtMAC, "join", join, -1);
+    rb_define_method(cExtMAC, "send_unconfirmed", send_unconfirmed, -1);
+    rb_define_method(cExtMAC, "send_confirmed", send_confirmed, -1);    
     rb_define_method(cExtMAC, "io_event", io_event, 2);    
     rb_define_method(cExtMAC, "timeUntilNextEvent", timeUntilNextEvent, 0);    
     rb_define_method(cExtMAC, "onAirTime", calculateOnAirTime, 3);    
@@ -193,9 +193,9 @@ void Radio_setEventHandler(struct lora_radio *self, void *receiver, radioEventCB
     rb_funcall((VALUE)self, rb_intern("set_mac"), 1, (VALUE)receiver);
 }
 
-static VALUE _ldl_alloc(VALUE klass)
+static VALUE alloc_state(VALUE klass)
 {
-    return Data_Wrap_Struct(klass, 0, free, calloc(1, sizeof(struct ldl)));
+    return Data_Wrap_Struct(klass, 0, free, calloc(1, sizeof(struct lora_device_lib)));
 }
 
 /* Create a new LDL instance
@@ -214,7 +214,7 @@ static VALUE _ldl_alloc(VALUE klass)
  * @option options [EUI64] :appKey application key (defaults to null key)
  * 
  * */
-static VALUE _ldl_initialize(int argc, VALUE *argv, VALUE self)
+static VALUE initialize(int argc, VALUE *argv, VALUE self)
 {
     struct region_symbol_map {
         VALUE symbol;
@@ -228,7 +228,7 @@ static VALUE _ldl_initialize(int argc, VALUE *argv, VALUE self)
         }        
     };
     
-    struct ldl *this;    
+    struct lora_device_lib *this;    
     enum lora_region_id region_id;
     size_t i;
     
@@ -239,7 +239,7 @@ static VALUE _ldl_initialize(int argc, VALUE *argv, VALUE self)
     VALUE devEUI;
     VALUE appKey;
     
-    Data_Get_Struct(self, struct ldl, this);
+    Data_Get_Struct(self, struct lora_device_lib, this);
     
     (void)rb_scan_args(argc, argv, "10:", &radio, &options);
     
@@ -289,12 +289,12 @@ static VALUE _ldl_initialize(int argc, VALUE *argv, VALUE self)
         region = ID2SYM(rb_intern("eu_863_870"));
     }
     
-    if(!ldl_init(this, region_id, (struct lora_radio *)radio)){
+    if(!LDL_init(this, region_id, (struct lora_radio *)radio)){
         
-        rb_raise(cError, "ldl_init() failed");
+        rb_raise(cError, "LDL_init() failed");
     }
     
-    ldl_setResponseHandler(this, (void *)self, _response);
+    LDL_setResponseHandler(this, (void *)self, _response);
     
     rb_iv_set(self, "@radio", radio);
     
@@ -347,10 +347,10 @@ static VALUE _ldl_initialize(int argc, VALUE *argv, VALUE self)
     return self;
 }
 
-static VALUE _ldl_initialize_copy(VALUE copy, VALUE orig)
+static VALUE initialize_copy(VALUE copy, VALUE orig)
 {
-    struct ldl *orig_ldl;
-    struct ldl *copy_ldl;
+    struct lora_device_lib *orig_ldl;
+    struct lora_device_lib *copy_ldl;
     
     if(copy == orig){
         return copy;
@@ -361,99 +361,99 @@ static VALUE _ldl_initialize_copy(VALUE copy, VALUE orig)
         rb_raise(rb_eTypeError, "wrong argument type");
     }
     
-    Data_Get_Struct(orig, struct ldl, orig_ldl);
-    Data_Get_Struct(copy, struct ldl, copy_ldl);
+    Data_Get_Struct(orig, struct lora_device_lib, orig_ldl);
+    Data_Get_Struct(copy, struct lora_device_lib, copy_ldl);
     
-    (void)memcpy(copy_ldl, orig_ldl, sizeof(struct ldl));
+    (void)memcpy(copy_ldl, orig_ldl, sizeof(struct lora_device_lib));
     
     return copy;
 }
 
-static VALUE _ldl_personalize(VALUE self, VALUE devAddr, VALUE nwkSKey, VALUE appSKey)
+static VALUE personalize(VALUE self, VALUE devAddr, VALUE nwkSKey, VALUE appSKey)
 {
-    struct ldl *this;    
-    Data_Get_Struct(self, struct ldl, this);
+    struct lora_device_lib *this;    
+    Data_Get_Struct(self, struct lora_device_lib, this);
     
-    if(!ldl_personalize(this, (uint32_t)NUM2UINT(devAddr), RSTRING_PTR(rb_funcall(nwkSKey, rb_intern("value"), 0)), RSTRING_PTR(rb_funcall(appSKey, rb_intern("value"), 0)))){
+    if(!LDL_personalize(this, (uint32_t)NUM2UINT(devAddr), RSTRING_PTR(rb_funcall(nwkSKey, rb_intern("value"), 0)), RSTRING_PTR(rb_funcall(appSKey, rb_intern("value"), 0)))){
         
-        rb_raise(cError, "ldl_personalize() failed");
+        rb_raise(cError, "LDL_personalize() failed");
     }
     
     return self;
 }
 
-static VALUE _ldl_addChannel(VALUE self, VALUE freq, VALUE chIndex)
+static VALUE addChannel(VALUE self, VALUE freq, VALUE chIndex)
 {
-    struct ldl *this;    
-    Data_Get_Struct(self, struct ldl, this);
+    struct lora_device_lib *this;    
+    Data_Get_Struct(self, struct lora_device_lib, this);
     
-    if(!ldl_addChannel(this, (uint32_t)NUM2UINT(freq), (uint8_t)NUM2UINT(chIndex))){
+    if(!LDL_addChannel(this, (uint32_t)NUM2UINT(freq), (uint8_t)NUM2UINT(chIndex))){
         
-        rb_raise(cError, "ldl_addChannel() failed");    
+        rb_raise(cError, "LDL_addChannel() failed");    
     }
     
     return self;
 }
 
-static VALUE _ldl_removeChannel(VALUE self, VALUE chIndex)
+static VALUE removeChannel(VALUE self, VALUE chIndex)
 {
-    struct ldl *this;    
-    Data_Get_Struct(self, struct ldl, this);
+    struct lora_device_lib *this;    
+    Data_Get_Struct(self, struct lora_device_lib, this);
     
-    ldl_removeChannel(this, (uint8_t)NUM2UINT(chIndex));
+    LDL_removeChannel(this, (uint8_t)NUM2UINT(chIndex));
     
     return self;
 }
 
-static VALUE _ldl_maskChannel(VALUE self, VALUE chIndex)
+static VALUE maskChannel(VALUE self, VALUE chIndex)
 {
-    struct ldl *this;    
-    Data_Get_Struct(self, struct ldl, this);
+    struct lora_device_lib *this;    
+    Data_Get_Struct(self, struct lora_device_lib, this);
     
-    if(!ldl_maskChannel(this, (uint8_t)NUM2UINT(chIndex))){
+    if(!LDL_maskChannel(this, (uint8_t)NUM2UINT(chIndex))){
         
-        rb_raise(cError, "ldl_maskChannel() failed");
+        rb_raise(cError, "LDL_maskChannel() failed");
     }
     
     return self;
 }
 
-static VALUE _ldl_unmaskChannel(VALUE self, VALUE chIndex)
+static VALUE unmaskChannel(VALUE self, VALUE chIndex)
 {
-    struct ldl *this;    
-    Data_Get_Struct(self, struct ldl, this);
+    struct lora_device_lib *this;    
+    Data_Get_Struct(self, struct lora_device_lib, this);
     
-    ldl_unmaskChannel(this, (uint8_t)NUM2UINT(chIndex));
+    LDL_unmaskChannel(this, (uint8_t)NUM2UINT(chIndex));
     
     return self;
 }
 
-static VALUE _ldl_setRateAndPower(VALUE self, VALUE rate, VALUE power)
+static VALUE setRateAndPower(VALUE self, VALUE rate, VALUE power)
 {
-    struct ldl *this;    
-    Data_Get_Struct(self, struct ldl, this);
+    struct lora_device_lib *this;    
+    Data_Get_Struct(self, struct lora_device_lib, this);
     
-    if(!ldl_setRateAndPower(this, (uint8_t)NUM2UINT(rate), (uint8_t)NUM2UINT(power))){
+    if(!LDL_setRateAndPower(this, (uint8_t)NUM2UINT(rate), (uint8_t)NUM2UINT(power))){
         
-        rb_raise(cError, "ldl_setRateAndPower() failed");
+        rb_raise(cError, "LDL_setRateAndPower() failed");
     }
     
     return self;
 }
 
 // want to pass a block for the callback
-static VALUE _ldl_join(int argc, VALUE *argv, VALUE self)
+static VALUE join(int argc, VALUE *argv, VALUE self)
 {
-    struct ldl *this;    
-    Data_Get_Struct(self, struct ldl, this);    
+    struct lora_device_lib *this;    
+    Data_Get_Struct(self, struct lora_device_lib, this);    
     
     VALUE handler;  
     
     (void)rb_scan_args(argc, argv, "00&", &handler);
     
-    if(!ldl_join(this)){
+    if(!LDL_join(this)){
         
-        rb_raise(cError, "ldl_join() failed");
+        rb_raise(cError, "LDL_join() failed");
     }
     
     rb_iv_set(self, "@join_handler", handler);
@@ -461,10 +461,10 @@ static VALUE _ldl_join(int argc, VALUE *argv, VALUE self)
     return self;
 }
 
-static VALUE _ldl_send_unconfirmed(int argc, VALUE *argv, VALUE self)
+static VALUE send_unconfirmed(int argc, VALUE *argv, VALUE self)
 {
-    struct ldl *this;    
-    Data_Get_Struct(self, struct ldl, this);
+    struct lora_device_lib *this;    
+    Data_Get_Struct(self, struct lora_device_lib, this);
     
     VALUE port;
     VALUE data;
@@ -472,9 +472,9 @@ static VALUE _ldl_send_unconfirmed(int argc, VALUE *argv, VALUE self)
     
     (void)rb_scan_args(argc, argv, "20&", &port, &data, &handler);
     
-    if(!ldl_send(this, false, NUM2UINT(port), RSTRING_PTR(data), RSTRING_LEN(data))){
+    if(!LDL_send(this, false, NUM2UINT(port), RSTRING_PTR(data), RSTRING_LEN(data))){
         
-        rb_raise(cError, "ldl_send() failed");
+        rb_raise(cError, "LDL_send() failed");
     }
     
     rb_iv_set(self, "@tx_handler", handler);
@@ -482,10 +482,10 @@ static VALUE _ldl_send_unconfirmed(int argc, VALUE *argv, VALUE self)
     return self;
 }
 
-static VALUE _ldl_send_confirmed(int argc, VALUE *argv, VALUE self)
+static VALUE send_confirmed(int argc, VALUE *argv, VALUE self)
 {
-    struct ldl *this;    
-    Data_Get_Struct(self, struct ldl, this);
+    struct lora_device_lib *this;    
+    Data_Get_Struct(self, struct lora_device_lib, this);
   
     VALUE port;
     VALUE data;
@@ -493,9 +493,9 @@ static VALUE _ldl_send_confirmed(int argc, VALUE *argv, VALUE self)
     
     (void)rb_scan_args(argc, argv, "20&", &port, &data, &handler);
     
-    if(ldl_send(this, true, NUM2UINT(port), RSTRING_PTR(data), RSTRING_LEN(data))){
+    if(LDL_send(this, true, NUM2UINT(port), RSTRING_PTR(data), RSTRING_LEN(data))){
     
-        rb_raise(cError, "ldl_send() failed");
+        rb_raise(cError, "LDL_send() failed");
     }
     
     rb_iv_set(self, "@tx_handler", handler);
@@ -503,12 +503,12 @@ static VALUE _ldl_send_confirmed(int argc, VALUE *argv, VALUE self)
     return self;
 }
 
-static VALUE _ldl_tick(VALUE self)
+static VALUE tick(VALUE self)
 {
-    struct ldl *this;    
-    Data_Get_Struct(self, struct ldl, this);
+    struct lora_device_lib *this;    
+    Data_Get_Struct(self, struct lora_device_lib, this);
     
-    ldl_tick(this);
+    LDL_tick(this);
     
     return self;
 }
@@ -603,8 +603,8 @@ static VALUE cr_to_symbol(enum lora_coding_rate cr)
 static VALUE io_event(VALUE self, VALUE event, VALUE time)
 {
     size_t i;
-    struct ldl *this;    
-    Data_Get_Struct(self, struct ldl, this);
+    struct lora_device_lib *this;    
+    Data_Get_Struct(self, struct lora_device_lib, this);
     
     struct {
         
@@ -640,22 +640,22 @@ static VALUE io_event(VALUE self, VALUE event, VALUE time)
 
 static VALUE timeUntilNextEvent(VALUE self)
 {
-    struct ldl *this;    
+    struct lora_device_lib *this;    
     uint64_t next;
-    Data_Get_Struct(self, struct ldl, this);
+    Data_Get_Struct(self, struct lora_device_lib, this);
     
     next = Event_timeUntilNextEvent(this);
     
     return (next == UINT64_MAX) ? Qnil : ULL2NUM(next);
 }
 
-/* Calculate the time (in us) to transmit size bytes
+/* Calculate milliseconds of air-time required to transmit message of size bytes
  * 
- * @param bandwidth [Symbol]
- * @param spreading_factor [Symbol]
+ * @param bandwidth [Integer]
+ * @param spreading_factor [Integer]
  * @param size [Integer] size in bytes
  * 
- * @return [Integer] microseconds of air-time required to transmit size bytes
+ * @return [Integer] milliseconds of air-time required to transmit size bytes
  * 
  * */
 static VALUE calculateOnAirTime(VALUE self, VALUE bandwidth, VALUE spreading_factor, VALUE size)

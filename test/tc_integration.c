@@ -12,7 +12,7 @@ static const uint8_t appKey[] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0
 
 static void test_init(void **user)
 {
-    struct ldl self;
+    struct lora_device_lib self;
     struct lora_board board;
     struct lora_radio radio;
 
@@ -22,7 +22,7 @@ static void test_init(void **user)
     will_return(System_getDevEUI, eui);
     will_return(System_getAppKey, appKey);
     
-    ldl_init(&self, EU_863_870, &radio);
+    LDL_init(&self, EU_863_870, &radio);
 }
 
 int main(void)
