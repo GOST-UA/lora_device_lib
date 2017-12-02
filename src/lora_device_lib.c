@@ -26,8 +26,8 @@
 
 bool ldl_init(struct ldl *self, enum lora_region_id region_id, struct lora_radio *radio)
 {
-    LORA_ASSERT(self != NULL)
-    LORA_ASSERT(radio != NULL)
+    LORA_PEDANTIC(self != NULL)
+    LORA_PEDANTIC(radio != NULL)
     
     const struct lora_region *region;
     bool retval = false;

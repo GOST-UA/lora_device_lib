@@ -105,8 +105,8 @@ void LoraAES_init(struct lora_aes_ctx *ctx, const uint8_t *key)
         0x8dU, 0x01U, 0x02U, 0x04U, 0x08U, 0x10U, 0x20U, 0x40U, 0x80U, 0x1bU, 0x36U
     };
 
-    LORA_ASSERT(ctx != NULL)
-    LORA_ASSERT(key != NULL)
+    LORA_PEDANTIC(ctx != NULL)
+    LORA_PEDANTIC(key != NULL)
 
     ctx->r = 10U;
     b = 176U;

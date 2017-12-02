@@ -34,8 +34,8 @@ static void addDefaultChannel(void *receiver, uint8_t chIndex, uint32_t freq);
 
 void ChannelList_init(struct lora_channel_list *self, const struct lora_region *region)
 {
-    LORA_ASSERT(self != NULL)
-    LORA_ASSERT(region != NULL)
+    LORA_PEDANTIC(self != NULL)
+    LORA_PEDANTIC(region != NULL)
     
     size_t i;
     
@@ -57,7 +57,7 @@ void ChannelList_init(struct lora_channel_list *self, const struct lora_region *
 
 bool ChannelList_add(struct lora_channel_list *self, uint8_t chIndex, uint32_t freq)
 {
-    LORA_ASSERT(self != NULL)
+    LORA_PEDANTIC(self != NULL)
     
     bool retval = false;
     struct lora_channel *channel = NULL;
@@ -102,7 +102,7 @@ bool ChannelList_add(struct lora_channel_list *self, uint8_t chIndex, uint32_t f
 
 void ChannelList_remove(struct lora_channel_list *self, uint8_t chIndex)
 {
-    LORA_ASSERT(self != NULL)
+    LORA_PEDANTIC(self != NULL)
     
     if(chIndex < sizeof(self->channels)/sizeof(*self->channels)){
         
@@ -123,7 +123,7 @@ void ChannelList_remove(struct lora_channel_list *self, uint8_t chIndex)
 
 bool ChannelList_constrainRate(struct lora_channel_list *self, uint8_t chIndex, uint8_t minRate, uint8_t maxRate)
 {
-    LORA_ASSERT(self != NULL)
+    LORA_PEDANTIC(self != NULL)
     
     bool retval = false;
     
@@ -149,7 +149,7 @@ bool ChannelList_constrainRate(struct lora_channel_list *self, uint8_t chIndex, 
 
 bool ChannelList_mask(struct lora_channel_list *self, uint8_t chIndex)
 {
-    LORA_ASSERT(self != NULL)
+    LORA_PEDANTIC(self != NULL)
     
     bool retval = false;
     
@@ -178,7 +178,7 @@ bool ChannelList_mask(struct lora_channel_list *self, uint8_t chIndex)
 
 void ChannelList_unmask(struct lora_channel_list *self, uint8_t chIndex)
 {
-    LORA_ASSERT(self != NULL)
+    LORA_PEDANTIC(self != NULL)
     
     if(chIndex < sizeof(self->channels)/sizeof(*self->channels)){
         
@@ -195,7 +195,7 @@ void ChannelList_unmask(struct lora_channel_list *self, uint8_t chIndex)
 
 uint64_t ChannelList_waitTime(const struct lora_channel_list *self, uint64_t timeNow)
 {
-    LORA_ASSERT(self != NULL)
+    LORA_PEDANTIC(self != NULL)
     
     uint32_t retval;
     
@@ -213,7 +213,7 @@ uint64_t ChannelList_waitTime(const struct lora_channel_list *self, uint64_t tim
 
 void ChannelList_registerTransmission(struct lora_channel_list *self, uint64_t time, uint32_t airTime)
 {
-    LORA_ASSERT(self != NULL)
+    LORA_PEDANTIC(self != NULL)
     
     if(self->nextBand != -1){
 
@@ -229,14 +229,14 @@ void ChannelList_registerTransmission(struct lora_channel_list *self, uint64_t t
 
 size_t ChannelList_capacity(const struct lora_channel_list *self)
 {
-    LORA_ASSERT(self != NULL)
+    LORA_PEDANTIC(self != NULL)
     
     return sizeof(self->channels)/sizeof(*self->channels);
 }
 
 bool ChannelList_txSetting(const struct lora_channel_list *self, struct lora_channel_setting *setting)
 {
-    LORA_ASSERT(self != NULL)
+    LORA_PEDANTIC(self != NULL)
     
     bool retval = false;
     
@@ -256,13 +256,13 @@ bool ChannelList_txSetting(const struct lora_channel_list *self, struct lora_cha
 
 void ChannelList_rx2Setting(const struct lora_channel_list *self, uint32_t *freq, uint8_t *rate)
 {
-    LORA_ASSERT(self != NULL)
+    LORA_PEDANTIC(self != NULL)
         
     const struct lora_region_default *defaults;
     
     defaults = Region_getDefaultSettings(self->region);
         
-    LORA_ASSERT(defaults != NULL)
+    LORA_PEDANTIC(defaults != NULL)
         
     *freq = defaults->rx2_freq;
     *rate = defaults->rx2_rate;        
@@ -270,7 +270,7 @@ void ChannelList_rx2Setting(const struct lora_channel_list *self, uint32_t *freq
 
 const struct lora_region *ChannelList_region(const struct lora_channel_list *self)
 {
-    LORA_ASSERT(self != NULL)
+    LORA_PEDANTIC(self != NULL)
     
     return self->region;
 }

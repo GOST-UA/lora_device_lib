@@ -46,9 +46,9 @@ uint8_t Frame_encode(const void *key, const struct lora_frame *f, uint8_t *out, 
     uint16_t size;
     uint8_t dlSettings;
 
-    LORA_ASSERT(f != NULL)
-    LORA_ASSERT((out != NULL) || (max == 0U))
-    LORA_ASSERT(key != NULL)
+    LORA_PEDANTIC(f != NULL)
+    LORA_PEDANTIC((out != NULL) || (max == 0U))
+    LORA_PEDANTIC(key != NULL)
 
     switch(f->type){
     default:

@@ -32,7 +32,7 @@ LDL breaks the problem into standalone modules which can be mocked out during te
 
 ![image missing](doc/plantuml/modules.png "LoraDeviceLib Modules")
 
-LDL is intended to be driven from two tasks - an _iterrupt_ level task and a _mainloop_ level task.
+LDL is intended to be driven from two tasks - an _interrupt_ level task and a _mainloop_ level task.
 
 The _interrupt_ level task signals when IO events occur. It runs for a short time and never blocks. The _interrupt_ level task must never
 be interrupted by the _mainloop_ level task. 
@@ -96,67 +96,80 @@ In summary:
 
 #### Implement System_getDevEUI()
 
-~~~
-void System_getDevEUI(void *owner, uint8_t *eui);
-~~~
+This function must return the DevEUI.
 
-The MAC uses this interface to get the DevEUI. 
+See [lora_system.h](include/lora_system.h).
 
 #### Implement System_getAppEUI()
 
-~~~
-void System_getAppEUI(void *owner, uint8_t *eui);
-~~~
+This function must return the AppEUI
 
-The MAC uses this interface to get the AppEUI. 
+See [lora_system.h](include/lora_system.h).
 
 #### Implement System_getAppKey()
 
-~~~
-void System_getAppKey(void *owner, uint8_t *key)
-~~~
+This function must return the AppKey.
 
-The MAC uses this interface to get the AppKey. 
+See [lora_system.h](include/lora_system.h).
 
 #### Implement System_getTime()
 
-~~~
-uint64_t System_getTime(void);
-~~~
-
 This function must return system time (e.g. time since power up) in microseconds.
+
+See [lora_system.h](include/lora_system.h).
 
 #### Implement System_usleep()
 
-~~~
-void System_usleep(uint32_t interval);
-~~~
-
 This function must cause the program counter to block for an interval of microseconds.
+
+See [lora_system.h](include/lora_system.h).
 
 #### Implement System_atomic_setPtr()
 
-~~~
-void System_atomic_setPtr(void **receiver, void *value);
-~~~
-
 This function must atomically write value to the receiver memory location.
+
+See [lora_system.h](include/lora_system.h).
 
 ### Optional
 
-#### Define a Platform Specific Error Message Stream
+### Define LORA_DEBUG_INCLUDE
 
-Define `LORA_ERROR(...)` to be a function that takes a printf style variadic argument.
+Define this macro to be a filename you want to `#include` at the top of 
+[lora_debug.h](include/lora_debug.h).
 
-LoraDeviceLib will print messages to explain why certain functions fail. The
-default configuration is to remove these messages from the build.
+### Define LORA_ERROR(...)
 
-#### Define a Platform Specific Assert Handler
+Define this macro to be a printf-like function that captures error level messages at run-time.
 
-Define `LORA_ASSERT(X)` to be an assertion that takes X as an argument.
+See [lora_debug.h](include/lora_debug.h).
 
-LoraDeviceLib makes run time assertions to catch bugs. It is recommended
-that this macro is defined at least for debug builds.
+### Define LORA_DEBUG(...)
+
+Define this macro to be a printf-like function that captures debug level messages at run-time.
+
+See [lora_debug.h](include/lora_debug.h).
+
+### Define LORA_INFO(...)
+
+Define this macro to be a printf-like function that captures info level messages at run-time.
+
+See [lora_debug.h](include/lora_debug.h).
+
+### Define LORA_ASSERT(X)
+
+Define this macro to be an assert-like function that performs run-time asserts on 'X'.
+
+See [lora_debug.h](include/lora_debug.h).
+
+- non-pedantic asserts are useful for development and recommended for production
+
+### Define LORA_PEDANTIC(X)
+
+Define this macro to be an assert-like function that performs run-time asserts on 'X'.
+
+- pendantic asserts are useful for development but not essential for production
+
+See [lora_debug.h](include/lora_debug.h).
 
 #### Substitute an Alternative AES Implementation
 
@@ -164,18 +177,23 @@ that this macro is defined at least for debug builds.
 2. Define `struct lora_aes_ctx` to suit the platform implementation
 3. Implement `LoraAES_init` and `LoraAES_encrypt` to wrap platform implementation
 
+See [lora_aes.h](include/lora_aes.h).
+
 #### Substitute an Alternative CMAC Implementation
 
 1. Define `LORA_USE_PLATFORM_CMAC`
 2. Define `struct lora_cmac_ctx` to suit the platform implementation
 3. Implement `LoraCMAC_init`, `LoraCMAC_update`, and `LoraCMAC_finish` to wrap platform implementation
 
+See [lora_cmac.h](include/lora_cmac.h).
+
 #### Customise lora_radio_sx1272
 
 - define LORA_RADIO_SX1272_USE_BOOST
-
     - Define this symbol if your hardware makes use of the BOOST pin
     - If not defined, radio will use the RFO pin
+        
+See [lora_radio_sx1272.c](include/lora_radio_sx1272.h).
 
 ## License
 

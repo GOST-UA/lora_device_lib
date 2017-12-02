@@ -22,20 +22,38 @@
 #ifndef LORA_DEBUG_H
 #define LORA_DEBUG_H
 
+/* Include your own lora_debug.h file.
+ * 
+ * Within this file you could define things like LORA_ERROR and LORA_ASSERT.
+ * 
+ * */
 #ifdef LORA_DEBUG_INCLUDE
 #include LORA_DEBUG_INCLUDE
 #endif
 
+/* A printf-like function that captures run-time error level messages */
 #ifndef LORA_ERROR
-    #define LORA_ERROR(X)
+    #define LORA_ERROR(...)
 #endif
 
-#ifndef LORA_MSG
-    #define LORA_MSG(...)
+/* A printf-like function that captures run-time info level messages */
+#ifndef LORA_INFO
+    #define LORA_INFO(...)
 #endif
 
+/* A printf-like function that captures run-time debug level messages */
+#ifndef LORA_DEBUG
+    #define LORA_DEBUG(...)
+#endif
+
+/* An assert-like function that performs run-time asserts on 'X' */
 #ifndef LORA_ASSERT
     #define LORA_ASSERT(X)
+#endif
+
+/* A assert-like function that performs pedantic run-time asserts on 'X' */
+#ifndef LORA_PEDANTIC
+    #define LORA_PEDANTIC(X)
 #endif
 
 #endif

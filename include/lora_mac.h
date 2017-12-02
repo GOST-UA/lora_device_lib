@@ -226,4 +226,6 @@ bool MAC_join(struct lora_mac *self);
 
 void MAC_radioEvent(void *receiver, enum lora_radio_event event, uint64_t time);
 
+uint32_t MAC_calculateOnAirTime(enum lora_signal_bandwidth bw, enum lora_spreading_factor sf, uint8_t payloadLen);
+
 #endif

@@ -38,8 +38,8 @@
         rb_funcall(rb_const_get(rb_const_get(rb_cObject, rb_intern("LDL")), rb_intern("Logger")), rb_intern("error"), 1, msg);\
     }while(0);
 
-/* LORA_MESSAGE will log as 'info' */
-#define LORA_MESSAGE(...) \
+/* LORA_INFO will log as 'info' */
+#define LORA_INFO(...) \
     do{\
         VALUE args[] = {\
             rb_funcall(rb_cFile, rb_intern("basename"), 1, rb_str_new_cstr(__FILE__)),\
@@ -48,6 +48,18 @@
         };\
         VALUE msg = rb_str_format(sizeof(args)/sizeof(*args), args, rb_str_new_cstr("%s: %s(): %s"));\
         rb_funcall(rb_const_get(rb_const_get(rb_cObject, rb_intern("LDL")), rb_intern("Logger")), rb_intern("info"), 1, msg);\
+    }while(0);
+
+/* LORA_DEBUG will log as 'debug' */
+#define LORA_DEBUG(...) \
+    do{\
+        VALUE args[] = {\
+            rb_funcall(rb_cFile, rb_intern("basename"), 1, rb_str_new_cstr(__FILE__)),\
+            rb_str_new_cstr(__FUNCTION__),\
+            rb_sprintf(__VA_ARGS__)\
+        };\
+        VALUE msg = rb_str_format(sizeof(args)/sizeof(*args), args, rb_str_new_cstr("%s: %s(): %s"));\
+        rb_funcall(rb_const_get(rb_const_get(rb_cObject, rb_intern("LDL")), rb_intern("Logger")), rb_intern("debug"), 1, msg);\
     }while(0);
 
 /* LORA_ASSERT will raise a LDL::LoraAssert */
@@ -63,6 +75,9 @@
         VALUE ex = rb_funcall(rb_const_get(rb_const_get(rb_cObject, rb_intern("LDL")), rb_intern("LoraAssert")), rb_intern("new"), 1, msg);\
         rb_funcall(rb_mKernel, rb_intern("raise"), 1, ex);\
     }
+
+/* LORA_PEDANTIC will expand to LORA_ASSERT */
+#define LORA_PEDANTIC(X) LORA_ASSERT(X)
 
 
 #endif

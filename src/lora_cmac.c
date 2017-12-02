@@ -59,8 +59,8 @@ static void leftShift128(uint8_t *v);
 
 void LoraCMAC_init(struct lora_cmac_ctx *ctx, const struct lora_aes_ctx *aes_ctx)
 {    
-    LORA_ASSERT(ctx != NULL)
-    LORA_ASSERT(aes_ctx != NULL)
+    LORA_PEDANTIC(ctx != NULL)
+    LORA_PEDANTIC(aes_ctx != NULL)
 
     (void)memset(ctx, 0, sizeof(*ctx));
     ctx->aes_ctx = aes_ctx;
@@ -68,8 +68,8 @@ void LoraCMAC_init(struct lora_cmac_ctx *ctx, const struct lora_aes_ctx *aes_ctx
 
 void LoraCMAC_update(struct lora_cmac_ctx *ctx, const void *data, uint8_t len)
 {
-    LORA_ASSERT(ctx != NULL)
-    LORA_ASSERT((len == 0U) || (data != NULL))
+    LORA_PEDANTIC(ctx != NULL)
+    LORA_PEDANTIC((len == 0U) || (data != NULL))
 
     size_t part = ctx->size % sizeof(ctx->m);
     size_t i;
@@ -118,7 +118,7 @@ void LoraCMAC_update(struct lora_cmac_ctx *ctx, const void *data, uint8_t len)
 
 void LoraCMAC_finish(const struct lora_cmac_ctx *ctx, void *out, uint8_t outMax)
 {
-    LORA_ASSERT(ctx != NULL)
+    LORA_PEDANTIC(ctx != NULL)
 
     uint8_t k[BLOCK_SIZE];
     

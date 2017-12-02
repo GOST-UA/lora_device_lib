@@ -52,16 +52,14 @@ static void collect(struct lora_mac *self);
 
 static void abandonSequence(struct lora_mac *self);
 
-static uint32_t calculateOnAirTime(const struct lora_mac *self, enum lora_signal_bandwidth bw, enum lora_spreading_factor sf, enum lora_coding_rate cr, uint8_t payloadLen);
-
 /* functions **********************************************************/
 
 void MAC_init(struct lora_mac *self, struct lora_channel_list *channels, struct lora_radio *radio, struct lora_event *events)
 {
-    LORA_ASSERT(self != NULL)
-    LORA_ASSERT(channels != NULL)
-    LORA_ASSERT(radio != NULL)
-    LORA_ASSERT(events != NULL)
+    LORA_PEDANTIC(self != NULL)
+    LORA_PEDANTIC(channels != NULL)
+    LORA_PEDANTIC(radio != NULL)
+    LORA_PEDANTIC(events != NULL)
 
     (void)memset(self, 0, sizeof(*self));
 
@@ -95,8 +93,8 @@ void MAC_init(struct lora_mac *self, struct lora_channel_list *channels, struct 
 
 bool MAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *data, uint8_t len)
 {
-    LORA_ASSERT(self != NULL)
-    LORA_ASSERT((len == 0) || (data != NULL))
+    LORA_PEDANTIC(self != NULL)
+    LORA_PEDANTIC((len == 0) || (data != NULL))
     
     bool retval = false;
     uint16_t bufferMax = Frame_getPhyPayloadSize(0, len);
@@ -116,7 +114,7 @@ bool MAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *d
                     
                     rate_setting = Region_getDataRateParameters(ChannelList_region(self->channels), self->rate);
                     
-                    LORA_ASSERT(rate_setting != NULL)
+                    LORA_PEDANTIC(rate_setting != NULL)
                     
                     if(rate_setting->payload >= bufferMax){ 
 
@@ -242,7 +240,7 @@ bool MAC_personalize(struct lora_mac *self, uint32_t devAddr, const void *nwkSKe
 
 void MAC_radioEvent(void *receiver, enum lora_radio_event event, uint64_t time)
 {
-    LORA_ASSERT(receiver != NULL)
+    LORA_PEDANTIC(receiver != NULL)
     
     struct lora_mac *self = (struct lora_mac *)receiver;
     
@@ -259,6 +257,60 @@ void MAC_radioEvent(void *receiver, enum lora_radio_event event, uint64_t time)
     default:
         break;
     }
+}
+
+uint32_t MAC_calculateOnAirTime(enum lora_signal_bandwidth bw, enum lora_spreading_factor sf, uint8_t payloadLen)
+{
+    /* from 4.1.1.7 of sx1272 datasheet
+     *
+     * Ts (symbol period)
+     * Rs (symbol rate)
+     * PL (payload length)
+     * SF (spreading factor
+     * CRC (presence of trailing CRC)
+     * IH (presence of implicit header)
+     * DE (presence of data rate optimize)
+     * CR (coding rate 1..4)
+     * 
+     *
+     * Ts = 1 / Rs
+     * Tpreamble = ( Npreamble x 4.25 ) x Tsym
+     *
+     * Npayload = 8 + max( ceil[( 8PL - 4SF + 28 + 16CRC + 20IH ) / ( 4(SF - 2DE) )] x (CR + 4), 0 )
+     *
+     * Tpayload = Npayload x Ts
+     *
+     * Tpacket = Tpreamble + Tpayload
+     *
+     * Implementation details:
+     *
+     * - period will be in microseconds so we can use integer operations rather than float
+     * 
+     * */
+
+    uint32_t Tpacket = 0U;
+
+    if((bw != BW_FSK) && (sf != SF_FSK)){
+
+        // for now hardcode this according to this recommendation
+        bool lowDataRateOptimize = ((bw == BW_125) && ((sf == SF_11) || (sf == SF_12))) ? true : false;
+        bool crc = true;    // true for uplink, false for downlink
+        bool header = true; 
+
+        uint32_t Ts = ((1U << sf) * 1000000U) / bw;     //symbol rate (us)
+        uint32_t Tpreamble = (Ts * 12U) +  (Ts / 4U);       //preamble (us)
+
+        uint32_t numerator = (8U * (uint32_t)payloadLen) - (4U * (uint32_t)sf) + 28U + ( crc ? 16U : 0U ) - ( (header) ? 20U : 0U );
+        uint32_t denom = 4U * ((uint32_t)sf - ( lowDataRateOptimize ? 2U : 0U ));
+
+        uint32_t Npayload = 8U + ((numerator / denom) + (((numerator % denom) != 0) ? 1U : 0U)) * ((uint32_t)CR_5 + 4U);
+
+        uint32_t Tpayload = Npayload * Ts;
+
+        Tpacket = Tpreamble + Tpayload;
+    }
+
+    return Tpacket;
 }
 
 /* static functions ***************************************************/
@@ -290,7 +342,7 @@ static void resetCounters(struct lora_mac *self)
 
 static void tx(void *receiver, uint64_t time)
 {
-    LORA_ASSERT(receiver != NULL)
+    LORA_PEDANTIC(receiver != NULL)
     
     struct lora_mac *self = (struct lora_mac *)receiver;    
     struct lora_channel_setting channel_setting;
@@ -298,7 +350,7 @@ static void tx(void *receiver, uint64_t time)
     const struct lora_data_rate *rate_setting;
     uint32_t transmitTime;
     
-    LORA_ASSERT((self->state == JOIN_WAIT_TX) || (self->state == WAIT_TX))
+    LORA_PEDANTIC((self->state == JOIN_WAIT_TX) || (self->state == WAIT_TX))
     
     if(ChannelList_txSetting(self->channels, &channel_setting)){
 
@@ -315,7 +367,7 @@ static void tx(void *receiver, uint64_t time)
             self->previousRate = self->rate;
             self->previousFreq = channel_setting.freq;
             
-            transmitTime = calculateOnAirTime(self, radio_setting.bw, radio_setting.sf, radio_setting.cr, self->bufferLen);
+            transmitTime = MAC_calculateOnAirTime(radio_setting.bw, radio_setting.sf, self->bufferLen);
             
             ChannelList_registerTransmission(self->channels, System_getTime(), transmitTime);
             
@@ -340,13 +392,13 @@ static void tx(void *receiver, uint64_t time)
 
 static void txComplete(void *receiver, uint64_t time)
 {
-    LORA_ASSERT(receiver != NULL)
+    LORA_PEDANTIC(receiver != NULL)
     
     struct lora_mac *self = (struct lora_mac *)receiver;            
     uint64_t timeNow = System_getTime();
     uint64_t futureTime;
         
-    LORA_ASSERT((self->state == JOIN_TX) || (self->state == TX))
+    LORA_PEDANTIC((self->state == JOIN_TX) || (self->state == TX))
     
     Radio_sleep(self->radio);
     
@@ -369,7 +421,7 @@ static void txComplete(void *receiver, uint64_t time)
 
 static void rxStart(void *receiver, uint64_t time)
 {
-    LORA_ASSERT(receiver != NULL)
+    LORA_PEDANTIC(receiver != NULL)
     
     struct lora_mac *self = (struct lora_mac *)receiver;    
     struct lora_radio_rx_setting radio_setting;
@@ -378,8 +430,8 @@ static void rxStart(void *receiver, uint64_t time)
     uint64_t targetTime;
     uint64_t timeNow = System_getTime();
         
-    LORA_ASSERT((self->state == WAIT_RX1) || (self->state == WAIT_RX2) || (self->state == JOIN_WAIT_RX1) || (self->state == JOIN_WAIT_RX2))
-    LORA_ASSERT(time <= timeNow)
+    LORA_PEDANTIC((self->state == WAIT_RX1) || (self->state == WAIT_RX2) || (self->state == JOIN_WAIT_RX1) || (self->state == JOIN_WAIT_RX2))
+    LORA_PEDANTIC(time <= timeNow)
    
     targetTime = timeNow - self->rx1_delay;
     
@@ -463,7 +515,7 @@ static void rxStart(void *receiver, uint64_t time)
 
 static void rxReady(void *receiver, uint64_t time)
 {
-    LORA_ASSERT(receiver != NULL)
+    LORA_PEDANTIC(receiver != NULL)
         
     struct lora_mac *self = (struct lora_mac *)receiver;    
     Event_cancel(self->events, &self->rxTimeout);    
@@ -476,7 +528,7 @@ static void rxReady(void *receiver, uint64_t time)
 
 static void rxTimeout(void *receiver, uint64_t time)
 {
-    LORA_ASSERT(receiver != NULL)
+    LORA_PEDANTIC(receiver != NULL)
     
     struct lora_mac *self = (struct lora_mac *)receiver;    
     Event_cancel(self->events, &self->rxReady);    
@@ -488,7 +540,7 @@ static void rxTimeout(void *receiver, uint64_t time)
 
 static void rxFinish(struct lora_mac *self)
 {    
-    LORA_ASSERT(self != NULL)
+    LORA_PEDANTIC(self != NULL)
     
     Radio_sleep(self->radio);
     
@@ -520,12 +572,12 @@ static void rxFinish(struct lora_mac *self)
 #if 0
 static void resetRadio(void *receiver, uint64_t time)
 {
-    LORA_ASSERT(receiver != NULL)
+    LORA_PEDANTIC(receiver != NULL)
     
     struct lora_mac *self = (struct lora_mac *)receiver;    
     uint32_t delay;
     
-    LORA_MSG("radio has been reset")
+    LORA_INFO("radio has been reset")
     
     Event_cancel(self->events, &self->rxReady);
     self->rxReady = NULL;
@@ -681,57 +733,4 @@ static void abandonSequence(struct lora_mac *self)
     self->state = IDLE;
 }
 
-static uint32_t calculateOnAirTime(const struct lora_mac *self, enum lora_signal_bandwidth bw, enum lora_spreading_factor sf, enum lora_coding_rate cr, uint8_t payloadLen)
-{
-    /* from 4.1.1.7 of sx1272 datasheet
-     *
-     * Ts (symbol period)
-     * Rs (symbol rate)
-     * PL (payload length)
-     * SF (spreading factor
-     * CRC (presence of trailing CRC)
-     * IH (presence of implicit header)
-     * DE (presence of data rate optimize)
-     * CR (coding rate 1..4)
-     * 
-     *
-     * Ts = 1 / Rs
-     * Tpreamble = ( Npreamble x 4.25 ) x Tsym
-     *
-     * Npayload = 8 + max( ceil[( 8PL - 4SF + 28 + 16CRC + 20IH ) / ( 4(SF - 2DE) )] x (CR + 4), 0 )
-     *
-     * Tpayload = Npayload x Ts
-     *
-     * Tpacket = Tpreamble + Tpayload
-     *
-     * Implementation details:
-     *
-     * - period will be in microseconds so we can use integer operations rather than float
-     * 
-     * */
-
-    uint32_t Tpacket = 0U;
-
-    if((bw != BW_FSK) && (sf != SF_FSK)){
-
-        // for now hardcode this according to this recommendation
-        bool lowDataRateOptimize = ((bw == BW_125) && ((sf == SF_11) || (sf == SF_12))) ? true : false;
-        bool crc = true;    // true for uplink, false for downlink
-        bool header = true; 
-
-        uint32_t Ts = ((1U << sf) * 1000000U) / bw;     //symbol rate (us)
-        uint32_t Tpreamble = (Ts * 12U) +  (Ts / 4U);       //preamble (us)
-
-        uint32_t numerator = (8U * (uint32_t)payloadLen) - (4U * (uint32_t)sf) + 28U + ( crc ? 16U : 0U ) - ( (header) ? 20U : 0U );
-        uint32_t denom = 4U * ((uint32_t)sf - ( lowDataRateOptimize ? 2U : 0U ));
-
-        uint32_t Npayload = 8U + ((numerator / denom) + (((numerator % denom) != 0) ? 1U : 0U)) * ((uint32_t)cr + 4U);
-
-        uint32_t Tpayload = Npayload * Ts;
-
-        Tpacket = Tpreamble + Tpayload;
-    }
-
-    return Tpacket;
-}
 

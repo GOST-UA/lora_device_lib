@@ -292,7 +292,7 @@ const struct lora_region *Region_getRegion(enum lora_region_id region)
 
 const struct lora_data_rate *Region_getDataRateParameters(const struct lora_region *self, uint8_t rate)
 {
-    LORA_ASSERT(self != NULL)
+    LORA_PEDANTIC(self != NULL)
     
     const struct lora_data_rate *retval = NULL;
 
@@ -306,8 +306,8 @@ const struct lora_data_rate *Region_getDataRateParameters(const struct lora_regi
 
 bool Region_validateFrequency(const struct lora_region *self, uint32_t frequency, uint8_t *band)
 {
-    LORA_ASSERT(self != NULL)
-    LORA_ASSERT(band != NULL)
+    LORA_PEDANTIC(self != NULL)
+    LORA_PEDANTIC(band != NULL)
     
     bool retval = false;
     size_t i;
@@ -328,7 +328,7 @@ bool Region_validateFrequency(const struct lora_region *self, uint32_t frequency
 
 bool Region_validateRate(const struct lora_region *self, uint8_t chIndex, uint8_t rate)
 {
-    LORA_ASSERT(self != NULL)
+    LORA_PEDANTIC(self != NULL)
     
     bool retval = false;
     size_t i;
@@ -354,8 +354,8 @@ bool Region_validateRate(const struct lora_region *self, uint8_t chIndex, uint8_
 
 uint8_t Region_getTXRates(const struct lora_region *self, uint8_t chIndex, const uint8_t **rates)
 {
-    LORA_ASSERT(self != NULL)
-    LORA_ASSERT(rates != NULL)
+    LORA_PEDANTIC(self != NULL)
+    LORA_PEDANTIC(rates != NULL)
     
     uint8_t retval = 0U;
     size_t i;
@@ -375,8 +375,8 @@ uint8_t Region_getTXRates(const struct lora_region *self, uint8_t chIndex, const
 
 bool Region_getOffTimeFactor(const struct lora_region *self, uint8_t band, uint16_t *offtime_factor)
 {
-    LORA_ASSERT(self != NULL)
-    LORA_ASSERT(offtime_factor != NULL)
+    LORA_PEDANTIC(self != NULL)
+    LORA_PEDANTIC(offtime_factor != NULL)
     
     bool retval = false;
 
@@ -391,15 +391,15 @@ bool Region_getOffTimeFactor(const struct lora_region *self, uint8_t band, uint1
 
 const struct lora_region_default *Region_getDefaultSettings(const struct lora_region *self)
 {
-    LORA_ASSERT(self != NULL)
+    LORA_PEDANTIC(self != NULL)
     
     return self->defaults;
 }
 
 void Region_getDefaultChannels(const struct lora_region *self, void *receiver, void (*handler)(void *reciever, uint8_t chIndex, uint32_t freq))
 {
-    LORA_ASSERT(self != NULL)
-    LORA_ASSERT(handler != NULL)
+    LORA_PEDANTIC(self != NULL)
+    LORA_PEDANTIC(handler != NULL)
     
     size_t i;
     
@@ -411,8 +411,8 @@ void Region_getDefaultChannels(const struct lora_region *self, void *receiver, v
 
 bool Region_getRX1DataRate(const struct lora_region *self, uint8_t tx_rate, uint8_t rx1_offset, uint8_t *rx1_rate)
 {
-    LORA_ASSERT(self != NULL)
-    LORA_ASSERT(rx1_rate != NULL)
+    LORA_PEDANTIC(self != NULL)
+    LORA_PEDANTIC(rx1_rate != NULL)
 
     bool retval = false;
     uint16_t index;

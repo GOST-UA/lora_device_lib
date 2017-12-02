@@ -45,8 +45,8 @@ static void setPower(struct lora_radio *self, int dbm);
 
 void Radio_init(struct lora_radio *self, const struct lora_board *board)
 {
-    LORA_ASSERT(self != NULL)
-    LORA_ASSERT(board != NULL)
+    LORA_PEDANTIC(self != NULL)
+    LORA_PEDANTIC(board != NULL)
     
     (void)memset(self, 0, sizeof(*self));
     (void)memcpy(&self->board, board, sizeof(*board));
@@ -54,7 +54,7 @@ void Radio_init(struct lora_radio *self, const struct lora_board *board)
 
 void Radio_setEventHandler(struct lora_radio *self, void *receiver, radioEventCB cb)
 {
-    LORA_ASSERT(self != NULL)
+    LORA_PEDANTIC(self != NULL)
     
     System_atomic_setPtr(&self->eventReceiver, NULL);
     self->eventHandler = cb;    
@@ -72,9 +72,9 @@ uint32_t Radio_resetHardware(struct lora_radio *self)
 
 bool Radio_transmit(struct lora_radio *self, const struct lora_radio_tx_setting *settings, const void *data, uint8_t len)
 {
-    LORA_ASSERT(self != NULL)
-    LORA_ASSERT(settings != NULL)
-    LORA_ASSERT((data != NULL) || (len == 0U))
+    LORA_PEDANTIC(self != NULL)
+    LORA_PEDANTIC(settings != NULL)
+    LORA_PEDANTIC((data != NULL) || (len == 0U))
     
     bool retval = false;
     
@@ -118,8 +118,8 @@ bool Radio_transmit(struct lora_radio *self, const struct lora_radio_tx_setting 
 
 bool Radio_receive(struct lora_radio *self, const struct lora_radio_rx_setting *settings)
 {
-    LORA_ASSERT(self != NULL)
-    LORA_ASSERT(settings != NULL)
+    LORA_PEDANTIC(self != NULL)
+    LORA_PEDANTIC(settings != NULL)
     
     bool retval = false;
     
@@ -231,15 +231,15 @@ static void setModemConfig(struct lora_radio *self, enum lora_signal_bandwidth b
 
 uint8_t Radio_collect(struct lora_radio *self, void *data, uint8_t max)
 {   
-    LORA_ASSERT(self != NULL)
-    LORA_ASSERT((data != NULL) || (max == 0U))
+    LORA_PEDANTIC(self != NULL)
+    LORA_PEDANTIC((data != NULL) || (max == 0U))
     
     return readFIFO(self, data, max);
 }
 
 void Radio_interrupt(struct lora_radio *self, uint8_t n, uint64_t time)
 {    
-    LORA_ASSERT(self != NULL)
+    LORA_PEDANTIC(self != NULL)
     
     if(self->eventHandler != NULL){
     
