@@ -57,6 +57,10 @@ static VALUE bw_to_symbol(enum lora_signal_bandwidth bw);
 static VALUE sf_to_symbol(enum lora_spreading_factor sf);
 static VALUE cr_to_symbol(enum lora_coding_rate cr);
 
+static VALUE timeUntilNextEvent(VALUE self);
+
+static VALUE calculateOnAirTime(VALUE self, VALUE bw, VALUE sf, VALUE payloadLen);
+
 uint64_t System_getTime(void)
 {
     return NUM2ULL(rb_funcall(rb_const_get(cLDL, rb_intern("SystemTime")), rb_intern("time"), 0));
@@ -124,6 +128,8 @@ void Init_ext_mac(void)
     rb_define_method(cExtMAC, "send_unconfirmed", _ldl_send_unconfirmed, -1);
     rb_define_method(cExtMAC, "send_confirmed", _ldl_send_confirmed, -1);    
     rb_define_method(cExtMAC, "io_event", io_event, 2);    
+    rb_define_method(cExtMAC, "timeUntilNextEvent", timeUntilNextEvent, 0);    
+    rb_define_method(cExtMAC, "onAirTime", calculateOnAirTime, 3);    
     
     cEUI64 = rb_const_get(cLDL, rb_intern("EUI64"));
     cKey = rb_const_get(cLDL, rb_intern("Key"));
@@ -199,9 +205,10 @@ static VALUE _ldl_alloc(VALUE klass)
  * - :eu_863_870
  * 
  * 
- * @param region [Symbol] optional region code
+ * @param radio [Radio]
  * @param options [Hash] parameter hash
  * 
+ * @option options [EUI64] :region 
  * @option options [EUI64] :appEUI application identifier (defaults to 00-00-00-00-00-00-00-00)
  * @option options [EUI64] :devEUI device identifier (defaults to 00-00-00-00-00-00-00-00)
  * @option options [EUI64] :appKey application key (defaults to null key)
@@ -629,4 +636,78 @@ static VALUE io_event(VALUE self, VALUE event, VALUE time)
     }
     
     return self;
+}
+
+static VALUE timeUntilNextEvent(VALUE self)
+{
+    struct ldl *this;    
+    uint64_t next;
+    Data_Get_Struct(self, struct ldl, this);
+    
+    next = Event_timeUntilNextEvent(this);
+    
+    return (next == UINT64_MAX) ? Qnil : ULL2NUM(next);
+}
+
+/* Calculate the time (in us) to transmit size bytes
+ * 
+ * @param bandwidth [Symbol]
+ * @param spreading_factor [Symbol]
+ * @param size [Integer] size in bytes
+ * 
+ * @return [Integer] microseconds of air-time required to transmit size bytes
+ * 
+ * */
+static VALUE calculateOnAirTime(VALUE self, VALUE bandwidth, VALUE spreading_factor, VALUE size)
+{
+    size_t bw_i;
+    size_t sf_i;
+    
+    static const enum lora_signal_bandwidth bw[] = {
+        BW_125,
+        BW_250,
+        BW_500
+    };
+    
+    static const enum lora_spreading_factor sf[] = {
+        SF_7,
+        SF_8,
+        SF_9,
+        SF_10,
+        SF_11,
+        SF_12
+    };
+    
+    for(bw_i=0U; bw_i < sizeof(bw)/sizeof(*bw); bw_i++){
+        
+        if(bw[bw_i] == NUM2UINT(bandwidth)){
+            
+            break;
+        }
+    }
+    
+    if(bw_i == sizeof(bw)/sizeof(*bw)){
+        
+        rb_raise(rb_eRangeError, "bandwidth must be 125K, 250K, or 500K");
+    }
+    
+    for(sf_i=0U; sf_i < sizeof(sf)/sizeof(*sf); sf_i++){
+        
+        if(sf[sf_i] == NUM2UINT(spreading_factor)){
+            
+            break;
+        }
+    }
+    
+    if(sf_i == sizeof(sf)/sizeof(*sf)){
+        
+        rb_raise(rb_eRangeError, "spreading_factor must be in range 7..12");
+    }
+    
+    if(NUM2UINT(size) > UINT8_MAX){
+        
+        rb_raise(rb_eRangeError, "size must be in range 0..255");
+    }
+    
+    return UINT2NUM(MAC_calculateOnAirTime(bw[bw_i], sf[sf_i], (uint8_t)NUM2UINT(size)));
 }
