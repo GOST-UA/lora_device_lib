@@ -132,30 +132,30 @@ See [lora_system.h](include/lora_system.h).
 
 ### Optional
 
-### Define LORA_DEBUG_INCLUDE
+#### Define LORA_DEBUG_INCLUDE
 
 Define this macro to be a filename you want to `#include` at the top of 
 [lora_debug.h](include/lora_debug.h).
 
-### Define LORA_ERROR(...)
+#### Define LORA_ERROR(...)
 
 Define this macro to be a printf-like function that captures error level messages at run-time.
 
 See [lora_debug.h](include/lora_debug.h).
 
-### Define LORA_DEBUG(...)
+#### Define LORA_DEBUG(...)
 
 Define this macro to be a printf-like function that captures debug level messages at run-time.
 
 See [lora_debug.h](include/lora_debug.h).
 
-### Define LORA_INFO(...)
+#### Define LORA_INFO(...)
 
 Define this macro to be a printf-like function that captures info level messages at run-time.
 
 See [lora_debug.h](include/lora_debug.h).
 
-### Define LORA_ASSERT(X)
+#### Define LORA_ASSERT(X)
 
 Define this macro to be an assert-like function that performs run-time asserts on 'X'.
 
@@ -163,7 +163,7 @@ See [lora_debug.h](include/lora_debug.h).
 
 - non-pedantic asserts are useful for development and recommended for production
 
-### Define LORA_PEDANTIC(X)
+#### Define LORA_PEDANTIC(X)
 
 Define this macro to be an assert-like function that performs run-time asserts on 'X'.
 
