@@ -61,6 +61,8 @@ struct lora_frame {
             const uint8_t *opts;
             uint8_t optsLen;
 
+            bool payloadPresent;       /**< is payload present? */
+
             uint8_t port;
             const uint8_t *data;
             uint8_t dataLen;
@@ -95,7 +97,7 @@ struct lora_frame {
 /** the result of a decode operation */
 enum lora_frame_result {
     LORA_FRAME_OK,      /**< frame is OK */
-    LORA_FRAME_BAD,     /**< frame format is bad */
+    LORA_FRAME_BAD,     /**< frame format is bad */    
     LORA_FRAME_MIC      /**< frame format is OK but MIC check failed */
 };
 

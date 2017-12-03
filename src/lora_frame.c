@@ -93,15 +93,18 @@ uint8_t Frame_encode(const void *key, const struct lora_frame *f, uint8_t *out, 
                     pos += f->fields.data.optsLen;
                 }
 
-                if(f->fields.data.dataLen > 0U){
+                if(f->fields.data.payloadPresent){
 
                     out[pos] = f->fields.data.port;
                     pos++;
 
-                    (void)memcpy(&out[pos], f->fields.data.data, f->fields.data.dataLen);
+                    if(f->fields.data.dataLen > 0U){
 
-                    cipherData(f->type, key, f->fields.data.devAddr, f->fields.data.counter, &out[pos], f->fields.data.dataLen);
-                    pos += f->fields.data.dataLen;                
+                        (void)memcpy(&out[pos], f->fields.data.data, f->fields.data.dataLen);
+
+                        cipherData(f->type, key, f->fields.data.devAddr, f->fields.data.counter, &out[pos], f->fields.data.dataLen);
+                        pos += f->fields.data.dataLen;                
+                    }                    
                 }
 
                 cmacData(f->type, key, f->fields.data.devAddr, f->fields.data.counter, out, pos, mic);
@@ -423,7 +426,7 @@ enum lora_frame_result Frame_decode(const void *appKey, const void *nwkSKey, con
             pos += f->fields.data.optsLen;
         }
 
-        if((len-pos) > 5U){
+        if((len-pos) > 4U){
 
             f->fields.data.port = ptr[pos];
             pos++;
@@ -431,13 +434,22 @@ enum lora_frame_result Frame_decode(const void *appKey, const void *nwkSKey, con
             f->fields.data.data = &ptr[pos];
             f->fields.data.dataLen = (len-(pos+4U));
             pos += f->fields.data.dataLen;
+            
+            f->fields.data.payloadPresent = true;
         }
         
-        key = ((f->fields.data.dataLen > 0U) && (f->fields.data.port != 0U)) ? appSKey : nwkSKey;
+        key = (f->fields.data.payloadPresent && (f->fields.data.port != 0U)) ? appSKey : nwkSKey;
     
         if((len-pos) != (uint8_t)sizeof(mic)){
 
             LORA_ERROR("frame too short")
+            return LORA_FRAME_BAD;
+        }
+
+        /* see spec 4.3.1.6 Frame options (FOptsLen in FCtrl, FOpts) */
+        if((f->fields.data.optsLen > 0U) && f->fields.data.payloadPresent && (f->fields.data.port == 0U)){
+            
+            LORA_ERROR("cannot have options and port 0")
             return LORA_FRAME_BAD;
         }
 
@@ -457,6 +469,7 @@ enum lora_frame_result Frame_decode(const void *appKey, const void *nwkSKey, con
         }
         
         pos += (uint8_t)sizeof(mic);
+        
         break;
     }
     

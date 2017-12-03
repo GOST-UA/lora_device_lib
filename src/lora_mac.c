@@ -128,6 +128,7 @@ bool MAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *d
                         f.fields.data.opts = NULL;
                         f.fields.data.optsLen = 0U;
                         f.fields.data.port = port;
+                        f.fields.data.payloadPresent = (len > 0);
                         f.fields.data.data = ((len > 0U) ? (const uint8_t *)data : NULL);
                         f.fields.data.dataLen = len;
                         
@@ -675,27 +676,26 @@ static void collect(struct lora_mac *self)
                 
                     if(validateDownCount(self, result.fields.data.counter)){
                 
-                        if(result.fields.data.optsLen > 0U){
-                            
-                            //process mac layer
-                            //MAC_processCommands(self, result.opts, result.optsLen);
-                        }
+                        //MAC_processCommands(self, result.fields.data.opts, result.fields.data.optsLen);
                         
-                        if(result.fields.data.port == 0U){
-                                        
-                            //MAC_processCommands(self, result.data, result.dataLen);
-                        }
-                        else{
-                            
-                            if(self->responseHandler != NULL){
+                        if(result.fields.data.payloadPresent){
+                
+                            if(result.fields.data.port > 0U){
                                 
-                                union lora_mac_response_arg arg;
-                                
-                                arg.rx.data = result.fields.data.data;
-                                arg.rx.len = result.fields.data.dataLen;
-                                arg.rx.port = result.fields.data.port;
-                                
-                                self->responseHandler(self->responseReceiver, LORA_MAC_RX, &arg);
+                                if(self->responseHandler != NULL){
+                                    
+                                    union lora_mac_response_arg arg;
+                                    
+                                    arg.rx.data = result.fields.data.data;
+                                    arg.rx.len = result.fields.data.dataLen;
+                                    arg.rx.port = result.fields.data.port;
+                                    
+                                    self->responseHandler(self->responseReceiver, LORA_MAC_RX, &arg);
+                                }
+                            }
+                            else{
+                                                                
+                                //MAC_processCommands(self, result.fields.data.data, result.fields.data.dataLen);
                             }
                         }
                     }
