@@ -43,13 +43,15 @@ static void setPower(struct lora_radio *self, int dbm);
 
 /* functions **********************************************************/
 
-void Radio_init(struct lora_radio *self, const struct lora_board *board)
+struct lora_radio * Radio_init(struct lora_radio *self, const struct lora_board *board)
 {
     LORA_PEDANTIC(self != NULL)
     LORA_PEDANTIC(board != NULL)
     
     (void)memset(self, 0, sizeof(*self));
     (void)memcpy(&self->board, board, sizeof(*board));
+    
+    return self;
 }
 
 void Radio_setEventHandler(struct lora_radio *self, void *receiver, radioEventCB cb)

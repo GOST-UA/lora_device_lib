@@ -67,12 +67,14 @@ struct lora_radio_rx_setting {
  * 
  * @warning this should be called once during stack initialisation
  * @warning this should not be called during operation to perform a device restart
+ *
+ * @note board should be buffered by Radio (so you don't need to keep it after making this call)
  * 
  * @param[in] self
  * @param[in] board board specific connections
  * 
  * */
-void Radio_init(struct lora_radio *self, const struct lora_board *board);
+struct lora_radio * Radio_init(struct lora_radio *self, const struct lora_board *board);
 
 /** Perform a hardware reset to return the transeiver to POR state
  * 

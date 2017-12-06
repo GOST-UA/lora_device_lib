@@ -33,7 +33,7 @@ extern "C" {
 /* types **************************************************************/
 
 /** recongised message types */
-enum message_type {
+enum lora_frame_type {
     FRAME_TYPE_JOIN_REQ = 0,
     FRAME_TYPE_JOIN_ACCEPT,
     FRAME_TYPE_DATA_UNCONFIRMED_UP,
@@ -42,68 +42,77 @@ enum message_type {
     FRAME_TYPE_DATA_CONFIRMED_DOWN,    
 };
 
+struct lora_frame_data {
+    
+    uint32_t devAddr;
+    uint16_t counter;
+    bool ack;
+    bool adr;
+    bool adrAckReq;
+    bool pending;
+
+    const uint8_t *opts;
+    uint8_t optsLen;
+
+    uint8_t port;
+    const uint8_t *data;
+    uint8_t dataLen;
+};
+
+struct lora_frame_join_accept {
+    
+    uint32_t appNonce;
+    uint32_t netID;
+    uint32_t devAddr;
+    uint8_t rx1DataRateOffset;
+    uint8_t rx2DataRate;
+    uint8_t rxDelay;
+    uint8_t cfList[16U];
+    uint8_t cfListLen;
+};
+
+struct lora_frame_join_request {
+    
+    uint8_t appEUI[8U];
+    uint8_t devEUI[8U];
+    uint16_t devNonce;    
+};
+
 /** frame parameters */
 struct lora_frame {
 
-    enum message_type type;
+    enum lora_frame_type type;
     
     union {
         
-        struct {
-
-            uint32_t devAddr;
-            uint32_t counter;
-            bool ack;
-            bool adr;
-            bool adrAckReq;
-            bool pending;
-
-            const uint8_t *opts;
-            uint8_t optsLen;
-
-            bool payloadPresent;       /**< is payload present? */
-
-            uint8_t port;
-            const uint8_t *data;
-            uint8_t dataLen;
-        
-        } data;
-        
-        struct {
-
-            uint32_t appNonce;
-            uint32_t netID;
-            uint32_t devAddr;
-            uint8_t rx1DataRateOffset;
-            uint8_t rx2DataRate;
-            uint8_t rxDelay;
-            uint8_t cfList[16];
-            uint8_t cfListLen;
-            
-        } joinAccept; 
-        
-        struct {
-            
-            uint8_t appEUI[8];
-            uint8_t devEUI[8];
-            uint16_t devNonce;
-                
-        } joinRequest;
+        struct lora_frame_data data;
+        struct lora_frame_join_accept joinAccept;
+        struct lora_frame_join_request joinRequest;        
         
     } fields;
     
-};
-
-/** the result of a decode operation */
-enum lora_frame_result {
-    LORA_FRAME_OK,      /**< frame is OK */
-    LORA_FRAME_BAD,     /**< frame format is bad */    
-    LORA_FRAME_MIC      /**< frame format is OK but MIC check failed */
+    /** true if MIC validated */
+    bool valid;    
 };
 
 /* function prototypes ************************************************/
 
-/** encode a frame
+/** encode a data frame
+ *
+ * @param[in] type type of data frame
+ * @param[in] key
+ * @param[in] f     frame parameter structure
+ * @param[out] out  frame buffer
+ * @param[in] max   maximum byte length of `out`
+ *
+ * @return bytes encoded
+ *
+ * @retval 0 frame could not be encoded
+ *
+ * */
+size_t Frame_putData(enum lora_frame_type type, const void *key, const struct lora_frame_data *f, void *out, size_t max);
+
+/** encode a join request frame
  *
  * @param[in] key
  * @param[in] f     frame parameter structure
@@ -115,7 +124,21 @@ enum lora_frame_result {
  * @retval 0 frame could not be encoded
  *
  * */
-uint8_t Frame_encode(const void *key, const struct lora_frame *f, uint8_t *out, uint8_t max);
+size_t Frame_putJoinRequest(const void *key, const struct lora_frame_join_request *f, void *out, size_t max);
+
+/** encode a join accept frame
+ *
+ * @param[in] key
+ * @param[in] f     frame parameter structure
+ * @param[out] out  frame buffer
+ * @param[in] max   maximum byte length of `out`
+ *
+ * @return bytes encoded
+ *
+ * @retval 0 frame could not be encoded
+ *
+ * */
+size_t Frame_putJoinAccept(const void *key, const struct lora_frame_join_accept *f, void *out, size_t max);
 
 /** decode a frame
  *
@@ -126,14 +149,10 @@ uint8_t Frame_encode(const void *key, const struct lora_frame *f, uint8_t *out, 
  * @param[in] len       byte length of `in`
  * @param[out] f        decoded frame structure
  *
- * @return lora_frame_result
- *
- * @retval LORA_FRAME_OK    frame decoded without any problems
- * @retval LORA_FRAME_BAD   frame format is bad
- * @retval LORA_FRAME_MIC   frame format OK but MIC check failed
+ * @return true if frame well formed
  *
  * */
-enum lora_frame_result Frame_decode(const void *appKey, const void *nwkSKey, const void *appSKey, void *in, uint8_t len, struct lora_frame *f);
+bool Frame_decode(const void *appKey, const void *nwkSKey, const void *appSKey, void *in, size_t len, struct lora_frame *f);
 
 /** calculate size of the PhyPayload
  *
@@ -143,9 +162,16 @@ enum lora_frame_result Frame_decode(const void *appKey, const void *nwkSKey, con
  * @return PhyPayload size in bytes
  *
  * */
-uint16_t Frame_getPhyPayloadSize(uint8_t dataLen, uint8_t optsLen);
+size_t Frame_getPhyPayloadSize(size_t dataLen, size_t optsLen);
 
-bool Frame_isUpstream(enum message_type type);
+/** Is this frame an upstream or downstream frame type?
+ * 
+ * @param[in] type
+ * 
+ * @return true if frame type is an upstream frame type
+ * 
+ * */
+bool Frame_isUpstream(enum lora_frame_type type);
 
 #ifdef __cplusplus
 }

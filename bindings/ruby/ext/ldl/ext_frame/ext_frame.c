@@ -42,7 +42,7 @@ static VALUE cEUI64;
 static const struct {
         
     VALUE *klass;
-    enum message_type type;
+    enum lora_frame_type type;
 
 } map[] = {
     {
@@ -77,8 +77,8 @@ static const uint8_t default_key[] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x
 
 static VALUE _decode(int argc, VALUE *argv, VALUE self);
 
-static VALUE frameTypeToKlass(enum message_type type);
-static bool klassToFrameType(VALUE klass, enum message_type *type);
+static VALUE frameTypeToKlass(enum lora_frame_type type);
+static bool klassToFrameType(VALUE klass, enum lora_frame_type *type);
 
 static VALUE _encode_data(VALUE self);
 static VALUE _encode_join_accept(VALUE self);
@@ -117,7 +117,6 @@ void Init_ext_frame(void)
 static VALUE _decode(int argc, VALUE *argv, VALUE self)
 {
     struct lora_frame f;
-    enum lora_frame_result result;
     
     VALUE nwkSKey;
     VALUE appSKey;
@@ -182,16 +181,17 @@ static VALUE _decode(int argc, VALUE *argv, VALUE self)
     
     VALUE mutable = rb_str_new(RSTRING_PTR(input), RSTRING_LEN(input));
         
-    switch(Frame_decode(RSTRING_PTR(rb_funcall(appKey, rb_intern("value"), 0)), RSTRING_PTR(rb_funcall(nwkSKey, rb_intern("value"), 0)), RSTRING_PTR(rb_funcall(appSKey, rb_intern("value"), 0)), RSTRING_PTR(mutable), RSTRING_LEN(mutable), &f)){
-    case LORA_FRAME_OK:
-        break;    
-    case LORA_FRAME_MIC:
-        rb_funcall(rb_cObject, rb_intern("raise"), 1, rb_funcall(cError, rb_intern("new"), 1, rb_str_new2("invalid MIC")));
-        break;
-    case LORA_FRAME_BAD:
-    default:
+    if(Frame_decode(RSTRING_PTR(rb_funcall(appKey, rb_intern("value"), 0)), RSTRING_PTR(rb_funcall(nwkSKey, rb_intern("value"), 0)), RSTRING_PTR(rb_funcall(appSKey, rb_intern("value"), 0)), RSTRING_PTR(mutable), RSTRING_LEN(mutable), &f)){
+    
+        if(!f.valid){
+            
+            rb_funcall(rb_cObject, rb_intern("raise"), 1, rb_funcall(cError, rb_intern("new"), 1, rb_str_new2("invalid MIC")));
+        }
+    
+    }
+    else{
+        
         rb_funcall(rb_cObject, rb_intern("raise"), 1, rb_funcall(cError, rb_intern("new"), 1, rb_str_new2("bad frame")));
-        break;
     }
     
     param = rb_hash_new();
@@ -250,12 +250,12 @@ static VALUE _decode(int argc, VALUE *argv, VALUE self)
     return rb_class_new_instance(sizeof(args)/sizeof(*args),args,klass);
 }
 
-static VALUE frameTypeToKlass(enum message_type type)
+static VALUE frameTypeToKlass(enum lora_frame_type type)
 {
     return *map[type].klass;
 }
 
-static bool klassToFrameType(VALUE klass, enum message_type *type)
+static bool klassToFrameType(VALUE klass, enum lora_frame_type *type)
 {
     size_t i;
     bool retval = false;
@@ -278,7 +278,7 @@ static VALUE _encode_join_req(VALUE self)
     uint8_t out[UINT8_MAX];
     uint8_t len;
     
-    struct lora_frame f;
+    struct lora_frame_join_request f;
     
     VALUE appKey;
     VALUE retval;
@@ -294,12 +294,11 @@ static VALUE _encode_join_req(VALUE self)
     devEUI = rb_iv_get(self, "@devEUI");
     devNonce = rb_iv_get(self, "@devNonce");
         
-    f.type = FRAME_TYPE_JOIN_REQ;
-    f.fields.joinRequest.devNonce = NUM2UINT(devNonce);            
-    (void)memcpy(f.fields.joinRequest.appEUI, RSTRING_PTR(appEUI), sizeof(f.fields.joinRequest.appEUI));
-    (void)memcpy(f.fields.joinRequest.appEUI, RSTRING_PTR(devEUI), sizeof(f.fields.joinRequest.devEUI));
+    f.devNonce = NUM2UINT(devNonce);            
+    (void)memcpy(f.appEUI, RSTRING_PTR(appEUI), sizeof(f.appEUI));
+    (void)memcpy(f.appEUI, RSTRING_PTR(devEUI), sizeof(f.devEUI));
             
-    len = Frame_encode(RSTRING_PTR(rb_funcall(appKey, rb_intern("value"), 0)), &f, out, sizeof(out));
+    len = Frame_putJoinRequest(RSTRING_PTR(rb_funcall(appKey, rb_intern("value"), 0)), &f, out, sizeof(out));
     
     assert(len != 0U);
     
@@ -313,7 +312,7 @@ static VALUE _encode_join_accept(VALUE self)
     uint8_t out[UINT8_MAX];
     uint8_t len;
     
-    struct lora_frame f;
+    struct lora_frame_join_accept f;
     
     VALUE appKey;
     VALUE retval;
@@ -336,18 +335,17 @@ static VALUE _encode_join_accept(VALUE self)
     netID = rb_iv_get(self, "@netID");
     devAddr = rb_iv_get(self, "@devAddr");
         
-    assert(RSTRING_LEN(cfList) <= sizeof(f.fields.joinAccept.cfList));
+    assert(RSTRING_LEN(cfList) <= sizeof(f.cfList));
     
-    f.type = FRAME_TYPE_JOIN_REQ;
-    f.fields.joinAccept.rx1DataRateOffset = NUM2UINT(rx1DataRateOffset);
-    f.fields.joinAccept.rx2DataRate = NUM2UINT(rx2DataRate);
-    f.fields.joinAccept.rxDelay = NUM2UINT(rxDelay);
-    (void)memcpy(f.fields.joinAccept.cfList, RSTRING_PTR(cfList), RSTRING_LEN(cfList));
-    f.fields.joinAccept.appNonce = NUM2UINT(appNonce);
-    f.fields.joinAccept.netID = NUM2UINT(netID);
-    f.fields.joinAccept.devAddr = NUM2UINT(devAddr);
+    f.rx1DataRateOffset = NUM2UINT(rx1DataRateOffset);
+    f.rx2DataRate = NUM2UINT(rx2DataRate);
+    f.rxDelay = NUM2UINT(rxDelay);
+    (void)memcpy(f.cfList, RSTRING_PTR(cfList), RSTRING_LEN(cfList));
+    f.appNonce = NUM2UINT(appNonce);
+    f.netID = NUM2UINT(netID);
+    f.devAddr = NUM2UINT(devAddr);
     
-    len = Frame_encode(RSTRING_PTR(rb_funcall(appKey, rb_intern("value"), 0)), &f, out, sizeof(out));
+    len = Frame_putJoinAccept(RSTRING_PTR(rb_funcall(appKey, rb_intern("value"), 0)), &f, out, sizeof(out));
     
     assert(len != 0U);
     
@@ -359,12 +357,12 @@ static VALUE _encode_join_accept(VALUE self)
 
 static VALUE _encode_data(VALUE self)
 {
-    enum message_type type;
+    enum lora_frame_type type;
     uint8_t out[UINT8_MAX];
     
     uint8_t len;
     
-    struct lora_frame f;
+    struct lora_frame_data f;
         
     VALUE nwkSKey;
     VALUE appSKey;
@@ -400,23 +398,21 @@ static VALUE _encode_data(VALUE self)
     
     counter = rb_iv_get(self, "@counter");
     
-    f.type = type;
+    f.devAddr = NUM2UINT(devAddr);
+    f.counter = NUM2UINT(counter);
+    f.ack = (ack == Qtrue) ? true : false;
+    f.adr = (adr == Qtrue) ? true : false;
+    f.adrAckReq = (adrAckReq == Qtrue) ? true : false;
+    f.pending = (pending == Qtrue) ? true : false;
     
-    f.fields.data.devAddr = NUM2UINT(devAddr);
-    f.fields.data.counter = NUM2UINT(counter);
-    f.fields.data.ack = (ack == Qtrue) ? true : false;
-    f.fields.data.adr = (adr == Qtrue) ? true : false;
-    f.fields.data.adrAckReq = (adrAckReq == Qtrue) ? true : false;
-    f.fields.data.pending = (pending == Qtrue) ? true : false;
+    f.opts = (opts != Qnil) ? (uint8_t *)RSTRING_PTR(opts) : NULL;
+    f.optsLen = (opts != Qnil) ? RSTRING_LEN(opts) : 0U;             
     
-    f.fields.data.opts = (opts != Qnil) ? (uint8_t *)RSTRING_PTR(opts) : NULL;
-    f.fields.data.optsLen = (opts != Qnil) ? RSTRING_LEN(opts) : 0U;             
-    
-    f.fields.data.data = (data != Qnil) ? (uint8_t *)RSTRING_PTR(data) : NULL;
-    f.fields.data.dataLen = (data != Qnil) ? RSTRING_LEN(data) : 0U;
-    f.fields.data.port = (port != Qnil) ? NUM2UINT(port) : 0U;
+    f.data = (data != Qnil) ? (uint8_t *)RSTRING_PTR(data) : NULL;
+    f.dataLen = (data != Qnil) ? RSTRING_LEN(data) : 0U;
+    f.port = (port != Qnil) ? NUM2UINT(port) : 0U;
 
-    len = Frame_encode((f.fields.data.port == 0) ? RSTRING_PTR(nwkSKey) : RSTRING_PTR(appSKey), &f, out, sizeof(out));
+    len = Frame_putData(type, (f.port == 0) ? RSTRING_PTR(nwkSKey) : RSTRING_PTR(appSKey), &f, out, sizeof(out));
     
     assert(len != 0U);
     

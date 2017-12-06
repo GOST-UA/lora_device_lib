@@ -49,15 +49,16 @@ static void Frame_encode_unconfirmedUp(void)
     const uint8_t payload[] = "hello world";
     const uint8_t key[] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
     
-    struct lora_frame f;
+    struct lora_frame_data f;
+    enum lora_frame_type type;
     
     (void)memset(&f, 0, sizeof(f));
     
-    f.type = FRAME_TYPE_DATA_UNCONFIRMED_UP;
-    f.fields.data.data = payload;
-    f.fields.data.dataLen = sizeof(payload)-1;
+    type = FRAME_TYPE_DATA_UNCONFIRMED_UP;
+    f.data = payload;
+    f.dataLen = sizeof(payload)-1;
     
-    retval = Frame_encode(key, &f, buffer, sizeof(buffer));
+    retval = Frame_putData(type, key, &f, buffer, sizeof(buffer));
     
     print_hex(__FUNCTION__, buffer, retval);
 }
@@ -69,16 +70,17 @@ static void Frame_encode_unconfirmedUp_upCount(void)
     const uint8_t payload[] = "hello world";
     const uint8_t key[] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
     
-    struct lora_frame f;
+    struct lora_frame_data f;
+    enum lora_frame_type type;
     
     (void)memset(&f, 0, sizeof(f));
     
-    f.type = FRAME_TYPE_DATA_UNCONFIRMED_UP;
-    f.fields.data.data = payload;
-    f.fields.data.dataLen = sizeof(payload)-1;
-    f.fields.data.counter = 256;
+    type = FRAME_TYPE_DATA_UNCONFIRMED_UP;
+    f.data = payload;
+    f.dataLen = sizeof(payload)-1;
+    f.counter = 256;
     
-    retval = Frame_encode(key, &f, buffer, sizeof(buffer));
+    retval = Frame_putData(type, key, &f, buffer, sizeof(buffer));
     
     print_hex(__FUNCTION__, buffer, retval);
 }
@@ -89,13 +91,14 @@ static void Frame_encode_unconfirmedUp_empty(void)
     uint8_t buffer[UINT8_MAX];
     const uint8_t key[] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
     
-    struct lora_frame f;
+    struct lora_frame_data f;
+    enum lora_frame_type type;
     
     (void)memset(&f, 0, sizeof(f));
     
-    f.type = FRAME_TYPE_DATA_UNCONFIRMED_UP;
+    type = FRAME_TYPE_DATA_UNCONFIRMED_UP;
     
-    retval = Frame_encode(key, &f, buffer, sizeof(buffer));
+    retval = Frame_putData(type, key, &f, buffer, sizeof(buffer));
     
     print_hex(__FUNCTION__, buffer, retval);
 }
@@ -108,17 +111,18 @@ static void Frame_encode_unconfirmedUp_withOpts(void)
     const uint8_t opts[] = "hello";
     const uint8_t key[] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
     
-    struct lora_frame f;
+    struct lora_frame_data f;
+    enum lora_frame_type type;
     
     (void)memset(&f, 0, sizeof(f));
     
-    f.type = FRAME_TYPE_DATA_UNCONFIRMED_UP;
-    f.fields.data.data = data;
-    f.fields.data.dataLen = sizeof(data)-1U;
-    f.fields.data.opts = opts;
-    f.fields.data.optsLen = sizeof(opts)-1U;
+    type = FRAME_TYPE_DATA_UNCONFIRMED_UP;
+    f.data = data;
+    f.dataLen = sizeof(data)-1U;
+    f.opts = opts;
+    f.optsLen = sizeof(opts)-1U;
     
-    retval = Frame_encode(key, &f, buffer, sizeof(buffer));
+    retval = Frame_putData(type, key, &f, buffer, sizeof(buffer));
     
     print_hex(__FUNCTION__, buffer, retval);
 }
@@ -131,18 +135,19 @@ static void Frame_encode_unconfirmedUp_withOpts_upCount(void)
     const uint8_t opts[] = "hello";
     const uint8_t key[] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
     
-    struct lora_frame f;
+    struct lora_frame_data f;
+    enum lora_frame_type type;
     
     (void)memset(&f, 0, sizeof(f));
     
-    f.type = FRAME_TYPE_DATA_UNCONFIRMED_UP;
-    f.fields.data.data = data;
-    f.fields.data.dataLen = sizeof(data)-1U;
-    f.fields.data.opts = opts;
-    f.fields.data.optsLen = sizeof(opts)-1U;
-    f.fields.data.counter = 1U;
+    type = FRAME_TYPE_DATA_UNCONFIRMED_UP;
+    f.data = data;
+    f.dataLen = sizeof(data)-1U;
+    f.opts = opts;
+    f.optsLen = sizeof(opts)-1U;
+    f.counter = 1U;
     
-    retval = Frame_encode(key, &f, buffer, sizeof(buffer));
+    retval = Frame_putData(type, key, &f, buffer, sizeof(buffer));
     
     print_hex(__FUNCTION__, buffer, retval);
 }
@@ -153,13 +158,13 @@ static void Frame_encode_joinReq(void)
     uint8_t buffer[UINT8_MAX];
     const uint8_t key[] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
     
-    struct lora_frame f;
+    struct lora_frame_join_request f;
     
     (void)memset(&f, 0, sizeof(f));
     
     f.type = FRAME_TYPE_JOIN_REQ;
     
-    retval = Frame_encode(key, &f, buffer, sizeof(buffer));
+    retval = Frame_putJoinRequest(key, &f, buffer, sizeof(buffer));
     
     print_hex(__FUNCTION__, buffer, retval);
 }
@@ -170,13 +175,11 @@ static void Frame_encode_joinAccept(void)
     uint8_t buffer[UINT8_MAX];
     const uint8_t key[] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
     
-    struct lora_frame f;
+    struct lora_frame_join_accept f;
     
     (void)memset(&f, 0, sizeof(f));
     
-    f.type = FRAME_TYPE_JOIN_ACCEPT;
-    
-    retval = Frame_encode(key, &f, buffer, sizeof(buffer));
+    retval = Frame_putJoinAccept(key, &f, buffer, sizeof(buffer));
     
     print_hex(__FUNCTION__, buffer, retval);
 }
@@ -187,14 +190,13 @@ static void Frame_encode_joinAccept_withCFList(void)
     uint8_t buffer[UINT8_MAX];
     const uint8_t key[] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
     
-    struct lora_frame f;
+    struct lora_frame_join_accept f;
     
     (void)memset(&f, 0, sizeof(f));
     
-    f.type = FRAME_TYPE_JOIN_ACCEPT;
-    f.fields.joinAccept.cfListLen = sizeof(f.fields.joinAccept.cfList);
+    f.cfListLen = sizeof(f.fields.joinAccept.cfList);
     
-    retval = Frame_encode(key, &f, buffer, sizeof(buffer));
+    retval = Frame_putJoinAccept(key, &f, buffer, sizeof(buffer));
     
     print_hex(__FUNCTION__, buffer, retval);
 }
@@ -207,18 +209,18 @@ static void Frame_encode_croft_example(void)
     //const uint8_t key[] = "\x2B\x7E\x15\x16\x28\xAE\xD2\xA6\xAB\xF7\x15\x88\x09\xCF\x4F\x3C";
     const uint8_t key[] = {0x2B,0x7E,0x15,0x16,0x28,0xAE,0xD2,0xA6,0xAB,0xF7,0x15,0x88,0x09,0xCF,0x4F,0x3C};
     
-    struct lora_frame f;
+    struct lora_frame_data f;
     
     (void)memset(&f, 0, sizeof(f));
     
-    f.type = FRAME_TYPE_DATA_CONFIRMED_UP;
-    f.fields.data.devAddr = 0x07BB778F;
-    f.fields.data.counter = 2;
-    f.fields.data.port = 6;
-    f.fields.data.data = payload;
-    f.fields.data.dataLen = sizeof(payload)-1;
+    type = FRAME_TYPE_DATA_CONFIRMED_UP;
+    f.devAddr = 0x07BB778F;
+    f.counter = 2;
+    f.port = 6;
+    f.data = payload;
+    f.dataLen = sizeof(payload)-1;
     
-    retval = Frame_encode(key, &f, buffer, sizeof(buffer));
+    retval = Frame_putData(type, key, &f, buffer, sizeof(buffer));
     
     print_hex(__FUNCTION__, buffer, retval);
 }

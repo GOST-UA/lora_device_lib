@@ -6,8 +6,9 @@
 
 #include "lora_radio.h"
 
-void Radio_init(struct lora_radio *self, const struct lora_board *board)
+struct lora_radio * Radio_init(struct lora_radio *self, const struct lora_board *board)
 {
+    return self;
 }
 
 uint32_t Radio_resetHardware(struct lora_radio *self)
