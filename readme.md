@@ -5,24 +5,20 @@ A LoRaWAN device implementation still in an early stage of development.
 
 [![Build Status](https://travis-ci.org/cjhdev/lora_device_lib.svg?branch=master)](https://travis-ci.org/cjhdev/lora_device_lib)
 
+
 ## Highlights
 
 - Support for class A
 - Event driven style
 - Modular implementation
-    - Chanel List
-    - MAC
-    - MAC Commands
-    - Event Manager
-    - Region Database
-        - EU_863_870
-    - Radio
-        - SX1272
-    - Frame Codec
-    - AES and CMAC implementation
-- Build-time Porting features
-    - Replace AES and CMAC implementations
-    - Replace logging and assert functions
+- Support for SX1272
+- Multiple Region database
+    - EU_863_870
+- Build-time features
+    - optional AVR specific optimisations
+    - optional Device specific optimisations
+    - optional asserts and logs
+    - optionally replace built-in cryptography
 - Tests utilising the Cmocka framework
 - Ruby binding for accelerated integration testing and simulation
 
@@ -132,6 +128,13 @@ See [lora_system.h](include/lora_system.h).
 
 ### Optional
 
+#### Define LORA_DEVICE
+
+Define this macro to remove code that isn't needed by (most) device implementations.
+
+- Often you only need one half of a codec for a device
+- Whole codecs are nice for code reuse and testing
+
 #### Define LORA_DEBUG_INCLUDE
 
 Define this macro to be a filename you want to `#include` at the top of 
@@ -170,6 +173,12 @@ Define this macro to be an assert-like function that performs run-time asserts o
 - pendantic asserts are useful for development but not essential for production
 
 See [lora_debug.h](include/lora_debug.h).
+
+#### Define LORA_AVR
+
+Define this macro to enable AVR specific avr-gcc optimisations.
+
+- Uses PROGMEM where appropriate
 
 #### Substitute an Alternative AES Implementation
 
