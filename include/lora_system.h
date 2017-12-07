@@ -27,6 +27,7 @@ extern "C" {
 #endif
 
 #include <stdint.h>
+#include <stddef.h>
 
 
 /** Retrieve system time in microseconds
