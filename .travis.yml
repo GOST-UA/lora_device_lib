@@ -10,8 +10,8 @@ script:
     - cd ..
     - cd bindings/ruby
     - bundle install
-    - bundle rake compile
-    - bundle rake
+    - bundle exec rake compile
+    - bundle exec rake
 
     
     
