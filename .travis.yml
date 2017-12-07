@@ -9,8 +9,9 @@ script:
     - make coverage
     - cd ..
     - cd bindings/ruby
-    - rake compile
-    - rake
+    - bundle install
+    - bundle rake compile
+    - bundle rake
 
     
     
