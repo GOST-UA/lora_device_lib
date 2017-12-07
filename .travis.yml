@@ -7,6 +7,9 @@ script:
     - cd test
     - make build_and_run
     - make coverage
+    - cd bindings/ruby
+    - rake compile
+    - rake
 
     
     
