@@ -1,5 +1,7 @@
 require File.expand_path("../lib/ldl/version", __FILE__)
 
+require 'time'
+
 Gem::Specification.new do |s|
     s.name    = "ldl"
     s.version = LDL::VERSION
