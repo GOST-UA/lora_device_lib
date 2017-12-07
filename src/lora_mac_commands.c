@@ -32,35 +32,29 @@ struct type_to_tag {
 static uint8_t typeToTag(enum lora_mac_cmd_type type);    
 static bool tagToType(uint8_t tag, enum lora_mac_cmd_type *type);
 
-static bool putU24(struct lora_stream *self, uint32_t in);
-static bool putU16(struct lora_stream *self, uint16_t in);
 static bool putU8(struct lora_stream *self, uint8_t in);
-
 static bool getU8(struct lora_stream *self, uint8_t *out);
 static bool getU16(struct lora_stream *self, uint16_t *out);
 static bool getU24(struct lora_stream *self, uint32_t *out);
 
 static bool getLinkCheckAns(struct lora_stream *s, struct lora_link_check_ans *value);
-
 static bool getLinkADRReq(struct lora_stream *s, struct lora_link_adr_req *value);
-static bool getLinkADRAns(struct lora_stream *s, struct lora_link_adr_ans *value);
-
 static bool getRXParamSetupReq(struct lora_stream *s, struct lora_rx_param_setup_req *value);
-static bool getRXParamSetupAns(struct lora_stream *s, struct lora_rx_param_setup_ans *value);
-
-static bool getDevStatusAns(struct lora_stream *s, struct lora_dev_status_ans *value);
-
 static bool getNewChannelReq(struct lora_stream *s, struct lora_new_channel_req *value);
-static bool getNewChannelAns(struct lora_stream *s, struct lora_new_channel_ans *value);
-
 static bool getDLChannelReq(struct lora_stream *s, struct lora_dl_channel_req *value);
-static bool getDLChannelAns(struct lora_stream *s, struct lora_dl_channel_ans *value);
-
 static bool getRXTimingSetupReq(struct lora_stream *s, struct lora_rx_timing_setup_req *value);
-
 static bool getTXParamSetupReq(struct lora_stream *s, struct lora_tx_param_setup_req *value);
-
 static bool getDutyCycleReq(struct lora_stream *s, struct lora_duty_cycle_req *value);
+
+#if !defined(LORA_DEVICE)
+static bool getLinkADRAns(struct lora_stream *s, struct lora_link_adr_ans *value);
+static bool getRXParamSetupAns(struct lora_stream *s, struct lora_rx_param_setup_ans *value);
+static bool getDevStatusAns(struct lora_stream *s, struct lora_dev_status_ans *value);
+static bool getNewChannelAns(struct lora_stream *s, struct lora_new_channel_ans *value);
+static bool getDLChannelAns(struct lora_stream *s, struct lora_dl_channel_ans *value);
+static bool putU24(struct lora_stream *self, uint32_t in);
+static bool putU16(struct lora_stream *self, uint16_t in);
+#endif
 
 static const struct type_to_tag tags[] = {
     {2U, LINK_CHECK},
@@ -85,6 +79,105 @@ bool MAC_putLinkCheckReq(struct lora_stream *s)
     return putU8(s, typeToTag(LINK_CHECK));
 }
 
+bool MAC_putLinkADRAns(struct lora_stream *s, const struct lora_link_adr_ans *value)
+{
+    bool retval = false;
+    uint8_t buf;
+    
+    if(putU8(s, typeToTag(LINK_ADR))){
+        
+        buf = (value->powerOK ? 4U : 0U) | (value->dataRateOK ? 2U : 0U) | (value->channelMaskOK ? 1U : 0U);
+            
+        if(putU8(s, buf)){
+            
+            retval = true;
+        }
+    }
+    
+    return retval;
+}
+
+bool MAC_putDutyCycleAns(struct lora_stream *s)
+{
+    return putU8(s, typeToTag(DUTY_CYCLE));
+}
+
+bool MAC_putRXParamSetupAns(struct lora_stream *s, const struct lora_rx_param_setup_ans *value)
+{
+    bool retval = false;
+    
+    if(putU8(s, typeToTag(RX_PARAM_SETUP))){
+            
+        if(putU8(s, (value->rx1DROffsetOK ? 4U : 0U) | (value->rx2DataRateOK ? 2U : 0U) | (value->channelOK ? 1U : 0U))){
+            
+            retval = true;
+        }
+    }
+    
+    return retval;
+}
+
+bool MAC_putDevStatusAns(struct lora_stream *s, const struct lora_dev_status_ans *value)
+{
+    bool retval = false;
+    
+    if(putU8(s, typeToTag(DEV_STATUS))){
+    
+        if(putU8(s, value->battery)){
+        
+            if(putU8(s, value->margin)){
+                
+                retval = true;
+            }
+        }
+    }
+    
+    return retval;
+}
+
+
+bool MAC_putNewChannelAns(struct lora_stream *s, const struct lora_new_channel_ans *value)
+{
+    bool retval = false;
+    
+    if(putU8(s, typeToTag(NEW_CHANNEL))){
+    
+        if(putU8(s, (value->dataRateRangeOK ? 2U : 0U) | (value->channelFrequencyOK ? 1U : 0U))){
+            
+            retval = true;
+        }
+    }
+    
+    return retval;
+}
+
+
+bool MAC_putDLChannelAns(struct lora_stream *s, const struct lora_dl_channel_ans *value)
+{
+    bool retval = false;
+    
+    if(putU8(s, typeToTag(DL_CHANNEL))){
+    
+        if(putU8(s, (value->uplinkFreqOK ? 2U : 0U) | (value->channelFrequencyOK ? 1U : 0U))){
+            
+            retval = true;
+        }
+    }
+    
+    return retval;
+}
+
+bool MAC_putRXTimingSetupAns(struct lora_stream *s)
+{
+    return putU8(s, typeToTag(RX_TIMING_SETUP));
+}
+
+bool MAC_putTXParamSetupAns(struct lora_stream *s)
+{
+    return putU8(s, typeToTag(TX_PARAM_SETUP));
+}
+
+#if !defined(LORA_DEVICE)
 bool MAC_putLinkCheckAns(struct lora_stream *s, const struct lora_link_check_ans *value)
 {
     bool retval = false;
@@ -124,24 +217,6 @@ bool MAC_putLinkADRReq(struct lora_stream *s, const struct lora_link_adr_req *va
     return retval;
 }
 
-bool MAC_putLinkADRAns(struct lora_stream *s, const struct lora_link_adr_ans *value)
-{
-    bool retval = false;
-    uint8_t buf;
-    
-    if(putU8(s, typeToTag(LINK_ADR))){
-        
-        buf = (value->powerOK ? 4U : 0U) | (value->dataRateOK ? 2U : 0U) | (value->channelMaskOK ? 1U : 0U);
-            
-        if(putU8(s, buf)){
-            
-            retval = true;
-        }
-    }
-    
-    return retval;
-}
-    
 bool MAC_putDutyCycleReq(struct lora_stream *s, const struct lora_duty_cycle_req *value)
 {
     bool retval = false;
@@ -155,11 +230,6 @@ bool MAC_putDutyCycleReq(struct lora_stream *s, const struct lora_duty_cycle_req
     }
     
     return retval;
-}
-
-bool MAC_putDutyCycleAns(struct lora_stream *s)
-{
-    return putU8(s, typeToTag(DUTY_CYCLE));
 }
 
 bool MAC_putRXParamSetupReq(struct lora_stream *s, const struct lora_rx_param_setup_req *value)
@@ -180,45 +250,11 @@ bool MAC_putRXParamSetupReq(struct lora_stream *s, const struct lora_rx_param_se
     return retval;
 }
 
-bool MAC_putRXParamSetupAns(struct lora_stream *s, const struct lora_rx_param_setup_ans *value)
-{
-    bool retval = false;
-    
-    if(putU8(s, typeToTag(RX_PARAM_SETUP))){
-            
-        if(putU8(s, (value->rx1DROffsetOK ? 4U : 0U) | (value->rx2DataRateOK ? 2U : 0U) | (value->channelOK ? 1U : 0U))){
-            
-            retval = true;
-        }
-    }
-    
-    return retval;
-}
-
-
 bool MAC_putDevStatusReq(struct lora_stream *s)
 {
     return putU8(s, typeToTag(DEV_STATUS));
 }
 
-
-bool MAC_putDevStatusAns(struct lora_stream *s, const struct lora_dev_status_ans *value)
-{
-    bool retval = false;
-    
-    if(putU8(s, typeToTag(DEV_STATUS))){
-    
-        if(putU8(s, value->battery)){
-        
-            if(putU8(s, value->margin)){
-                
-                retval = true;
-            }
-        }
-    }
-    
-    return retval;
-}
 
 bool MAC_putNewChannelReq(struct lora_stream *s, const struct lora_new_channel_req *value)
 {
@@ -235,21 +271,6 @@ bool MAC_putNewChannelReq(struct lora_stream *s, const struct lora_new_channel_r
                     retval = true;
                 }                    
             }
-        }
-    }
-    
-    return retval;
-}
-
-bool MAC_putNewChannelAns(struct lora_stream *s, const struct lora_new_channel_ans *value)
-{
-    bool retval = false;
-    
-    if(putU8(s, typeToTag(NEW_CHANNEL))){
-    
-        if(putU8(s, (value->dataRateRangeOK ? 2U : 0U) | (value->channelFrequencyOK ? 1U : 0U))){
-            
-            retval = true;
         }
     }
     
@@ -274,19 +295,19 @@ bool MAC_putDLChannelReq(struct lora_stream *s, const struct lora_dl_channel_req
     return retval;
 }
 
-bool MAC_putDLChannelAns(struct lora_stream *s, const struct lora_dl_channel_ans *value)
+bool MAC_putTXParamSetupReq(struct lora_stream *s, const struct lora_tx_param_setup_req *value)
 {
     bool retval = false;
     
-    if(putU8(s, typeToTag(DL_CHANNEL))){
+    if(putU8(s, typeToTag(TX_PARAM_SETUP))){
     
-        if(putU8(s, (value->uplinkFreqOK ? 2U : 0U) | (value->channelFrequencyOK ? 1U : 0U))){
+        if(putU8(s, (value->downlinkDwell ? 0x20U : 0U) | (value->uplinkDwell ? 0x10U : 0U) | value->maxEIRP )){
             
             retval = true;
         }
     }
     
-    return retval;
+    return retval;    
 }
 
 bool MAC_putRXTimingSetupReq(struct lora_stream *s, const struct lora_rx_timing_setup_req *value)
@@ -303,31 +324,7 @@ bool MAC_putRXTimingSetupReq(struct lora_stream *s, const struct lora_rx_timing_
     
     return retval;
 }
-
-bool MAC_putRXTimingSetupAns(struct lora_stream *s)
-{
-    return putU8(s, typeToTag(RX_TIMING_SETUP));
-}
-
-bool MAC_putTXParamSetupReq(struct lora_stream *s, const struct lora_tx_param_setup_req *value)
-{
-    bool retval = false;
-    
-    if(putU8(s, typeToTag(TX_PARAM_SETUP))){
-    
-        if(putU8(s, (value->downlinkDwell ? 0x20U : 0U) | (value->uplinkDwell ? 0x10U : 0U) | value->maxEIRP )){
-            
-            retval = true;
-        }
-    }
-    
-    return retval;    
-}
-
-bool MAC_putTXParamSetupAns(struct lora_stream *s)
-{
-    return putU8(s, typeToTag(TX_PARAM_SETUP));
-}
+#endif
 
 bool MAC_eachDownstreamCommand(void *receiver, const uint8_t *data, uint8_t len, void (*handler)(void *, const struct lora_downstream_cmd *))
 {
@@ -412,6 +409,7 @@ bool MAC_eachDownstreamCommand(void *receiver, const uint8_t *data, uint8_t len,
     return retval;
 }
 
+#if !defined(LORA_DEVICE)
 bool MAC_eachUpstreamCommand(void *receiver, const uint8_t *data, uint8_t len, void (*handler)(void *, const struct lora_upstream_cmd *))
 {
     uint8_t tag;
@@ -482,9 +480,9 @@ bool MAC_eachUpstreamCommand(void *receiver, const uint8_t *data, uint8_t len, v
     
     return retval;
 }
+#endif
 
 /* static functions ***************************************************/
-
 
 static uint8_t typeToTag(enum lora_mac_cmd_type type)
 {
@@ -508,6 +506,115 @@ static bool tagToType(uint8_t tag, enum lora_mac_cmd_type *type)
     
     return retval;
 }
+
+#if !defined(LORA_DEVICE)
+static bool getLinkADRAns(struct lora_stream *s, struct lora_link_adr_ans *value)
+{
+    bool retval = false;
+    
+    uint8_t buf;
+    
+    if(getU8(s, &buf)){
+    
+        value->powerOK = ((buf & 4U) == 4U);
+        value->dataRateOK = ((buf & 2U) == 2U);
+        value->channelMaskOK = ((buf & 1U) == 1U);
+        
+        retval = true;        
+    }
+    
+    return retval;
+}
+
+static bool getRXParamSetupAns(struct lora_stream *s, struct lora_rx_param_setup_ans *value)
+{
+    bool retval = false;
+    
+    uint8_t buf;
+    
+    if(getU8(s, &buf)){
+    
+        value->rx1DROffsetOK = ((buf & 4U) == 4U);
+        value->rx2DataRateOK = ((buf & 2U) == 2U);
+        value->channelOK = ((buf & 1U) == 1U);
+        
+        retval = true;        
+    }
+    
+    return retval;
+}
+
+static bool getDevStatusAns(struct lora_stream *s, struct lora_dev_status_ans *value)
+{
+    bool retval = false;
+    
+    if(getU8(s, &value->battery)){
+        
+        if(getU8(s, &value->margin)){
+            
+            retval = true;
+        }
+    }
+    
+    return retval;
+}
+
+static bool getNewChannelAns(struct lora_stream *s, struct lora_new_channel_ans *value)
+{
+    bool retval = false;
+    
+    uint8_t buf;
+    
+    if(getU8(s, &buf)){
+    
+        value->dataRateRangeOK = ((buf & 2U) == 2U);
+        value->channelFrequencyOK = ((buf & 1U) == 1U);
+        
+        retval = true;        
+    }
+    
+    return retval;
+}
+
+static bool getDLChannelAns(struct lora_stream *s, struct lora_dl_channel_ans *value)
+{
+    bool retval = false;
+    
+    uint8_t buf;
+    
+    if(getU8(s, &buf)){
+    
+        value->channelFrequencyOK = ((buf & 2U) == 2U);
+        value->uplinkFreqOK = ((buf & 1U) == 1U);
+        
+        retval = true;        
+    }
+    
+    return retval;
+}
+
+static bool putU24(struct lora_stream *self, uint32_t in)
+{
+    uint8_t out[] = {
+        in, 
+        in >> 8,
+        in >> 16
+    };
+    
+    return Stream_write(self, out, sizeof(out));
+}
+
+static bool putU16(struct lora_stream *self, uint16_t in)
+{
+    uint8_t out[] = {
+        in, 
+        in >> 8        
+    };
+    
+    return Stream_write(self, out, sizeof(out));
+}
+
+#endif
 
 static bool getLinkCheckAns(struct lora_stream *s, struct lora_link_check_ans *value)
 {
@@ -548,24 +655,6 @@ static bool getLinkADRReq(struct lora_stream *s, struct lora_link_adr_req *value
     return retval;
 }
 
-static bool getLinkADRAns(struct lora_stream *s, struct lora_link_adr_ans *value)
-{
-    bool retval = false;
-    
-    uint8_t buf;
-    
-    if(getU8(s, &buf)){
-    
-        value->powerOK = ((buf & 4U) == 4U);
-        value->dataRateOK = ((buf & 2U) == 2U);
-        value->channelMaskOK = ((buf & 1U) == 1U);
-        
-        retval = true;        
-    }
-    
-    return retval;
-}
-
 static bool getDutyCycleReq(struct lora_stream *s, struct lora_duty_cycle_req *value)
 {
     bool retval = false;
@@ -594,39 +683,6 @@ static bool getRXParamSetupReq(struct lora_stream *s, struct lora_rx_param_setup
     return retval;    
 }
 
-static bool getRXParamSetupAns(struct lora_stream *s, struct lora_rx_param_setup_ans *value)
-{
-    bool retval = false;
-    
-    uint8_t buf;
-    
-    if(getU8(s, &buf)){
-    
-        value->rx1DROffsetOK = ((buf & 4U) == 4U);
-        value->rx2DataRateOK = ((buf & 2U) == 2U);
-        value->channelOK = ((buf & 1U) == 1U);
-        
-        retval = true;        
-    }
-    
-    return retval;
-}
-
-static bool getDevStatusAns(struct lora_stream *s, struct lora_dev_status_ans *value)
-{
-    bool retval = false;
-    
-    if(getU8(s, &value->battery)){
-        
-        if(getU8(s, &value->margin)){
-            
-            retval = true;
-        }
-    }
-    
-    return retval;
-}
-
 static bool getNewChannelReq(struct lora_stream *s, struct lora_new_channel_req *value)
 {
     bool retval = false;
@@ -649,23 +705,6 @@ static bool getNewChannelReq(struct lora_stream *s, struct lora_new_channel_req 
     return retval;
 }
 
-static bool getNewChannelAns(struct lora_stream *s, struct lora_new_channel_ans *value)
-{
-    bool retval = false;
-    
-    uint8_t buf;
-    
-    if(getU8(s, &buf)){
-    
-        value->dataRateRangeOK = ((buf & 2U) == 2U);
-        value->channelFrequencyOK = ((buf & 1U) == 1U);
-        
-        retval = true;        
-    }
-    
-    return retval;
-}
-
 static bool getDLChannelReq(struct lora_stream *s, struct lora_dl_channel_req *value)
 {
     bool retval = false;
@@ -676,23 +715,6 @@ static bool getDLChannelReq(struct lora_stream *s, struct lora_dl_channel_req *v
         
             retval = true;                                
         }
-    }
-    
-    return retval;
-}
-
-static bool getDLChannelAns(struct lora_stream *s, struct lora_dl_channel_ans *value)
-{
-    bool retval = false;
-    
-    uint8_t buf;
-    
-    if(getU8(s, &buf)){
-    
-        value->channelFrequencyOK = ((buf & 2U) == 2U);
-        value->uplinkFreqOK = ((buf & 1U) == 1U);
-        
-        retval = true;        
     }
     
     return retval;
@@ -710,6 +732,7 @@ static bool getRXTimingSetupReq(struct lora_stream *s, struct lora_rx_timing_set
     
     return retval;
 }
+
 static bool getTXParamSetupReq(struct lora_stream *s, struct lora_tx_param_setup_req *value)
 {
     bool retval = false;
@@ -794,27 +817,6 @@ static bool getBeaconFreqAns(struct lora_stream *s, struct lora_beacon_freq_ans 
 }
 
 #endif
-
-static bool putU24(struct lora_stream *self, uint32_t in)
-{
-    uint8_t out[] = {
-        in, 
-        in >> 8,
-        in >> 16
-    };
-    
-    return Stream_write(self, out, sizeof(out));
-}
-
-static bool putU16(struct lora_stream *self, uint16_t in)
-{
-    uint8_t out[] = {
-        in, 
-        in >> 8        
-    };
-    
-    return Stream_write(self, out, sizeof(out));
-}
 
 static bool putU8(struct lora_stream *self, uint8_t in)
 {

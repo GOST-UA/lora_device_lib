@@ -1,3 +1,5 @@
+*.map
+*.elf
 *.gem
 *.o
 *.so

@@ -111,6 +111,7 @@ size_t Frame_putJoinRequest(const void *key, const struct lora_frame_join_reques
     return pos;
 }
 
+#if !defined(LORA_DEVICE)
 size_t Frame_putJoinAccept(const void *key, const struct lora_frame_join_accept *f, void *out, size_t max)
 {
     size_t pos = 0U;    
@@ -151,6 +152,7 @@ size_t Frame_putJoinAccept(const void *key, const struct lora_frame_join_accept 
     
     return pos;    
 }
+#endif
 
 bool Frame_decode(const void *appKey, const void *nwkSKey, const void *appSKey, void *in, size_t len, struct lora_frame *f)
 {
@@ -217,7 +219,7 @@ bool Frame_decode(const void *appKey, const void *nwkSKey, const void *appSKey, 
             
                 if(((len-pos) == 16U) || ((len-pos) == 32U)){
                     
-                    uint8_t dlSettings;
+                    uint8_t dlSettings = 0U;
                     struct lora_aes_ctx aes_ctx;   
                                  
                     LoraAES_init(&aes_ctx, appKey);
@@ -262,7 +264,7 @@ bool Frame_decode(const void *appKey, const void *nwkSKey, const void *appSKey, 
 
                 if((len-pos) >= (4U + 1U + 2U + 4U)){
             
-                    uint8_t fhdr;
+                    uint8_t fhdr = 0U;
                     const uint8_t *key;
 
                     pos += getU32(&ptr[pos], len - pos, &f->fields.data.devAddr);

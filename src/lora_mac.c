@@ -52,6 +52,8 @@ static void collect(struct lora_mac *self);
 
 static void abandonSequence(struct lora_mac *self);
 
+static void processCommands(struct lora_mac *self, const uint8_t *data, uint8_t len);
+
 /* functions **********************************************************/
 
 void MAC_init(struct lora_mac *self, struct lora_channel_list *channels, struct lora_radio *radio, struct lora_event *events)
@@ -672,7 +674,7 @@ static void collect(struct lora_mac *self)
                 
                     if(validateDownCount(self, result.fields.data.counter)){
                 
-                        //MAC_processCommands(self, result.fields.data.opts, result.fields.data.optsLen);
+                        processCommands(self, result.fields.data.opts, result.fields.data.optsLen);
                         
                         if(result.fields.data.data != NULL){
                 
@@ -691,7 +693,7 @@ static void collect(struct lora_mac *self)
                             }
                             else{
                                                                 
-                                //MAC_processCommands(self, result.fields.data.data, result.fields.data.dataLen);
+                                processCommands(self, result.fields.data.data, result.fields.data.dataLen);
                             }
                         }
                     }
@@ -707,6 +709,11 @@ static void collect(struct lora_mac *self)
             break;
         }
     }
+}
+
+static void processCommands(struct lora_mac *self, const uint8_t *data, uint8_t len)
+{
+    (void)MAC_eachDownstreamCommand(self, data, len, NULL);
 }
 
 static void abandonSequence(struct lora_mac *self)
