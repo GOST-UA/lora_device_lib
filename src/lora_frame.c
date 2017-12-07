@@ -332,11 +332,14 @@ bool Frame_decode(const void *appKey, const void *nwkSKey, const void *appSKey, 
     return retval;
 }
 
+#if 0
+// appears to be useless
 size_t Frame_getPhyPayloadSize(size_t dataLen, size_t optsLen)
 {
     /* MHDR + DevAddr + Fctrl + Fcnt + MIC */
     return (1U + 4U + 1U + 2U + 4U) + ((dataLen > 0U) ? 1U : 0U) + dataLen + optsLen;
 }
+#endif
 
 bool Frame_isUpstream(enum lora_frame_type type)
 {

@@ -101,7 +101,6 @@ bool MAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *d
     LORA_PEDANTIC((len == 0) || (data != NULL))
     
     bool retval = false;
-    uint16_t bufferMax = Frame_getPhyPayloadSize(0, len);
     
     struct lora_channel_setting settings;
     const struct lora_data_rate *rate_setting;
@@ -120,7 +119,7 @@ bool MAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *d
                     
                     LORA_PEDANTIC(rate_setting != NULL)
                     
-                    if(rate_setting->payload >= bufferMax){ 
+                    if(rate_setting->payload >= len){ 
 
                         f.devAddr = self->devAddr;
                         f.counter = (uint32_t)getUpCount(self);
