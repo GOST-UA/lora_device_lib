@@ -53,6 +53,7 @@ static void collect(struct lora_mac *self);
 
 static void abandonSequence(struct lora_mac *self);
 
+static void handleCommands(void *receiver, const struct lora_downstream_cmd *cmd);
 static void processCommands(struct lora_mac *self, const uint8_t *data, uint8_t len);
 
 /* functions **********************************************************/
@@ -607,54 +608,6 @@ static void collect(struct lora_mac *self)
         
             if(self->joinPending){
                 
-                struct lora_aes_ctx aes_ctx;
-                struct lora_cmac_ctx cmac_ctx;
-                uint8_t block[16U];
-                
-                LoraAES_init(&aes_ctx, self->appKey);
-                
-                block[0] = 1U;
-                block[1] = result.fields.joinAccept.appNonce;
-                block[2] = result.fields.joinAccept.appNonce >> 8;
-                block[3] = result.fields.joinAccept.appNonce >> 16;
-                block[4] = result.fields.joinAccept.netID;
-                block[5] = result.fields.joinAccept.netID >> 8;
-                block[6] = result.fields.joinAccept.netID >> 16;
-                block[7] = self->devNonce;
-                block[8] = self->devNonce >> 8;                    
-                block[9] = 0U;                    
-                block[10] = 0U;                    
-                block[11] = 0U;                    
-                block[12] = 0U;                    
-                block[13] = 0U;                    
-                block[14] = 0U;                    
-                block[15] = 0U;                    
-                
-                LoraCMAC_init(&cmac_ctx, &aes_ctx); 
-                LoraCMAC_update(&cmac_ctx, block, sizeof(block));
-                LoraCMAC_finish(&cmac_ctx, self->nwkSKey, sizeof(self->nwkSKey));
-                
-                block[0] = 2U;
-                block[1] = result.fields.joinAccept.appNonce;
-                block[2] = result.fields.joinAccept.appNonce >> 8;
-                block[3] = result.fields.joinAccept.appNonce >> 16;
-                block[4] = result.fields.joinAccept.netID;
-                block[5] = result.fields.joinAccept.netID >> 8;
-                block[6] = result.fields.joinAccept.netID >> 16;
-                block[7] = self->devNonce;
-                block[8] = self->devNonce >> 8;                    
-                block[9] = 0U;                    
-                block[10] = 0U;                    
-                block[11] = 0U;                    
-                block[12] = 0U;                    
-                block[13] = 0U;                    
-                block[14] = 0U;                    
-                block[15] = 0U;                    
-                
-                LoraCMAC_init(&cmac_ctx, &aes_ctx); 
-                LoraCMAC_update(&cmac_ctx, block, sizeof(block));
-                LoraCMAC_finish(&cmac_ctx, self->appSKey, sizeof(self->appSKey));
-                
                 self->joinPending = false;
                 self->joined = true;                
                 
@@ -712,9 +665,56 @@ static void collect(struct lora_mac *self)
     }
 }
 
+static void handleCommands(void *receiver, const struct lora_downstream_cmd *cmd)
+{
+    struct lora_mac *self = (struct lora_mac *)receiver;
+    
+    switch(cmd->type){
+    default:
+    case LINK_CHECK:
+        
+        self->linkStatus.margin = cmd->fields.linkCheckAns.margin;
+        self->linkStatus.gwCount = cmd->fields.linkCheckAns.gwCount;        
+        //maybe reply?
+        break;
+        
+    case LINK_ADR:                    
+        //these need be processed as a transaction
+        break;
+    
+    case DUTY_CYCLE:                
+        
+        break;
+    
+    case RX_PARAM_SETUP:
+    
+        break;
+    
+    case DEV_STATUS:
+    
+        break;
+    
+    case NEW_CHANNEL:
+        //ChannelList_add(self->channels, cmd->fields.newChannelReq.chIndex, cmd->fields.newChannelReq.freq);
+        break;
+        
+    case DL_CHANNEL:
+    
+        break;
+    
+    case RX_TIMING_SETUP:
+    
+        break;
+    
+    case TX_PARAM_SETUP:
+        
+        break;
+    }    
+}
+
 static void processCommands(struct lora_mac *self, const uint8_t *data, uint8_t len)
 {
-    (void)MAC_eachDownstreamCommand(self, data, len, NULL);
+    (void)MAC_eachDownstreamCommand(self, data, len, handleCommands);
 }
 
 static void abandonSequence(struct lora_mac *self)

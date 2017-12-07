@@ -89,6 +89,14 @@ struct lora_mac {
 
     enum states state;
     
+    struct {
+        
+        uint8_t gwCount;
+        uint8_t margin;
+        uint32_t time;
+    
+    } linkStatus;
+    
     uint8_t rate;
     uint8_t power;
     

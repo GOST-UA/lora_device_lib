@@ -19,8 +19,8 @@
  *
  * */
 
-#ifndef LORA_MAX_COMMANDS_H
-#define LORA_MAX_COMMANDS_H
+#ifndef LORA_MAC_COMMANDS_H
+#define LORA_MAC_COMMANDS_H
 
 #include <stdint.h>
 #include <stdbool.h>
