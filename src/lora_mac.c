@@ -28,6 +28,7 @@
 #include "lora_cmac.h"
 #include "lora_system.h"
 #include "lora_region.h"
+#include "lora_mac_commands.h"
 
 #include <string.h>
 

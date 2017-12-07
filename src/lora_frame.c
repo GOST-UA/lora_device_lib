@@ -197,7 +197,10 @@ bool Frame_decode(const void *appKey, const void *nwkSKey, const void *appSKey, 
             switch(f->type){
             default:        
             case FRAME_TYPE_JOIN_REQ:
-                
+
+#if defined(LORA_DEVICE)            
+                LORA_ERROR("device does not need to decode a join-request")
+#else                            
                 if(len >= 23U){
                 
                     pos += getEUI(&ptr[pos], len - pos, f->fields.joinRequest.appEUI);
@@ -213,6 +216,7 @@ bool Frame_decode(const void *appKey, const void *nwkSKey, const void *appSKey, 
                     
                     LORA_ERROR("unexpected frame length for join request")
                 }
+#endif                
                 break;
     
             case FRAME_TYPE_JOIN_ACCEPT:

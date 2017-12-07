@@ -36,18 +36,6 @@ struct lora_mac;
 #define INTERVAL_RX1    1000
 #define INTERVAL_RX2    1000
 
-enum mac_cmd_type {
-    LINK_CHECK,
-    LINK_ADR,
-    DUTY_CYCLE,
-    RX_PARAM_SETUP,
-    DEV_STATUS,
-    NEW_CHANNEL,
-    RX_TIMING_SETUP,
-    TX_PARAM_SETUP,
-    DL_CHANNEL
-};
-
 enum lora_mac_response_type {
     LORA_MAC_TX_COMPLETE,
     LORA_MAC_TX_CONFIRMED,
