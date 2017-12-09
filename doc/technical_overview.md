@@ -5,7 +5,7 @@ Technical Overview
 
 LDL breaks the problem into standalone modules which can be mocked out during testing:
 
-![image missing](doc/plantuml/modules.png "LoraDeviceLib Modules")
+![image missing](/doc/plantuml/modules.png "LoraDeviceLib Modules")
 
 LDL is intended to be driven from two tasks - an _interrupt_ level task and a _mainloop_ level task.
 
@@ -18,15 +18,15 @@ will always use atomic operations when accessing these sections.
 
 All _mainloop_ code runs from calls to EventManager.tick():
 
-![image missing](doc/plantuml/event_tick.png "EventManger Tick")
+![image missing](/doc/plantuml/event_tick.png "EventManger Tick")
 
 Below is a simplified sequence of sending data:
 
-![image missing](doc/plantuml/tick_upstream.png "Upstream")
+![image missing](/doc/plantuml/tick_upstream.png "Upstream")
 
 Below is a simplified sequence of recieving data:
 
-![image missing](doc/plantuml/tick_downstream.png "Downstream")
+![image missing](/doc/plantuml/tick_downstream.png "Downstream")
 
 ## Timing Requirements
 
@@ -37,7 +37,7 @@ jitter to when LDL can open the RX window.
 
 The diagram below illustrates the TX -> RX1 -> RX2 pattern:
 
-![image missing](doc/plantuml/rx_windows.png "RX Timing")
+![image missing](/doc/plantuml/rx_windows.png "RX Timing")
 
 The architecture handles RX windows as follows:
 
