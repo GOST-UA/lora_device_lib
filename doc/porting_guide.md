@@ -15,25 +15,25 @@ To optimise LDL, you should consider items in the optional list.
 
 This function must return the DevEUI.
 
-See [lora_system.h](include/lora_system.h).
+See [lora_system.h](/include/lora_system.h).
 
 #### Implement System_getAppEUI()
 
 This function must return the AppEUI
 
-See [lora_system.h](include/lora_system.h).
+See [lora_system.h](/include/lora_system.h).
 
 #### Implement System_getAppKey()
 
 This function must return the AppKey.
 
-See [lora_system.h](include/lora_system.h).
+See [lora_system.h](/include/lora_system.h).
 
 #### Implement System_getTime()
 
 This function must return system time (e.g. time since power up) in microseconds.
 
-See [lora_system.h](include/lora_system.h).
+See [lora_system.h](/include/lora_system.h).
 
 #### Implement System_usleep()
 
@@ -42,13 +42,13 @@ This function must cause the program counter to block for an interval of microse
 - LDL may use this for fine timing adjustments where setting a timer event callback
   would take too long
 
-See [lora_system.h](include/lora_system.h).
+See [lora_system.h](/include/lora_system.h).
 
 #### Implement System_atomic_setPtr()
 
 This function must atomically write value to the receiver memory location.
 
-See [lora_system.h](include/lora_system.h).
+See [lora_system.h](/include/lora_system.h).
 
 ## Optional
 
@@ -70,7 +70,7 @@ for the regions you want to support:
 - `LORA_REGION_KR_920_923`
 
 Note that if none of these macros are defined, 
-LDL will define `LORA_REGION_ALL` in [lora_region.h](include/lora_region.h).
+LDL will define `LORA_REGION_ALL` in [lora_region.h](/include/lora_region.h).
 
 #### Define LORA_DEVICE
 
@@ -82,31 +82,31 @@ Define this macro to remove code that isn't needed by (most) device implementati
 #### Define LORA_DEBUG_INCLUDE
 
 Define this macro to be a filename you want to `#include` at the top of 
-[lora_debug.h](include/lora_debug.h).
+[lora_debug.h](/include/lora_debug.h).
 
 #### Define LORA_ERROR(...)
 
 Define this macro to be a printf-like function that captures error level messages at run-time.
 
-See [lora_debug.h](include/lora_debug.h).
+See [lora_debug.h](/include/lora_debug.h).
 
 #### Define LORA_DEBUG(...)
 
 Define this macro to be a printf-like function that captures debug level messages at run-time.
 
-See [lora_debug.h](include/lora_debug.h).
+See [lora_debug.h](/include/lora_debug.h).
 
 #### Define LORA_INFO(...)
 
 Define this macro to be a printf-like function that captures info level messages at run-time.
 
-See [lora_debug.h](include/lora_debug.h).
+See [lora_debug.h](/include/lora_debug.h).
 
 #### Define LORA_ASSERT(X)
 
 Define this macro to be an assert-like function that performs run-time asserts on 'X'.
 
-See [lora_debug.h](include/lora_debug.h).
+See [lora_debug.h](/include/lora_debug.h).
 
 - non-pedantic asserts are useful for development and recommended for production
 
@@ -116,7 +116,7 @@ Define this macro to be an assert-like function that performs run-time asserts o
 
 - pendantic asserts are useful for development but not essential for production
 
-See [lora_debug.h](include/lora_debug.h).
+See [lora_debug.h](/include/lora_debug.h).
 
 #### Define LORA_AVR
 
@@ -130,7 +130,7 @@ Define this macro to enable AVR specific avr-gcc optimisations.
 2. Define `struct lora_aes_ctx` to suit the platform implementation
 3. Implement `LoraAES_init` and `LoraAES_encrypt` to wrap platform implementation
 
-See [lora_aes.h](include/lora_aes.h).
+See [lora_aes.h](/include/lora_aes.h).
 
 #### Substitute an Alternative CMAC Implementation
 
@@ -138,7 +138,7 @@ See [lora_aes.h](include/lora_aes.h).
 2. Define `struct lora_cmac_ctx` to suit the platform implementation
 3. Implement `LoraCMAC_init`, `LoraCMAC_update`, and `LoraCMAC_finish` to wrap platform implementation
 
-See [lora_cmac.h](include/lora_cmac.h).
+See [lora_cmac.h](/include/lora_cmac.h).
 
 #### Customise lora_radio_sx1272
 
@@ -146,4 +146,4 @@ See [lora_cmac.h](include/lora_cmac.h).
     - Define this symbol if your hardware makes use of the BOOST pin
     - If not defined, radio will use the RFO pin
         
-See [lora_radio_sx1272.c](include/lora_radio_sx1272.h).
+See [lora_radio_sx1272.c](/include/lora_radio_sx1272.h).
