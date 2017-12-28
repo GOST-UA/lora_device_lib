@@ -4,7 +4,7 @@
 
 #include "cmocka.h"
 
-#include "lora_device_lib.h"
+#include "lora_mac.h"
 #include "lora_radio_sx1272.h"
 
 static const uint8_t eui[] = "\x00\x00\x00\x00\x00\x00\x00\x00";
@@ -22,7 +22,7 @@ static void test_init(void **user)
     will_return(System_getDevEUI, eui);
     will_return(System_getAppKey, appKey);
     
-    LDL_init(&self, EU_863_870, &radio);
+    MAC_init(&self, EU_863_870, &radio);
 }
 
 int main(void)

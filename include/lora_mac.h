@@ -22,6 +22,10 @@
 #ifndef LORA_MAC_H
 #define LORA_MAC_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "lora_region.h"
 #include "lora_radio.h"
 #include "lora_event.h"
@@ -56,8 +60,6 @@ typedef void (*lora_mac_response_fn)(void *receiver, enum lora_mac_response_type
 enum lora_mac_state {
 
     IDLE,
-    
-    RSSI_RANDOM,    // getting a 'random' seed from the radio
     
     WAIT_TX,
     TX,         // radio is TX
@@ -168,5 +170,16 @@ bool MAC_join(struct lora_mac *self);
 void MAC_radioEvent(void *receiver, enum lora_radio_event event, uint64_t time);
 
 uint32_t MAC_calculateOnAirTime(enum lora_signal_bandwidth bw, enum lora_spreading_factor sf, uint8_t payloadLen);
+
+void MAC_tick(struct lora_mac *self);
+
+bool MAC_addChannel(struct lora_mac *self, uint8_t chIndex, uint32_t freq, uint8_t minRate, uint8_t maxRate);
+void MAC_unmaskChannel(struct lora_mac *self, uint8_t chIndex);
+bool MAC_maskChannel(struct lora_mac *self, uint8_t chIndex);
+void MAC_removeChannel(struct lora_mac *self, uint8_t chIndex);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

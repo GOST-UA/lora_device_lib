@@ -19,11 +19,11 @@ A LoRaWAN device implementation still in an early stage of development.
 
 ## Porting Guide
 
-See [doc/porting_guide.md](doc/technical_overview.md).
+See [doc/porting_guide.md](doc/porting_guide.md).
 
 ## Technical Overview
 
-See [doc/technical_overview.md](doc/porting_guide.md).
+See [doc/technical_overview.md](doc/technical_overview.md).
 
 ## License
 

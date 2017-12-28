@@ -109,11 +109,9 @@ uint16_t System_getDown(void *owner);
 
 /** Receive a downcounter value
  * 
- * @param[in] owner
- * @param[in] counter
  * 
  * */
-void System_setDown(void *owner, uint16_t counter);
+bool System_receiveDown(void *owner, uint16_t counter, uint16_t maxGap);
 
 /** Reset teh the down counter
  * 

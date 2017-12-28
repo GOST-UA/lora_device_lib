@@ -36,19 +36,15 @@ struct param_store {
     uint8_t rx1_delay;
     uint8_t rx2_delay;
     
-    uint8_t adr_ack_limit;  
-    uint8_t adr_ack_delay;  
-    uint8_t adr_ack_timeout;    
-    uint8_t adr_ack_dither;     
-    
     uint32_t rx2_freq;
     uint8_t rx2_rate;     
     
     uint16_t crc;
 };
 
-uint16_t upcounter[5U] EEMEM;
-uint16_t downcounter[1U] EEMEM;
+/*todo wear level*/
+uint16_t upCounter EEMEM;
+uint16_t downCounter EEMEM;
 
 static struct param_store params EEMEM;
 
@@ -88,11 +84,6 @@ bool System_setChannel(void *owner, uint8_t chIndex, uint32_t freq, uint8_t minR
     }
     
     return retval;
-}
-
-bool System_removeChannel(void *owner, uint8_t chIndex)
-{
-    return System_setChannel(owner, chIndex, 0U, 0U, 0U); 
 }
 
 bool System_maskChannel(void *owner, uint8_t chIndex)
@@ -260,26 +251,34 @@ uint16_t System_getDown(void *owner)
     return 0U;
 }
 
-uint16_t System_getUp(void *owner)
-{
-    return 0U;
-}
-
 void System_resetUp(void *owner)
 {
+    eeprom_write_word(&upCounter, 0U);
 }
 
 void System_resetDown(void *owner)
 {
+    eeprom_write_word(&downCounter, 0U);
 }
 
 uint16_t System_incrementUp(void *owner)
 {
-    return 0U;
+    uint16_t value = eeprom_read_word(&upCounter);    
+    eeprom_update_word(&upCounter, value + 1U);
+    return value;
 }
 
-void System_setDown(void *owner, uint16_t counter)
+bool System_receiveDown(void *owner, uint16_t counter, uint16_t maxGap)
 {
+    bool retval = false;
+    uint16_t value = eeprom_read_word(&downCounter);
+    
+    if((uint32_t)counter < ((uint32_t)value + (uint32_t)maxGap)){
+        
+        eeprom_write_word(&downCounter, counter);
+    }
+    
+    return retval;
 }
 
 void System_logLinkStatus(void *owner, uint8_t margin, uint8_t gwCount)

@@ -9,7 +9,6 @@
 #include <avr/wdt.h>
 
 #define BAUD 9600U
-#define F_CPU 8000000U
 
 static void responseHandler(void *receiver, enum lora_mac_response_type type, const union lora_mac_response_arg *arg);
 

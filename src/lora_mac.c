@@ -56,8 +56,6 @@ static void addDefaultChannel(void *receiver, uint8_t chIndex, uint32_t freq, ui
 static bool getChannel(struct lora_mac *self, uint8_t chIndex, uint32_t *freq, uint8_t *minRate, uint8_t *maxRate);
 static bool isAvailable(struct lora_mac *self, uint8_t chIndex, uint64_t timeNow, uint8_t rate);
 
-static bool validateDownCount(struct lora_mac *self, uint16_t counter);
-
 /* functions **********************************************************/
 
 void MAC_init(struct lora_mac *self, enum lora_region_id region, struct lora_radio *radio)
@@ -309,6 +307,59 @@ uint32_t MAC_calculateOnAirTime(enum lora_signal_bandwidth bw, enum lora_spreadi
     }
 
     return Tpacket;
+}
+
+void MAC_tick(struct lora_mac *self)
+{
+    Event_tick(&self->events);
+}
+
+bool MAC_addChannel(struct lora_mac *self, uint8_t chIndex, uint32_t freq, uint8_t minRate, uint8_t maxRate)
+{
+    bool retval = false;
+    
+    if(Region_isDynamic(self->region)){
+
+        if(Region_validateFreq(self->region, chIndex, freq)){
+            
+            if(Region_validateRate(self->region, chIndex, minRate, maxRate)){
+
+                retval = System_addChannel(self, chIndex, freq, minRate, maxRate);                                 
+            }
+            else{
+                
+                LORA_ERROR("invalid rate")
+            }
+        }
+        else{
+            
+            LORA_ERROR("invalid frequency")
+        }
+    }
+    else{
+        
+        LORA_ERROR("region is not dynamic")
+    }
+    
+    return retval;
+}
+
+void MAC_removeChannel(struct lora_mac *self, uint8_t chIndex)
+{    
+    if(Region_isDynamic(self->region)){
+        
+        (void)System_setChannel(self, chIndex, 0U, 0U, 0U);
+    }    
+}
+
+bool MAC_maskChannel(struct lora_mac *self, uint8_t chIndex)
+{
+    return System_maskChannel(self, chIndex);
+}
+
+void MAC_unmaskChannel(struct lora_mac *self, uint8_t chIndex)
+{
+    return System_unmaskChannel(self, chIndex);
 }
 
 /* static functions ***************************************************/
@@ -623,8 +674,8 @@ static void collect(struct lora_mac *self)
             
                 if(System_getDevAddr(self) == result.fields.data.devAddr){
                 
-                    if(validateDownCount(self, result.fields.data.counter)){
-                
+                    if(System_receiveDown(self, result.fields.data.counter, Region_getMaxFCNTGap(self->region))){
+                    
                         processCommands(self, result.fields.data.opts, result.fields.data.optsLen);
                         
                         if(result.fields.data.data != NULL){
@@ -857,18 +908,5 @@ static bool getChannel(struct lora_mac *self, uint8_t chIndex, uint32_t *freq, u
         retval = Region_getChannel(self->region, chIndex, freq, minRate, maxRate);                        
     }
      
-    return retval;
-}
-
-static bool validateDownCount(struct lora_mac *self, uint16_t counter)
-{
-    bool retval = false;
-    
-    if((uint32_t)counter < ((uint32_t)System_getDown(self) + (uint32_t)Region_getMaxFCNTGap(self->region))){
-        
-        retval = true;
-        System_setDown(self, counter);
-    }
-    
     return retval;
 }

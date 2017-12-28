@@ -13,12 +13,14 @@ INCLUDES += -I.
 SRC := $(notdir $(wildcard $(DIR_ROOT)/src/*.c)) mega_demo.c system.c store.c
 OBJ := $(SRC:.c=.o)
 
-CFLAGS += -mmcu=atmega328p
+MCU := atmega328p
+
+CFLAGS += -mmcu=$(MCU)
 CFLAGS += -Os -Wall -std=gnu99
 CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums 
 CFLAGS += $(INCLUDES)
 
-CFLAGS += -DF_CPU=16000000U
+CFLAGS += -DF_CPU=8000000U
 
 # only include code useful to a device
 CFLAGS += -DLORA_DEVICE	
@@ -37,3 +39,6 @@ $(DIR_BUILD)/%.o: %.c
 clean:
 	@ echo cleaning up objects
 	@ rm -f $(DIR_BUILD)/*
+
+size: mega_demo.elf
+	avr-size --format=avr --mcu=$(MCU) $^
