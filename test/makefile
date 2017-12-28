@@ -63,14 +63,6 @@ coverage:
 clean:
 	rm -f $(DIR_BUILD)/*
 
-$(DIR_BIN)/tc_channellist_add: $(addprefix $(DIR_BUILD)/, tc_channellist_add.o lora_channel_list.o mock_lora_region.o $(OBJ_CMOCKA))
-	@ echo linking $@
-	@ $(CC) $(LDFLAGS) $^ -o $@
-
-$(DIR_BIN)/tc_channellist_waittime: $(addprefix $(DIR_BUILD)/, tc_channellist_waittime.o lora_channel_list.o mock_lora_region.o $(OBJ_CMOCKA))
-	@ echo linking $@
-	@ $(CC) $(LDFLAGS) $^ -o $@
-
 $(DIR_BIN)/tc_aes: $(addprefix $(DIR_BUILD)/, tc_aes.o lora_aes.o $(OBJ_CMOCKA))
 	@ echo linking $@
 	@ $(CC) $(LDFLAGS) $^ -o $@
@@ -95,7 +87,7 @@ $(DIR_BIN)/tc_event: $(addprefix $(DIR_BUILD)/, tc_event.o lora_event.o mock_lor
 	@ echo linking $@
 	@ $(CC) $(LDFLAGS) $^ -o $@
 
-$(DIR_BIN)/tc_mac: $(addprefix $(DIR_BUILD)/, tc_mac.o lora_mac.o mock_lora_region.o mock_lora_aes.o mock_lora_cmac.o mock_lora_system.o mock_lora_radio.o mock_lora_event.o mock_lora_channel_list.o mock_lora_frame.o $(OBJ_CMOCKA))
+$(DIR_BIN)/tc_mac: $(addprefix $(DIR_BUILD)/, tc_mac.o lora_mac.o mock_lora_region.o mock_lora_aes.o mock_lora_cmac.o mock_lora_system.o mock_lora_radio.o mock_lora_event.o mock_lora_frame.o $(OBJ_CMOCKA))
 	@ echo linking $@
 	@ $(CC) $(LDFLAGS) $^ -o $@
 

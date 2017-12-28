@@ -5,7 +5,6 @@
 #include "cmocka.h"
 
 #include "lora_mac.h"
-#include "lora_channel_list.h"
 #include "lora_radio_sx1272.h"
 #include "lora_event.h"
 
@@ -17,16 +16,13 @@ static const uint8_t appKey[] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0
 static int setup_MAC(void **user)
 {
     static struct lora_mac self;
-    static struct lora_channel_list channels;
     static struct lora_radio radio;
-    static struct lora_event events;
     
-    will_return(ChannelList_region, NULL);
     will_return(System_getAppEUI, eui);
     will_return(System_getDevEUI, eui);
     will_return(System_getAppKey, appKey);
     
-    MAC_init(&self, &channels, &radio, &events);
+    MAC_init(&self, EU_863_870, &radio);
     
     *user = (void *)&self;
     
@@ -36,16 +32,13 @@ static int setup_MAC(void **user)
 static void test_MAC_init(void **user)
 {
     struct lora_mac self;
-    struct lora_channel_list channels;
     struct lora_radio radio;
-    struct lora_event events;    
     
-    will_return(ChannelList_region, NULL);
     will_return(System_getAppEUI, eui);
     will_return(System_getDevEUI, eui);
     will_return(System_getAppKey, appKey);
     
-    MAC_init(&self, &channels, &radio, &events);
+    MAC_init(&self, EU_863_870, &radio);
 }
 
 static void test_MAC_personalize(void **user)

@@ -10,7 +10,7 @@ VPATH += .
 INCLUDES += -I$(DIR_ROOT)/include
 INCLUDES += -I.
 
-SRC := $(notdir $(wildcard $(DIR_ROOT)/src/*.c)) mega_demo.c
+SRC := $(notdir $(wildcard $(DIR_ROOT)/src/*.c)) mega_demo.c system.c store.c
 OBJ := $(SRC:.c=.o)
 
 CFLAGS += -mmcu=atmega328p
@@ -18,11 +18,13 @@ CFLAGS += -Os -Wall -std=gnu99
 CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums 
 CFLAGS += $(INCLUDES)
 
+CFLAGS += -DF_CPU=16000000U
+
 # only include code useful to a device
 CFLAGS += -DLORA_DEVICE	
 
 # avr-gcc specific optimisations
-CFLAGS += -DLORA_AVR=PROGMEM
+CFLAGS += -DLORA_AVR
 
 mega_demo.elf: $(addprefix $(DIR_BUILD)/, $(OBJ))
 	@ echo building $@

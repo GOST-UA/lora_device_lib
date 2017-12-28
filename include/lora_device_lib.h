@@ -28,14 +28,12 @@ extern "C" {
 
 #include "lora_mac.h"
 #include "lora_event.h"
-#include "lora_channel_list.h"
 #include "lora_radio.h"
 #include "lora_region.h"
 
 struct lora_device_lib {
     
     struct lora_mac mac;
-    struct lora_channel_list channels;
     struct lora_event events;    
 };
 

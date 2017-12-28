@@ -127,37 +127,3 @@ ISR(D4){
 
 #endif
 
-
-uint64_t System_getTime(void)
-{
-    return 0U;
-}
-
-void System_usleep(uint32_t interval)
-{
-}
-
-void System_atomic_setPtr(void **receiver, void *value)
-{
-    *receiver = value;
-}
-
-void System_rand(uint8_t *data, size_t len)
-{
-    (void)memset(data, 0, len);
-}
-
-void System_getAppEUI(void *owner, uint8_t *eui)
-{
-    (void)memset(eui, 0, 8U);
-}
-
-void System_getDevEUI(void *owner, uint8_t *eui)
-{
-    (void)memset(eui, 0, 8U);
-}
-
-void System_getAppKey(void *owner, uint8_t *key)
-{
-    (void)memset(key, 0, 16U);
-}

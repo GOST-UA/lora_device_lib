@@ -111,14 +111,14 @@ size_t Frame_putJoinRequest(const void *key, const struct lora_frame_join_reques
     return pos;
 }
 
-#if !defined(LORA_DEVICE)
+#ifndef LORA_DEVICE
 size_t Frame_putJoinAccept(const void *key, const struct lora_frame_join_accept *f, void *out, size_t max)
 {
     size_t pos = 0U;    
     uint8_t *ptr = (uint8_t *)out;
     struct lora_aes_ctx aes_ctx;
     
-    if(max >= (17U + (size_t)f->cfListLen)){
+    if(max >= (17U + ( f->cfListPresent ? 16U : 0U ))){
     
         pos += putU8(&ptr[pos], max - pos, ((uint8_t)FRAME_TYPE_JOIN_ACCEPT) << 5);
         pos += putU24(&ptr[pos], max - pos, f->appNonce);
@@ -126,24 +126,26 @@ size_t Frame_putJoinAccept(const void *key, const struct lora_frame_join_accept 
         pos += putU32(&ptr[pos], max - pos, f->devAddr);
         pos += putU8(&ptr[pos], max - pos, (f->rx1DataRateOffset << 4) | (f->rx2DataRate & 0xfU));
         pos += putU8(&ptr[pos], max - pos, f->rxDelay);
-        (void)memcpy(&ptr[pos], f->cfList, f->cfListLen);
-        pos += f->cfListLen;    
+        
+        if(f->cfListPresent){
+
+            size_t i;
+            
+            for(i=0U; i < sizeof(f->cfList)/sizeof(*f->cfList); i++){
+                
+                pos += putU24(&ptr[pos], max - pos, f->cfList[i]);
+            }            
+        }
+        
         pos += putU32(&ptr[pos], max - pos, cmacJoin(key, ptr, pos));
     
         LoraAES_init(&aes_ctx, key);
         LoraAES_decrypt(&aes_ctx, &ptr[1]);
         
-        switch(f->cfListLen){
-        case 0U:            
-            break;        
-        case 16U:
+        if(f->cfListPresent){
+            
             LoraAES_decrypt(&aes_ctx, &ptr[17]);
-            break;    
-        default:
-            pos = 0U;
-            LORA_ERROR("cfListLen must be zero or 16")
-            break;
-        }
+        }    
     }
     else{
         
@@ -198,7 +200,7 @@ bool Frame_decode(const void *appKey, const void *nwkSKey, const void *appSKey, 
             default:        
             case FRAME_TYPE_JOIN_REQ:
 
-#if defined(LORA_DEVICE)            
+#ifdef LORA_DEVICE
                 LORA_ERROR("device does not need to decode a join-request")
 #else                            
                 if(len >= 23U){
@@ -229,6 +231,7 @@ bool Frame_decode(const void *appKey, const void *nwkSKey, const void *appSKey, 
                     LoraAES_init(&aes_ctx, appKey);
                     LoraAES_encrypt(&aes_ctx, &ptr[pos]);
                     if((len-pos) == 32U){                        
+                        
                         LoraAES_encrypt(&aes_ctx, &ptr[pos+16U]);
                     }
                     
@@ -244,10 +247,14 @@ bool Frame_decode(const void *appKey, const void *nwkSKey, const void *appSKey, 
                     
                      if((len - pos) > sizeof(mic)){
                  
-                        f->fields.joinAccept.cfListLen = 16U;
+                        f->fields.joinAccept.cfListPresent = true;
+                 
+                        size_t i;
                         
-                        (void)memcpy(f->fields.joinAccept.cfList, &ptr[pos], sizeof(f->fields.joinAccept.cfList));
-                        pos += sizeof(f->fields.joinAccept.cfList);            
+                        for(i=0U; i < sizeof(f->fields.joinAccept.cfList)/sizeof(*f->fields.joinAccept.cfList); i++){
+                        
+                            pos += getU24(&ptr[pos], len - pos, &f->fields.joinAccept.cfList[i]);
+                        }                            
                     }
                     
                     pos += getU32(&ptr[pos], len - pos, &mic);

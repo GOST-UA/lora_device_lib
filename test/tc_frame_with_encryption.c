@@ -85,7 +85,7 @@ static void test_Frame_encode_joinAccept_withCFList(void **user)
     
     (void)memset(&f, 0, sizeof(f));
     
-    f.cfListLen = sizeof(f.cfList);
+    f.cfListPresent = true;
     
     retval = Frame_putJoinAccept(key, &f, buffer, sizeof(buffer));
     

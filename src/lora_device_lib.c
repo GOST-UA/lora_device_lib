@@ -29,18 +29,13 @@ bool LDL_init(struct lora_device_lib *self, enum lora_region_id region_id, struc
     LORA_PEDANTIC(self != NULL)
     LORA_PEDANTIC(radio != NULL)
     
-    const struct lora_region *region;
     bool retval = false;
     
     (void)memset(self, 0, sizeof(*self));
+    
+    if(Region_getRegion(region_id)){
 
-    region = Region_getRegion(region_id);
-
-    if(region != NULL){
-
-        ChannelList_init(&self->channels, region);
-        Event_init(&self->events);
-        MAC_init(&self->mac, &self->channels, radio, &self->events);        
+        MAC_init(&self->mac, region_id, radio);        
         retval = true;        
     }
     else{
@@ -56,25 +51,27 @@ bool LDL_personalize(struct lora_device_lib *self, uint32_t devAddr, const void 
     return MAC_personalize(&self->mac, devAddr, nwkSKey, appSKey);
 }
 
+#if 0
 bool LDL_addChannel(struct lora_device_lib *self, uint32_t freq, uint8_t chIndex)
 {
-    return ChannelList_add(&self->channels, freq, chIndex);
+    return Channel_add(&self->channels, freq, chIndex);
 }
 
 void LDL_removeChannel(struct lora_device_lib *self, uint8_t chIndex)
 {
-    ChannelList_remove(&self->channels, chIndex);
+    Channel_remove(&self->channels, chIndex);
 }
 
 bool LDL_maskChannel(struct lora_device_lib *self, uint8_t chIndex)
 {
-    return ChannelList_mask(&self->channels, chIndex);
+    return Channel_mask(&self->channels, chIndex);
 }
 
 void LDL_unmaskChannel(struct lora_device_lib *self, uint8_t chIndex)
 {
-    ChannelList_unmask(&self->channels, chIndex);
+    Channel_unmask(&self->channels, chIndex);
 }
+#endif
 
 bool LDL_setRateAndPower(struct lora_device_lib *self, uint8_t rate, uint8_t power)
 {

@@ -24,17 +24,12 @@
 
 #include "lora_region.h"
 #include "lora_radio.h"
+#include "lora_event.h"
 
 #include <stdint.h>
 #include <stdbool.h>
 
-struct lora_event;
-struct lora_channeL_list;
 struct lora_mac;
-
-/* shift to region */
-#define INTERVAL_RX1    1000
-#define INTERVAL_RX2    1000
 
 enum lora_mac_response_type {
     LORA_MAC_TX_COMPLETE,
@@ -58,7 +53,7 @@ union lora_mac_response_arg {
 
 typedef void (*lora_mac_response_fn)(void *receiver, enum lora_mac_response_type type, const union lora_mac_response_arg *arg);
 
-enum states {
+enum lora_mac_state {
 
     IDLE,
     
@@ -83,79 +78,39 @@ enum states {
     ERROR
 };
 
-#define MAX_FCNT_GAP 16384U
-
 struct lora_mac {
 
-    enum states state;
-    
-    struct {
-        
-        uint8_t gwCount;
-        uint8_t margin;
-        uint32_t time;
-    
-    } linkStatus;
-    
-    uint8_t rate;
-    uint8_t power;
-    
-    uint8_t previousRate;   /**< the previous rate used */
-    uint32_t previousFreq;
-    
-    uint8_t txCount;
-
-    uint8_t devEUI[8U];
-    uint8_t appEUI[8U];
-    
-    uint8_t appKey[16U];
-
-    uint8_t nwkSKey[16U];
-    uint8_t appSKey[16U];
-    uint32_t devAddr;
-
-    uint16_t rwindow;
-    uint16_t upCounter;
-    uint16_t downCounter;
-    
-    uint16_t maxFrameCounterGap;
-    
-    uint16_t max_fcnt_gap;  /**< maximum frame counter gap */
-    
-    uint8_t rx1_delay;      /**< rx1 delay (seconds) */
-    uint8_t rx2_delay;      /**< rx2 delay (seconds) */
-    uint8_t rx2_rate;
-    uint32_t rx2_freq;
-    uint8_t rx1_offset;
-    
-    uint8_t ja1_delay;      /**< join accept 1 delay (seconds) */
-    uint8_t ja2_delay;      /**< join accept 2 delay (seconds) */
-    
-    uint8_t adr_ack_limit;  
-    uint8_t adr_ack_delay;  
-    uint8_t adr_ack_timeout;    
-    uint8_t adr_ack_dither;     
+    enum lora_mac_state state;
     
     uint64_t txCompleteTime;
     
     uint8_t buffer[UINT8_MAX];
     uint8_t bufferLen;
     
-    uint8_t nbTrans;    /**< number of transmissions for each uplink message */
+    uint64_t bands[6U];
     
-    bool joined;
-    bool personalised;
-    bool joinPending;
-    bool confirmPending;
-    bool confirmed;
+    struct {
+        
+        uint8_t chIndex;
+        uint32_t freq;
+        
+    } tx;
     
-    uint16_t devNonce;
+    struct {
+        
+        bool joined : 1U;
+        bool personalised : 1U;
+        bool joinPending : 1U;
+        bool confirmPending : 1U;
+        bool confirmed : 1U;
+    
+    } status;
     
     #define RX_WDT_INTERVAL 60000
     
-    struct lora_channel_list *channels;
     struct lora_radio *radio;
-    struct lora_event *events;
+    struct lora_event events;
+    const struct lora_region *region;
     
     /* these are references to events that we may want to cancel */
     void *rxReady;
@@ -167,7 +122,7 @@ struct lora_mac {
     void *responseReceiver;
 };
 
-void MAC_init(struct lora_mac *self, struct lora_channel_list *channels, struct lora_radio *radio, struct lora_event *events);
+void MAC_init(struct lora_mac *self, enum lora_region_id region, struct lora_radio *radio);
 
 /** Set join parameters locally
  * 
@@ -180,15 +135,6 @@ void MAC_init(struct lora_mac *self, struct lora_channel_list *channels, struct 
  * 
  * */
 bool MAC_personalize(struct lora_mac *self, uint32_t devAddr, const void *nwkSKey, const void *appSKey);
-
-/** Set the number of times an upstream data frame will be sent (for redundancy)
- * 
- * (i.e. user asks to send a data frame, the stack may send it nbTrans times for redundancy)
- * 
- * 
- * 
- * */
-bool MAC_setNbTrans(struct lora_mac *self, uint8_t nbTrans);
 
 /** Send a message upstream
  * 
@@ -214,7 +160,6 @@ bool MAC_setNbTrans(struct lora_mac *self, uint8_t nbTrans);
  * 
  * */
 bool MAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *data, uint8_t len);
-
 
 void MAC_setResponseHandler(struct lora_mac *self, void *receiver, lora_mac_response_fn cb);
 

@@ -67,8 +67,9 @@ struct lora_frame_join_accept {
     uint8_t rx1DataRateOffset;
     uint8_t rx2DataRate;
     uint8_t rxDelay;
-    uint8_t cfList[16U];
-    uint8_t cfListLen;
+    
+    uint32_t cfList[5U];
+    bool cfListPresent;    
 };
 
 struct lora_frame_join_request {

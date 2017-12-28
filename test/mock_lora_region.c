@@ -3,16 +3,19 @@
 #include <setjmp.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include "cmocka.h"
 #include "lora_region.h"
 
-const struct lora_data_rate *Region_getDataRateParameters(const struct lora_region *self, uint8_t rate)
+bool Region_getRate(const struct lora_region *self, uint8_t rate, struct lora_data_rate *setting)
 {
-    return mock_ptr_type(struct lora_data_rate *);
+    (void)memset(setting, 0, sizeof(*setting));
+    
+    return true;
 }
 
-void Region_getDefaultChannels(const struct lora_region *self, void *receiver, void (*cb)(void *reciever, uint8_t chIndex, uint32_t freq))
+void Region_getDefaultChannels(const struct lora_region *self, void *receiver, void (*handler)(void *reciever, uint8_t chIndex, uint32_t freq, uint8_t minRate, uint8_t maxRate))
 {
 }
 
@@ -29,27 +32,19 @@ bool Region_validateFrequency(const struct lora_region *self, uint32_t frequency
     return retval;
 }
 
-bool Region_getOffTimeFactor(const struct lora_region *self, uint8_t band, uint16_t *offtime_factor)
-{
-    *offtime_factor = mock();
-    
-    return mock();
-}
-
-bool Region_validateRate(const struct lora_region *self, uint8_t chIndex, uint8_t rate)
+uint16_t Region_getOffTimeFactor(const struct lora_region *self, uint8_t band)
 {
     return mock();
 }
 
-uint8_t Region_getTXRates(const struct lora_region *self, uint8_t chIndex, const uint8_t **rates)
+bool Region_validateRate(const struct lora_region *self, uint8_t chIndex, uint8_t minRate, uint8_t maxRate)
 {
-    *rates = mock_ptr_type(const uint8_t *);    
     return mock();
 }
 
-const struct lora_region_default *Region_getDefaultSettings(const struct lora_region *self)
+void Region_getDefaultSettings(const struct lora_region *self, struct lora_region_default *defaults)
 {
-    return mock_ptr_type(const struct lora_region_default *);
+    memset(defaults, 0, sizeof(*defaults));
 }
 
 bool Region_getRX1DataRate(const struct lora_region *self, uint8_t tx_rate, uint8_t rx1_offset, uint8_t *rx1_rate)
