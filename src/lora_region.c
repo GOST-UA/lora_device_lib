@@ -346,22 +346,21 @@ static const struct lora_region_default defaults_EU_863_870 PROGMEM = {
     
     .max_fcnt_gap = 16384U,
     
-    .rx1_delay = 1U,
-    .rx2_delay = 2U,
-    
+    .rx1_delay = 1U,    
     .ja1_delay = 5U,
-    .ja2_delay = 6U,
+    
+    .rx1_offset = 0U,
+    
+    .rx2_freq = 869525000U,
+    .rx2_rate = 0U,
     
     .adr_ack_delay = 32U,
     .adr_ack_limit = 64U,
     .adr_ack_timeout = 2U,
     .adr_ack_dither = 1U,
     
-    .rx2_freq = 869525000U,
-    .rx2_rate = 0U,
-    
-    .init_tx_rate = 6U,
-    .init_tx_power = 0U,
+    .tx_rate = 6U,
+    .tx_power = 0U,
 };
 
 static const struct lora_region_default defaults_US_902_928 PROGMEM = {
@@ -369,21 +368,21 @@ static const struct lora_region_default defaults_US_902_928 PROGMEM = {
     .max_fcnt_gap = 16384U,
     
     .rx1_delay = 1U,
-    .rx2_delay = 2U,
     
     .ja1_delay = 5U,
-    .ja2_delay = 6U,
+    
+    .rx1_offset = 0U,
+    
+    .rx2_freq = 923300000U,
+    .rx2_rate = 8U,
     
     .adr_ack_delay = 32U,
     .adr_ack_limit = 64U,
     .adr_ack_timeout = 2U,
     .adr_ack_dither = 1U,
     
-    .rx2_freq = 923300000U,
-    .rx2_rate = 8U,
-    
-    .init_tx_rate = 6U,
-    .init_tx_power = 0U,
+    .tx_rate = 6U,
+    .tx_power = 0U,
 };
 
 
@@ -738,13 +737,6 @@ uint8_t Region_getJA1Delay(const struct lora_region *self)
 {
     uint8_t retval;
     memcpy_P(&retval, &self->defaults->ja1_delay, sizeof(retval));
-    return retval;
-}
-
-uint8_t Region_getJA2Delay(const struct lora_region *self)
-{
-    uint8_t retval;
-    memcpy_P(&retval, &self->defaults->ja2_delay, sizeof(retval));
     return retval;
 }
 

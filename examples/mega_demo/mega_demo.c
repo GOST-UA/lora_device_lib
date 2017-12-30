@@ -1,4 +1,4 @@
-#include "lora_device_lib.h"
+#include "lora_mac.h"
 #include "lora_radio_sx1272.h"
 
 #include <string.h>
@@ -15,7 +15,7 @@ static void responseHandler(void *receiver, enum lora_mac_response_type type, co
 void main(void) __attribute__((noreturn));
 
 volatile struct lora_radio radio;
-volatile struct lora_device_lib ldl;
+volatile struct lora_mac mac;
 
 volatile bool do_tick;
 
@@ -71,9 +71,9 @@ static void setup_lora(void)
         .read = radioRead
     };
     
-    (void)LDL_init(&ldl, EU_863_870, Radio_init(&radio, &board));
+    (void)MAC_init(&mac, EU_863_870, Radio_init(&radio, &board));
  
-    LDL_setResponseHandler(&ldl, NULL, responseHandler);
+    MAC_setResponseHandler(&mac, NULL, responseHandler);
 }
 
 void main(void)
@@ -85,11 +85,11 @@ void main(void)
  
     const char message[] = "dummy";
  
-    (void)LDL_send(&ldl, false, 1, message, sizeof(message));
+    (void)MAC_send(&mac, false, 1, message, sizeof(message));
     
     while(true){
     
-        LDL_tick(&ldl);                    
+        MAC_tick(&mac);                    
     }
 }
 

@@ -75,27 +75,21 @@ struct lora_region_default {
 
     uint16_t max_fcnt_gap;  /**< maximum frame counter gap */
     
-    uint8_t rx1_delay;      /**< rx1 delay (seconds) */
-    uint8_t rx2_delay;      /**< rx2 delay (seconds) */
-    
+    uint8_t rx1_delay;      /**< rx1 delay (seconds) */    
     uint8_t ja1_delay;      /**< join accept 1 delay (seconds) */
-    uint8_t ja2_delay;      /**< join accept 2 delay (seconds) */
+    
+    uint8_t rx1_offset;    
+    
+    uint32_t rx2_freq;      /**< rx2 slot frequency */
+    uint8_t rx2_rate;       /**< rx2 slot rate */        
     
     uint8_t adr_ack_limit;  
     uint8_t adr_ack_delay;  
     uint8_t adr_ack_timeout;    
     uint8_t adr_ack_dither;     
     
-    uint8_t rx1DROffset;    
-    uint8_t rx2DataRate;    
-    
-    uint8_t rx1Delay;       /**< time between end of tx and rx1 window (1..15 seconds) */
-    
-    uint32_t rx2_freq;      /**< rx2 slot frequency */
-    uint8_t rx2_rate;       /**< rx2 slot rate */        
-    
-    uint8_t init_tx_rate;        /**< an acceptable initial tx data rate */
-    uint8_t init_tx_power;       /**< an acceptable initial power setting */
+    uint8_t tx_rate;        /**< an acceptable initial tx data rate */
+    uint8_t tx_power;       /**< an acceptable initial power setting */
 };
 
 struct lora_data_rate {
@@ -132,7 +126,6 @@ uint8_t Region_numChannels(const struct lora_region *self);
 uint8_t Region_getPayload(const struct lora_region *self, uint8_t rate);
 
 uint8_t Region_getJA1Delay(const struct lora_region *self);
-uint8_t Region_getJA2Delay(const struct lora_region *self);
 
 /** Get the default channel settings for this region via an iterator callback
  * 

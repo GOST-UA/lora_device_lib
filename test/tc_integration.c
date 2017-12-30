@@ -12,7 +12,7 @@ static const uint8_t appKey[] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0
 
 static void test_init(void **user)
 {
-    struct lora_device_lib self;
+    struct lora_mac self;
     struct lora_board board;
     struct lora_radio radio;
 

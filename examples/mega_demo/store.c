@@ -34,7 +34,6 @@ struct param_store {
     uint8_t rx2_data_rate;    
     
     uint8_t rx1_delay;
-    uint8_t rx2_delay;
     
     uint32_t rx2_freq;
     uint8_t rx2_rate;     
@@ -181,9 +180,21 @@ uint8_t System_getMaxDutyCycle(void *owner)
     return eeprom_read_byte(&params.max_duty_cycle);
 }
 
+bool System_setMaxDutyCycle(void *owner, uint8_t value)
+{
+    eeprom_update_byte(&params.max_duty_cycle, value);
+    return true;
+}
+
 uint8_t System_getRX1Delay(void *owner)
 {
     return eeprom_read_byte(&params.rx1_delay);
+}
+
+bool System_setRX1Delay(void *owner, uint8_t value)
+{
+    eeprom_update_byte(&params.rx1_delay, value);
+    return true;
 }
 
 uint8_t System_getNbTrans(void *owner)
@@ -290,14 +301,15 @@ uint32_t System_getRX2Freq(void *owner)
     return eeprom_read_dword(&params.rx2_freq);
 }
 
+bool System_setRX2Freq(void *owner, uint32_t freq)
+{
+    eeprom_update_dword(&params.rx2_freq, freq);
+    return true;
+}
+
 uint8_t System_getRX2Rate(void *owner)
 {
     return eeprom_read_byte(&params.rx2_rate);
-}
-
-uint8_t System_getRX2Delay(void *owner)
-{
-    return eeprom_read_byte(&params.rx2_delay);
 }
 
 /* static functions ***************************************************/

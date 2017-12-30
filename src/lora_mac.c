@@ -230,6 +230,10 @@ bool MAC_personalize(struct lora_mac *self, uint32_t devAddr, const void *nwkSKe
      
         retval = true;
     }
+    else{
+                
+        LORA_ERROR("cannot personalize while not idle")
+    }
     
     return retval;
 }
@@ -324,7 +328,7 @@ bool MAC_addChannel(struct lora_mac *self, uint8_t chIndex, uint32_t freq, uint8
             
             if(Region_validateRate(self->region, chIndex, minRate, maxRate)){
 
-                retval = System_addChannel(self, chIndex, freq, minRate, maxRate);                                 
+                retval = System_setChannel(self, chIndex, freq, minRate, maxRate);                                 
             }
             else{
                 
@@ -359,7 +363,25 @@ bool MAC_maskChannel(struct lora_mac *self, uint8_t chIndex)
 
 void MAC_unmaskChannel(struct lora_mac *self, uint8_t chIndex)
 {
-    return System_unmaskChannel(self, chIndex);
+    System_unmaskChannel(self, chIndex);
+}
+
+void MAC_restoreDefaults(struct lora_mac *self)
+{
+    struct lora_region_default defaults;
+    
+    if(self->state == IDLE){
+        
+        Region_getDefaultSettings(self->region, &defaults);
+        
+        System_setRX1DROffset(self, defaults.rx1_offset);
+        System_setRX2DataRate(self, defaults.rx2_rate);
+        System_setRX2Freq(self, defaults.rx2_freq);
+        
+        System_setRX1Delay(self, defaults.rx1_delay);
+        
+        System_setRX1DROffset(self, defaults.rx1_offset);        
+    }
 }
 
 /* static functions ***************************************************/
@@ -453,7 +475,7 @@ static void rxStart(void *receiver, uint64_t time)
     LORA_PEDANTIC((self->state == WAIT_RX1) || (self->state == WAIT_RX2) || (self->state == JOIN_WAIT_RX1) || (self->state == JOIN_WAIT_RX2))
     LORA_PEDANTIC(time <= timeNow)
    
-    targetTime = timeNow - System_getRX2Delay(self);
+    targetTime = timeNow - 1U;
     
     if(targetTime <= self->txCompleteTime){
         
@@ -568,12 +590,12 @@ static void rxFinish(struct lora_mac *self)
     default:
     case RX1:        
         self->state = WAIT_RX2;    
-        (void)Event_onTimeout(&self->events, self->txCompleteTime + System_getRX2Delay(self), self, rxStart);
+        (void)Event_onTimeout(&self->events, self->txCompleteTime + System_getRX1Delay(self) + 1U, self, rxStart);
         break;
     
     case JOIN_RX1:        
         self->state = JOIN_WAIT_RX2;    
-        (void)Event_onTimeout(&self->events, self->txCompleteTime + Region_getJA2Delay(self->region), self, rxStart);
+        (void)Event_onTimeout(&self->events, self->txCompleteTime + Region_getJA1Delay(self->region) + 1U, self, rxStart);
         break;
         
     case RX2:        
@@ -721,8 +743,7 @@ static void handleCommands(void *receiver, const struct lora_downstream_cmd *cmd
     default:
     case LINK_CHECK:
     
-        //System_logLinkStatus(self, cmd->fields.linkCheckAns.margin, cmd->fields.linkCheckAns.gwCount);
-        //maybe reply?
+        System_logLinkStatus(self, cmd->fields.linkCheckAns.margin, cmd->fields.linkCheckAns.gwCount);
         break;
         
     case LINK_ADR:                    
@@ -730,8 +751,7 @@ static void handleCommands(void *receiver, const struct lora_downstream_cmd *cmd
         break;
     
     case DUTY_CYCLE:                
-        
-        //System_setMaxDutyCycle(self, cmd->fields.dutyCycleReq.maxDutyCycle);
+        System_setMaxDutyCycle(self, cmd->fields.dutyCycleReq.maxDutyCycle);
         break;
     
     case RX_PARAM_SETUP:
@@ -739,32 +759,33 @@ static void handleCommands(void *receiver, const struct lora_downstream_cmd *cmd
         break;
     
     case DEV_STATUS:
-        
-        break;
-    
-    case NEW_CHANNEL:    
     {
+        struct lora_dev_status_ans ans;
+                
+        ans.battery = System_getBatteryLevel(self);
+        ans.margin = 0U;
+    }
+        break;
+        
+    case NEW_CHANNEL:    
+    
         if(Region_isDynamic(self->region)){
         
-            //struct lora_new_channel_ans ans;
+            struct lora_new_channel_ans ans;
         
-            //ans.rateOK = Region_validateRate(self->region, chIndex, minRate, maxRate);        
-            //ans.freqOK = Region_validateFreq(self->region, chIndex, freq);
+            ans.dataRateRangeOK = Region_validateRate(self->region, cmd->fields.newChannelReq.chIndex, cmd->fields.newChannelReq.minDR, cmd->fields.newChannelReq.maxDR);        
+            ans.channelFrequencyOK = Region_validateFreq(self->region, cmd->fields.newChannelReq.chIndex, cmd->fields.newChannelReq.freq);
             
-            //if(ans.rateOK && ans.freqOK){
+            if(ans.dataRateRangeOK && ans.channelFrequencyOK){
                 
-              //  (void)System_addChannel(self, chIndex, freq, minRate, maxRate);                        
-            //}
-            
-            //make reply?
+                (void)System_setChannel(self, cmd->fields.newChannelReq.chIndex, cmd->fields.newChannelReq.freq, cmd->fields.newChannelReq.minDR, cmd->fields.newChannelReq.maxDR);                        
+            }            
         }
-    }
         break;        
     case DL_CHANNEL:            
         break;
     
     case RX_TIMING_SETUP:    
-    
     
         break;
     
