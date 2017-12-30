@@ -162,7 +162,7 @@ module LDL
             if @cfList
                 # todo
             else
-                @cfList = ""
+                @cfList = nil
             end
             
             if @appNonce

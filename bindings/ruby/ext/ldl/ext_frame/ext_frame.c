@@ -219,7 +219,21 @@ static VALUE _decode(int argc, VALUE *argv, VALUE self)
         rb_hash_aset(param, ID2SYM(rb_intern("rx1DataRateOffset")), UINT2NUM(f.fields.joinAccept.rx1DataRateOffset));
         rb_hash_aset(param, ID2SYM(rb_intern("rx2DataRate")), UINT2NUM(f.fields.joinAccept.rx2DataRate));
         rb_hash_aset(param, ID2SYM(rb_intern("rxDelay")), UINT2NUM(f.fields.joinAccept.rxDelay));
-        rb_hash_aset(param, ID2SYM(rb_intern("cfList")), (f.fields.joinAccept.cfListLen > 0U) ? rb_str_new((char *)f.fields.joinAccept.cfList, sizeof(f.fields.joinAccept.cfListLen)) : Qnil);
+        
+        
+        if(f.fields.joinAccept.cfListPresent){
+        
+            VALUE cfList = rb_ary_new();
+            size_t i;
+            
+            for(i=0U; i < sizeof(f.fields.joinAccept.cfList)/sizeof(*f.fields.joinAccept.cfList); i++){
+                
+                rb_ary_push(cfList, f.fields.joinAccept.cfList[i]);
+            }
+            
+            rb_hash_aset(param, ID2SYM(rb_intern("cfList")), cfList);
+        }
+        
     }
         break;
     case FRAME_TYPE_DATA_UNCONFIRMED_UP:
@@ -330,20 +344,27 @@ static VALUE _encode_join_accept(VALUE self)
     rx1DataRateOffset = rb_iv_get(self, "@rx1DataRateOffset");
     rx2DataRate = rb_iv_get(self, "@rx2DataRate");
     rxDelay = rb_iv_get(self, "@rxDelay");
-    cfList = rb_iv_get(self, "@cfList");
     appNonce = rb_iv_get(self, "@appNonce");
     netID = rb_iv_get(self, "@netID");
     devAddr = rb_iv_get(self, "@devAddr");
-        
-    assert(RSTRING_LEN(cfList) <= sizeof(f.cfList));
+    cfList = rb_iv_get(self, "@cfList");
     
     f.rx1DataRateOffset = NUM2UINT(rx1DataRateOffset);
     f.rx2DataRate = NUM2UINT(rx2DataRate);
     f.rxDelay = NUM2UINT(rxDelay);
-    (void)memcpy(f.cfList, RSTRING_PTR(cfList), RSTRING_LEN(cfList));
     f.appNonce = NUM2UINT(appNonce);
     f.netID = NUM2UINT(netID);
     f.devAddr = NUM2UINT(devAddr);
+    f.cfListPresent = ( cfList != Qnil) ? true : false;
+    
+    if(f.cfListPresent){
+        
+        f.cfList[0] = rb_ary_entry(cfList, 0);
+        f.cfList[1] = rb_ary_entry(cfList, 1);
+        f.cfList[2] = rb_ary_entry(cfList, 2);
+        f.cfList[3] = rb_ary_entry(cfList, 3);
+        f.cfList[4] = rb_ary_entry(cfList, 4);
+    }
     
     len = Frame_putJoinAccept(RSTRING_PTR(rb_funcall(appKey, rb_intern("value"), 0)), &f, out, sizeof(out));
     
@@ -351,7 +372,6 @@ static VALUE _encode_join_accept(VALUE self)
     
     retval = rb_str_new((char *)out, len);        
     
-        
     return retval;
 }
 

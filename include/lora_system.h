@@ -136,15 +136,14 @@ uint8_t System_getTXRate(void *owner);
 uint32_t System_getRX2Freq(void *owner);
 uint8_t System_getRX2DataRate(void *owner);
 
-bool System_setRX1DROffset(void *owner, uint8_t value);
-bool System_setMaxDutyCycle(void *owner, uint8_t value);
-bool System_setRX1Delay(void *owner, uint8_t value);
-bool System_setTXPower(void *owner, uint8_t value);
-bool System_setNbTrans(void *owner, uint8_t value);
-bool System_setTXRate(void *owner, uint8_t value);
-bool System_setRX2Freq(void *owner, uint32_t value);
-bool System_setRX2DataRate(void *owner, uint8_t value);
-
+void System_setRX1DROffset(void *owner, uint8_t value);
+void System_setMaxDutyCycle(void *owner, uint8_t value);
+void System_setRX1Delay(void *owner, uint8_t value);
+void System_setTXPower(void *owner, uint8_t value);
+void System_setNbTrans(void *owner, uint8_t value);
+void System_setTXRate(void *owner, uint8_t value);
+void System_setRX2Freq(void *owner, uint32_t value);
+void System_setRX2DataRate(void *owner, uint8_t value);
 
 void System_logLinkStatus(void *owner, uint8_t margin, uint8_t gwCount);
 

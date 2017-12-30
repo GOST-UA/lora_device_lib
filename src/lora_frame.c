@@ -37,14 +37,18 @@ static uint32_t cmacJoin(const uint8_t *key, const uint8_t *msg, size_t len);
 
 static void xor128(uint8_t *acc, const uint8_t *op);
 
+#ifndef LORA_DEVICE
 static size_t getEUI(const uint8_t *in, size_t max, uint8_t *value);
+#endif
 static size_t getU32(const uint8_t *in, size_t max, uint32_t *value);
 static size_t getU24(const uint8_t *in, size_t max, uint32_t *value);
 static size_t getU16(const uint8_t *in, size_t max, uint16_t *value);
 static size_t getU8(const uint8_t *in, size_t max, uint8_t *value);
 static size_t putEUI(uint8_t *out, size_t max, const uint8_t *value);
 static size_t putU32(uint8_t *out, size_t max, uint32_t value);
+#ifndef LORA_DEVICE
 static size_t putU24(uint8_t *out, size_t max, uint32_t value);
+#endif
 static size_t putU16(uint8_t *out, size_t max, uint16_t value);
 static size_t putU8(uint8_t *out, size_t max, uint8_t value);
 
@@ -521,7 +525,7 @@ static size_t putU16(uint8_t *out, size_t max, uint16_t value)
     return retval;
 }
 
-
+#ifndef LORA_DEVICE
 static size_t putU24(uint8_t *out, size_t max, uint32_t value)
 {
     size_t retval = 0U;
@@ -536,7 +540,7 @@ static size_t putU24(uint8_t *out, size_t max, uint32_t value)
     
     return retval;
 }
-
+#endif
 
 static size_t putU32(uint8_t *out, size_t max, uint32_t value)
 {
@@ -645,6 +649,7 @@ static size_t getU32(const uint8_t *in, size_t max, uint32_t *value)
     return retval;
 }
 
+#ifndef LORA_DEVICE
 static size_t getEUI(const uint8_t *in, size_t max, uint8_t *value)
 {
     size_t retval = 0U;
@@ -665,5 +670,5 @@ static size_t getEUI(const uint8_t *in, size_t max, uint8_t *value)
     
     return retval;
 }
-
+#endif
 

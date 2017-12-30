@@ -158,10 +158,9 @@ uint8_t System_getRX1DROffset(void *owner)
     return eeprom_read_byte(&params.rx1_dr_offset);
 }
 
-bool System_setRX1DROffset(void *owner, uint8_t value)
+void System_setRX1DROffset(void *owner, uint8_t value)
 {
     eeprom_update_byte(&params.rx1_dr_offset, value);
-    return true;
 }
 
 uint8_t System_getRX2DataRate(void *owner)
@@ -169,10 +168,9 @@ uint8_t System_getRX2DataRate(void *owner)
     return eeprom_read_byte(&params.rx2_data_rate);
 }
 
-bool System_setRX2DataRate(void *owner, uint8_t value)
+void System_setRX2DataRate(void *owner, uint8_t value)
 {
     eeprom_update_byte(&params.rx2_data_rate, value);
-    return true;
 }
 
 uint8_t System_getMaxDutyCycle(void *owner)
@@ -180,10 +178,9 @@ uint8_t System_getMaxDutyCycle(void *owner)
     return eeprom_read_byte(&params.max_duty_cycle);
 }
 
-bool System_setMaxDutyCycle(void *owner, uint8_t value)
+void System_setMaxDutyCycle(void *owner, uint8_t value)
 {
     eeprom_update_byte(&params.max_duty_cycle, value);
-    return true;
 }
 
 uint8_t System_getRX1Delay(void *owner)
@@ -191,10 +188,9 @@ uint8_t System_getRX1Delay(void *owner)
     return eeprom_read_byte(&params.rx1_delay);
 }
 
-bool System_setRX1Delay(void *owner, uint8_t value)
+void System_setRX1Delay(void *owner, uint8_t value)
 {
     eeprom_update_byte(&params.rx1_delay, value);
-    return true;
 }
 
 uint8_t System_getNbTrans(void *owner)
@@ -301,10 +297,9 @@ uint32_t System_getRX2Freq(void *owner)
     return eeprom_read_dword(&params.rx2_freq);
 }
 
-bool System_setRX2Freq(void *owner, uint32_t freq)
+void System_setRX2Freq(void *owner, uint32_t freq)
 {
     eeprom_update_dword(&params.rx2_freq, freq);
-    return true;
 }
 
 uint8_t System_getRX2Rate(void *owner)
