@@ -208,37 +208,37 @@ uint8_t System_getTXRate(void *owner)
     return eeprom_read_byte(&params.tx_rate);
 }
 
-void System_getAppEUI(void *owner, uint8_t *eui)
+void System_getAppEUI(void *owner, void *eui)
 {
     eeprom_read_block(eui, &params.appEUI, sizeof(params.appEUI));
 }
 
-void System_getDevEUI(void *owner, uint8_t *eui)
+void System_getDevEUI(void *owner, void *eui)
 {
     eeprom_read_block(eui, &params.devEUI, sizeof(params.devEUI));
 }
 
-void System_getAppKey(void *owner, uint8_t *key)
+void System_getAppKey(void *owner, void *key)
 {
     eeprom_read_block(key, &params.appKey, sizeof(params.appKey));
 }
 
-void System_getNwkSKey(void *owner, uint8_t *key)
+void System_getNwkSKey(void *owner, void *key)
 {
     eeprom_read_block(key, &params.nwkSKey, sizeof(params.nwkSKey));
 }
 
-void System_setNwkSKey(void *owner, const uint8_t *key)
+void System_setNwkSKey(void *owner, const void *key)
 {
     eeprom_write_block(key, &params.nwkSKey, sizeof(params.nwkSKey));
 }
 
-void System_getAppSKey(void *owner, uint8_t *key)
+void System_getAppSKey(void *owner, void *key)
 {
     eeprom_read_block(key, &params.appSKey, sizeof(params.appSKey));
 }
 
-void System_setAppSKey(void *owner, const uint8_t *key)
+void System_setAppSKey(void *owner, const void *key)
 {
     eeprom_write_block(key, &params.appSKey, sizeof(params.appSKey));
 }
@@ -283,6 +283,7 @@ bool System_receiveDown(void *owner, uint16_t counter, uint16_t maxGap)
     if((uint32_t)counter < ((uint32_t)value + (uint32_t)maxGap)){
         
         eeprom_write_word(&downCounter, counter);
+        retval = true;
     }
     
     return retval;

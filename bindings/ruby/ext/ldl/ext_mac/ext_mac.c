@@ -23,7 +23,7 @@
 #include <ruby.h>
 #include <stddef.h>
 
-#include "lora_device_lib.h"
+#include "lora_mac.h"
 
 static const uint8_t default_key[] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
 static const uint8_t default_eui[] = "\x00\x00\x00\x00\x00\x00\x00\x00";
@@ -45,7 +45,8 @@ static VALUE addChannel(VALUE self, VALUE freq, VALUE chIndex);
 static VALUE removeChannel(VALUE self, VALUE chIndex);
 static VALUE maskChannel(VALUE self, VALUE chIndex);
 static VALUE unmaskChannel(VALUE self, VALUE chIndex);
-static VALUE setRateAndPower(VALUE self, VALUE rate, VALUE power);
+static VALUE setRate(VALUE self, VALUE rate);
+static VALUE setPower(VALUE self, VALUE power);
 static VALUE join(int argc, VALUE *argv, VALUE self);
 static VALUE send_unconfirmed(int argc, VALUE *argv, VALUE self);
 static VALUE send_confirmed(int argc, VALUE *argv, VALUE self);
@@ -61,6 +62,10 @@ static VALUE timeUntilNextEvent(VALUE self);
 
 static VALUE calculateOnAirTime(VALUE self, VALUE bw, VALUE sf, VALUE payloadLen);
 
+static VALUE ptrToValue(const void *ptr);
+
+/* functions **********************************************************/
+
 uint64_t System_getTime(void)
 {
     return NUM2ULL(rb_funcall(rb_const_get(cLDL, rb_intern("SystemTime")), rb_intern("time"), 0));
@@ -68,13 +73,12 @@ uint64_t System_getTime(void)
 
 void System_usleep(uint32_t interval)
 {
+    //fixme
 }
 
-void System_rand(uint8_t *data, size_t len)
+uint8_t System_rand(void)
 {
-    VALUE result = rb_random_bytes(rb_str_new2(""), len);
-    
-    (void)memcpy(data, RSTRING_PTR(result), len);
+    return (uint8_t)rb_genrand_int32();
 }
 
 void System_atomic_setPtr(void **receiver, void *value)
@@ -82,7 +86,7 @@ void System_atomic_setPtr(void **receiver, void *value)
     *receiver = value;  //fixme
 }
 
-void System_getAppEUI(void *owner, uint8_t *eui)
+void System_getAppEUI(void *owner, void *eui)
 {
     VALUE self = (VALUE)owner;
     
@@ -91,7 +95,7 @@ void System_getAppEUI(void *owner, uint8_t *eui)
     (void)memcpy(eui, RSTRING_PTR(rb_funcall(appEUI, rb_intern("bytes"), 0)), sizeof(default_eui));
 }
 
-void System_getDevEUI(void *owner, uint8_t *eui)
+void System_getDevEUI(void *owner, void *eui)
 {
     VALUE self = (VALUE)owner;    
     VALUE devEUI = rb_iv_get(self, "@devEUI");
@@ -99,12 +103,263 @@ void System_getDevEUI(void *owner, uint8_t *eui)
     (void)memcpy(eui, RSTRING_PTR(rb_funcall(devEUI, rb_intern("bytes"), 0)), sizeof(default_eui));
 }
 
-void System_getAppKey(void *owner, uint8_t *key)
+void System_getAppKey(void *owner, void *key)
 {
     VALUE self = (VALUE)owner;    
     VALUE appKey = rb_iv_get(self, "@appKey");
     
     (void)memcpy(key, RSTRING_PTR(rb_funcall(appKey, rb_intern("value"), 0)), sizeof(default_key));
+}
+
+void System_getNwkSKey(void *owner, void *key)
+{
+    VALUE k = rb_iv_get(ptrToValue(owner), "@nwkSKey");
+ 
+    (void)memcpy(key, RSTRING_PTR(k), RSTRING_LEN(k));    
+}
+
+void System_getAppSKey(void *owner, void *key)
+{
+    VALUE k = rb_iv_get(ptrToValue(owner), "@appSKey");
+ 
+    (void)memcpy(key, RSTRING_PTR(k), RSTRING_LEN(k));
+}
+
+void System_setNwkSKey(void *owner, const void *key)
+{
+    rb_iv_set(ptrToValue(owner), "@nwkSKey", rb_str_new((const char *)key, 16U));
+}
+
+void System_setAppSKey(void *owner, const void *key)
+{
+    rb_iv_set(ptrToValue(owner), "@appSKey", rb_str_new((const char *)key, 16U));
+}
+
+void System_setDevAddr(void *owner, uint32_t devAddr)
+{
+    rb_iv_set(ptrToValue(owner), "@devAddr", UINT2NUM(devAddr));
+}
+
+uint32_t System_getDevAddr(void *owner)
+{
+    return NUM2UINT(rb_iv_get(ptrToValue(owner), "@devAddr"));
+}
+
+bool System_getChannel(void *owner, uint8_t chIndex, uint32_t *freq, uint8_t *minRate, uint8_t *maxRate)
+{
+    bool retval = false;
+    
+    VALUE channels = rb_iv_get(ptrToValue(owner), "@channels");    
+    VALUE channel = rb_ary_entry(channels, UINT2NUM(chIndex));
+    
+    if(channel != Qnil){
+        
+        *freq = NUM2UINT(rb_hash_aref(channel, ID2SYM(rb_intern("freq"))));
+        *minRate = NUM2UINT(rb_hash_aref(channel, ID2SYM(rb_intern("minRate"))));
+        *maxRate = NUM2UINT(rb_hash_aref(channel, ID2SYM(rb_intern("maxRate"))));
+        
+        retval = true;
+    }
+    
+    return retval;    
+}
+
+bool System_setChannel(void *owner, uint8_t chIndex, uint32_t freq, uint8_t minRate, uint8_t maxRate)
+{
+    bool retval = false;
+    
+    VALUE channels = rb_iv_get(ptrToValue(owner), "@channels");    
+    VALUE channel = rb_ary_entry(channels, UINT2NUM(chIndex));
+    
+    if(channel != Qnil){
+        
+        rb_hash_aset(channel, ID2SYM(rb_intern("freq")), UINT2NUM(freq));
+        rb_hash_aset(channel, ID2SYM(rb_intern("minRate")), UINT2NUM(minRate));
+        rb_hash_aset(channel, ID2SYM(rb_intern("maxRate")), UINT2NUM(maxRate));
+        
+        rb_ary_store(channels, UINT2NUM(chIndex), channel);
+        
+        retval = true;
+    }
+    
+    return retval;    
+}
+
+bool System_maskChannel(void *owner, uint8_t chIndex)
+{
+    bool retval = false;
+    
+    VALUE channels = rb_iv_get(ptrToValue(owner), "@channels");    
+    VALUE channel = rb_ary_entry(channels, UINT2NUM(chIndex));
+    
+    if(channel != Qnil){
+    
+        rb_hash_aset(channel, ID2SYM(rb_intern("masked")), Qtrue);
+        
+        retval = true;
+    }
+    
+    return retval;
+}
+
+bool System_unmaskChannel(void *owner, uint8_t chIndex)
+{
+    bool retval = false;
+    
+    VALUE channels = rb_iv_get(ptrToValue(owner), "@channels");    
+    VALUE channel = rb_ary_entry(channels, UINT2NUM(chIndex));
+    
+    if(channel != Qnil){
+    
+        rb_hash_aset(channel, ID2SYM(rb_intern("masked")), Qfalse);
+        
+        retval = true;
+    }
+    
+    return retval;
+}
+
+bool System_channelIsMasked(void *owner, uint8_t chIndex)
+{
+    bool retval = false;
+    
+    VALUE channels = rb_iv_get(ptrToValue(owner), "@channels");    
+    VALUE channel = rb_ary_entry(channels, UINT2NUM(chIndex));
+    
+    if(channel != Qnil){
+    
+        retval = ( rb_hash_aref(channel, ID2SYM(rb_intern("masked"))) == Qtrue ) ? true : false;
+    }
+    
+    return retval;
+}
+
+uint8_t System_getRX1DROffset(void *owner)
+{
+    return NUM2UINT(rb_iv_get(ptrToValue(owner), "@rx1DROffset"));
+}
+
+uint8_t System_getMaxDutyCycle(void *owner)
+{    
+    return NUM2UINT(rb_iv_get(ptrToValue(owner), "@maxDutyCycle"));
+}
+
+uint8_t System_getRX1Delay(void *owner)
+{
+    return NUM2UINT(rb_iv_get(ptrToValue(owner), "@rx1Delay"));
+}
+
+uint8_t System_getNbTrans(void *owner)
+{
+    return NUM2UINT(rb_iv_get(ptrToValue(owner), "@nbTrans"));
+}
+
+uint8_t System_getTXPower(void *owner)
+{
+    return NUM2UINT(rb_iv_get(ptrToValue(owner), "@txPower"));
+}
+
+uint8_t System_getTXRate(void *owner)
+{
+    return NUM2UINT(rb_iv_get(ptrToValue(owner), "@txRate"));
+}
+
+uint32_t System_getRX2Freq(void *owner)
+{
+    return NUM2UINT(rb_iv_get(ptrToValue(owner), "@rx2Freq"));
+}
+
+uint8_t System_getRX2DataRate(void *owner)
+{
+    return NUM2UINT(rb_iv_get(ptrToValue(owner), "@rx2DataRate"));
+}
+
+void System_setRX1DROffset(void *owner, uint8_t value)
+{
+    rb_iv_set(ptrToValue(owner), "@rx1DROffset", UINT2NUM(value));
+}
+
+void System_setMaxDutyCycle(void *owner, uint8_t value)
+{
+    rb_iv_set(ptrToValue(owner), "@maxDutyCycle", UINT2NUM(value));
+}
+
+void System_setRX1Delay(void *owner, uint8_t value)
+{
+    rb_iv_set(ptrToValue(owner), "@rx1Delay", UINT2NUM(value));
+}
+
+void System_setTXPower(void *owner, uint8_t value)
+{
+    rb_iv_set(ptrToValue(owner), "@txPower", UINT2NUM(value));
+}
+
+void System_setNbTrans(void *owner, uint8_t value)
+{
+    rb_iv_set(ptrToValue(owner), "@nbTrans", UINT2NUM(value));
+}
+
+void System_setTXRate(void *owner, uint8_t value)
+{
+    rb_iv_set(ptrToValue(owner), "@txRate", UINT2NUM(value));
+}
+
+void System_setRX2Freq(void *owner, uint32_t value)
+{
+    rb_iv_set(ptrToValue(owner), "@rx2Freq", UINT2NUM(value));
+}
+
+void System_setRX2DataRate(void *owner, uint8_t value)
+{
+    rb_iv_set(ptrToValue(owner), "@rx2DataRate", UINT2NUM(value));
+}
+
+uint16_t System_getUp(void *owner)
+{
+    return NUM2UINT(rb_iv_get(ptrToValue(owner), "@upCount"));
+}
+
+uint16_t System_incrementUp(void *owner)
+{
+    uint16_t retval = NUM2UINT(rb_iv_get(ptrToValue(owner), "@upCount"));
+    
+    rb_iv_set(ptrToValue(owner), "@upCount", retval + 1U);
+    
+    return retval;    
+}
+
+void System_resetUp(void *owner)
+{
+    rb_iv_set(ptrToValue(owner), "@upCount", 0U);
+}
+
+uint16_t System_getDown(void *owner)
+{
+    return NUM2UINT(rb_iv_get(ptrToValue(owner), "@downCount"));
+}
+
+uint8_t System_getBatteryLevel(void *owner)
+{
+    return 255U;
+}
+
+bool System_receiveDown(void *owner, uint16_t counter, uint16_t maxGap)
+{
+    bool retval = false;
+    uint16_t value = NUM2UINT(rb_iv_get(ptrToValue(owner), "@upCount"));
+    
+    if((uint32_t)counter < ((uint32_t)value + (uint32_t)maxGap)){
+        
+        rb_iv_set(ptrToValue(owner), "@downCount", UINT2NUM(counter));        
+        retval = true;
+    }
+    
+    return retval;
+}
+
+void System_resetDown(void *owner)
+{
+    rb_iv_set(ptrToValue(owner), "@downCount", 0U);
 }
 
 void Init_ext_mac(void)
@@ -123,7 +378,8 @@ void Init_ext_mac(void)
     rb_define_method(cExtMAC, "removeChannel", removeChannel, 1);
     rb_define_method(cExtMAC, "maskChannel", maskChannel, 1);
     rb_define_method(cExtMAC, "unmaskChannel", unmaskChannel, 1);
-    rb_define_method(cExtMAC, "setRateAndPower", setRateAndPower, 2);
+    rb_define_method(cExtMAC, "rate=", setRate, 1);
+    rb_define_method(cExtMAC, "power=", setPower, 1);
     rb_define_method(cExtMAC, "join", join, -1);
     rb_define_method(cExtMAC, "send_unconfirmed", send_unconfirmed, -1);
     rb_define_method(cExtMAC, "send_confirmed", send_confirmed, -1);    
@@ -195,8 +451,31 @@ void Radio_setEventHandler(struct lora_radio *self, void *receiver, radioEventCB
 
 static VALUE alloc_state(VALUE klass)
 {
-    return Data_Wrap_Struct(klass, 0, free, calloc(1, sizeof(struct lora_device_lib)));
+    return Data_Wrap_Struct(klass, 0, free, calloc(1, sizeof(struct lora_mac)));
 }
+
+static void initChannels(VALUE self, enum lora_region_id region)
+{
+    VALUE channels = rb_ary_new();
+    uint8_t i;
+    
+    for(i=0U; i < Region_numChannels(Region_getRegion(region)); i++){
+        
+        VALUE channel = rb_hash_new();
+        
+        rb_hash_aset(channel, ID2SYM(rb_intern("chIndex")), UINT2NUM(i));
+        rb_hash_aset(channel, ID2SYM(rb_intern("freq")), UINT2NUM(0));
+        rb_hash_aset(channel, ID2SYM(rb_intern("minRate")), UINT2NUM(0));
+        rb_hash_aset(channel, ID2SYM(rb_intern("maxRate")), UINT2NUM(0));
+        rb_hash_aset(channel, ID2SYM(rb_intern("mask")), Qfalse);
+        
+        rb_ary_push(channels, channel);
+    }
+    
+    rb_iv_set(self, "@channels", channels);
+}
+
+/* static functions ***************************************************/
 
 /* Create a new LDL instance
  * 
@@ -228,7 +507,7 @@ static VALUE initialize(int argc, VALUE *argv, VALUE self)
         }        
     };
     
-    struct lora_device_lib *this;    
+    struct lora_mac *this;    
     enum lora_region_id region_id;
     size_t i;
     
@@ -239,14 +518,9 @@ static VALUE initialize(int argc, VALUE *argv, VALUE self)
     VALUE devEUI;
     VALUE appKey;
     
-    Data_Get_Struct(self, struct lora_device_lib, this);
+    Data_Get_Struct(self, struct lora_mac, this);
     
     (void)rb_scan_args(argc, argv, "10:", &radio, &options);
-    
-    if(region == Qnil){
-        
-        region = ID2SYM(rb_intern("eu_863_870"));
-    }
     
     if(options == Qnil){
         
@@ -257,7 +531,7 @@ static VALUE initialize(int argc, VALUE *argv, VALUE self)
     devEUI = rb_hash_aref(options, ID2SYM(rb_intern("devEUI")));
     appKey = rb_hash_aref(options, ID2SYM(rb_intern("appKey")));
     region = rb_hash_aref(options, ID2SYM(rb_intern("region")));
-    
+
     if(rb_obj_is_kind_of(radio, cRadio) != Qnil){
         
         rb_raise(rb_eTypeError, "radio must be kind of Radio");
@@ -274,7 +548,7 @@ static VALUE initialize(int argc, VALUE *argv, VALUE self)
             
             if(map[i].symbol == region){
                 
-                region = map[i].symbol;
+                region_id = map[i].region;
                 break;
             }
         }
@@ -287,14 +561,12 @@ static VALUE initialize(int argc, VALUE *argv, VALUE self)
     else{
     
         region = ID2SYM(rb_intern("eu_863_870"));
+        region_id = EU_863_870;
     }
     
-    if(!LDL_init(this, region_id, (struct lora_radio *)radio)){
-        
-        rb_raise(cError, "LDL_init() failed");
-    }
+    MAC_init(this, region_id, (struct lora_radio *)radio);
     
-    LDL_setResponseHandler(this, (void *)self, _response);
+    MAC_setResponseHandler(this, (void *)self, _response);
     
     rb_iv_set(self, "@radio", radio);
     
@@ -334,23 +606,34 @@ static VALUE initialize(int argc, VALUE *argv, VALUE self)
         appKey = rb_funcall(cKey, rb_intern("new"), 1, rb_str_new((char *)default_key, sizeof(default_key)-1));
     }
     
+    VALUE appSKey = rb_funcall(cKey, rb_intern("new"), 1, rb_str_new((char *)default_key, sizeof(default_key)-1));
+    VALUE nwkSKey = rb_funcall(cKey, rb_intern("new"), 1, rb_str_new((char *)default_key, sizeof(default_key)-1));
+    
+    
     rb_iv_set(self, "@appEUI", appEUI);
     rb_iv_set(self, "@devEUI", devEUI);
     rb_iv_set(self, "@appKey", appKey);
+    rb_iv_set(self, "@appSKey", appSKey);
+    rb_iv_set(self, "@nwkSKey", nwkSKey);
+    rb_iv_set(self, "@devAddr", UINT2NUM(0U));
     
     rb_iv_set(self, "@tx_handler", Qnil);
     rb_iv_set(self, "@rx_handler", Qnil);
     rb_iv_set(self, "@join_handler", Qnil);
     
     rb_iv_set(self, "@rx_queue", rb_funcall(rb_const_get(rb_cObject, rb_intern("Queue")), rb_intern("new"), 0));
+ 
+    initChannels(self, region_id);
+    
+    MAC_restoreDefaults(this);
     
     return self;
 }
 
 static VALUE initialize_copy(VALUE copy, VALUE orig)
 {
-    struct lora_device_lib *orig_ldl;
-    struct lora_device_lib *copy_ldl;
+    struct lora_mac *orig_ldl;
+    struct lora_mac *copy_ldl;
     
     if(copy == orig){
         return copy;
@@ -361,22 +644,22 @@ static VALUE initialize_copy(VALUE copy, VALUE orig)
         rb_raise(rb_eTypeError, "wrong argument type");
     }
     
-    Data_Get_Struct(orig, struct lora_device_lib, orig_ldl);
-    Data_Get_Struct(copy, struct lora_device_lib, copy_ldl);
+    Data_Get_Struct(orig, struct lora_mac, orig_ldl);
+    Data_Get_Struct(copy, struct lora_mac, copy_ldl);
     
-    (void)memcpy(copy_ldl, orig_ldl, sizeof(struct lora_device_lib));
+    (void)memcpy(copy_ldl, orig_ldl, sizeof(struct lora_mac));
     
     return copy;
 }
 
 static VALUE personalize(VALUE self, VALUE devAddr, VALUE nwkSKey, VALUE appSKey)
 {
-    struct lora_device_lib *this;    
-    Data_Get_Struct(self, struct lora_device_lib, this);
+    struct lora_mac *this;    
+    Data_Get_Struct(self, struct lora_mac, this);
     
-    if(!LDL_personalize(this, (uint32_t)NUM2UINT(devAddr), RSTRING_PTR(rb_funcall(nwkSKey, rb_intern("value"), 0)), RSTRING_PTR(rb_funcall(appSKey, rb_intern("value"), 0)))){
+    if(!MAC_personalize(this, (uint32_t)NUM2UINT(devAddr), RSTRING_PTR(rb_funcall(nwkSKey, rb_intern("value"), 0)), RSTRING_PTR(rb_funcall(appSKey, rb_intern("value"), 0)))){
         
-        rb_raise(cError, "LDL_personalize() failed");
+        rb_raise(cError, "MAC_personalize() failed");
     }
     
     return self;
@@ -384,12 +667,12 @@ static VALUE personalize(VALUE self, VALUE devAddr, VALUE nwkSKey, VALUE appSKey
 
 static VALUE addChannel(VALUE self, VALUE freq, VALUE chIndex)
 {
-    struct lora_device_lib *this;    
-    Data_Get_Struct(self, struct lora_device_lib, this);
+    struct lora_mac *this;    
+    Data_Get_Struct(self, struct lora_mac, this);
     
-    if(!LDL_addChannel(this, (uint32_t)NUM2UINT(freq), (uint8_t)NUM2UINT(chIndex))){
+    if(!MAC_addChannel(this, (uint8_t)NUM2UINT(chIndex), (uint32_t)NUM2UINT(freq), 0, 0)){
         
-        rb_raise(cError, "LDL_addChannel() failed");    
+        rb_raise(cError, "MAC_addChannel() failed");    
     }
     
     return self;
@@ -397,22 +680,22 @@ static VALUE addChannel(VALUE self, VALUE freq, VALUE chIndex)
 
 static VALUE removeChannel(VALUE self, VALUE chIndex)
 {
-    struct lora_device_lib *this;    
-    Data_Get_Struct(self, struct lora_device_lib, this);
+    struct lora_mac *this;    
+    Data_Get_Struct(self, struct lora_mac, this);
     
-    LDL_removeChannel(this, (uint8_t)NUM2UINT(chIndex));
+    MAC_removeChannel(this, (uint8_t)NUM2UINT(chIndex));
     
     return self;
 }
 
 static VALUE maskChannel(VALUE self, VALUE chIndex)
 {
-    struct lora_device_lib *this;    
-    Data_Get_Struct(self, struct lora_device_lib, this);
+    struct lora_mac *this;    
+    Data_Get_Struct(self, struct lora_mac, this);
     
-    if(!LDL_maskChannel(this, (uint8_t)NUM2UINT(chIndex))){
+    if(!MAC_maskChannel(this, (uint8_t)NUM2UINT(chIndex))){
         
-        rb_raise(cError, "LDL_maskChannel() failed");
+        rb_raise(cError, "MAC_maskChannel() failed");
     }
     
     return self;
@@ -420,22 +703,36 @@ static VALUE maskChannel(VALUE self, VALUE chIndex)
 
 static VALUE unmaskChannel(VALUE self, VALUE chIndex)
 {
-    struct lora_device_lib *this;    
-    Data_Get_Struct(self, struct lora_device_lib, this);
+    struct lora_mac *this;    
+    Data_Get_Struct(self, struct lora_mac, this);
     
-    LDL_unmaskChannel(this, (uint8_t)NUM2UINT(chIndex));
+    MAC_unmaskChannel(this, (uint8_t)NUM2UINT(chIndex));
     
     return self;
 }
 
-static VALUE setRateAndPower(VALUE self, VALUE rate, VALUE power)
+
+static VALUE setRate(VALUE self, VALUE rate)
 {
-    struct lora_device_lib *this;    
-    Data_Get_Struct(self, struct lora_device_lib, this);
+    struct lora_mac *this;    
+    Data_Get_Struct(self, struct lora_mac, this);
     
-    if(!LDL_setRateAndPower(this, (uint8_t)NUM2UINT(rate), (uint8_t)NUM2UINT(power))){
+    if(!MAC_setRate(this, (uint8_t)NUM2UINT(rate))){
         
-        rb_raise(cError, "LDL_setRateAndPower() failed");
+        rb_raise(cError, "MAC_setRate() failed");
+    }
+    
+    return self;
+}
+
+static VALUE setPower(VALUE self, VALUE power)
+{
+    struct lora_mac *this;    
+    Data_Get_Struct(self, struct lora_mac, this);
+    
+    if(!MAC_setPower(this, (uint8_t)NUM2UINT(power))){
+        
+        rb_raise(cError, "MAC_setPower() failed");
     }
     
     return self;
@@ -444,16 +741,16 @@ static VALUE setRateAndPower(VALUE self, VALUE rate, VALUE power)
 // want to pass a block for the callback
 static VALUE join(int argc, VALUE *argv, VALUE self)
 {
-    struct lora_device_lib *this;    
-    Data_Get_Struct(self, struct lora_device_lib, this);    
+    struct lora_mac *this;    
+    Data_Get_Struct(self, struct lora_mac, this);    
     
     VALUE handler;  
     
     (void)rb_scan_args(argc, argv, "00&", &handler);
     
-    if(!LDL_join(this)){
+    if(!MAC_join(this)){
         
-        rb_raise(cError, "LDL_join() failed");
+        rb_raise(cError, "MAC_join() failed");
     }
     
     rb_iv_set(self, "@join_handler", handler);
@@ -463,8 +760,8 @@ static VALUE join(int argc, VALUE *argv, VALUE self)
 
 static VALUE send_unconfirmed(int argc, VALUE *argv, VALUE self)
 {
-    struct lora_device_lib *this;    
-    Data_Get_Struct(self, struct lora_device_lib, this);
+    struct lora_mac *this;    
+    Data_Get_Struct(self, struct lora_mac, this);
     
     VALUE port;
     VALUE data;
@@ -472,9 +769,9 @@ static VALUE send_unconfirmed(int argc, VALUE *argv, VALUE self)
     
     (void)rb_scan_args(argc, argv, "20&", &port, &data, &handler);
     
-    if(!LDL_send(this, false, NUM2UINT(port), RSTRING_PTR(data), RSTRING_LEN(data))){
+    if(!MAC_send(this, false, NUM2UINT(port), RSTRING_PTR(data), RSTRING_LEN(data))){
         
-        rb_raise(cError, "LDL_send() failed");
+        rb_raise(cError, "MAC_send() failed");
     }
     
     rb_iv_set(self, "@tx_handler", handler);
@@ -484,8 +781,8 @@ static VALUE send_unconfirmed(int argc, VALUE *argv, VALUE self)
 
 static VALUE send_confirmed(int argc, VALUE *argv, VALUE self)
 {
-    struct lora_device_lib *this;    
-    Data_Get_Struct(self, struct lora_device_lib, this);
+    struct lora_mac *this;    
+    Data_Get_Struct(self, struct lora_mac, this);
   
     VALUE port;
     VALUE data;
@@ -493,9 +790,9 @@ static VALUE send_confirmed(int argc, VALUE *argv, VALUE self)
     
     (void)rb_scan_args(argc, argv, "20&", &port, &data, &handler);
     
-    if(LDL_send(this, true, NUM2UINT(port), RSTRING_PTR(data), RSTRING_LEN(data))){
+    if(MAC_send(this, true, NUM2UINT(port), RSTRING_PTR(data), RSTRING_LEN(data))){
     
-        rb_raise(cError, "LDL_send() failed");
+        rb_raise(cError, "MAC_send() failed");
     }
     
     rb_iv_set(self, "@tx_handler", handler);
@@ -505,10 +802,10 @@ static VALUE send_confirmed(int argc, VALUE *argv, VALUE self)
 
 static VALUE tick(VALUE self)
 {
-    struct lora_device_lib *this;    
-    Data_Get_Struct(self, struct lora_device_lib, this);
+    struct lora_mac *this;    
+    Data_Get_Struct(self, struct lora_mac, this);
     
-    LDL_tick(this);
+    MAC_tick(this);
     
     return self;
 }
@@ -603,8 +900,8 @@ static VALUE cr_to_symbol(enum lora_coding_rate cr)
 static VALUE io_event(VALUE self, VALUE event, VALUE time)
 {
     size_t i;
-    struct lora_device_lib *this;    
-    Data_Get_Struct(self, struct lora_device_lib, this);
+    struct lora_mac *this;    
+    Data_Get_Struct(self, struct lora_mac, this);
     
     struct {
         
@@ -640,11 +937,11 @@ static VALUE io_event(VALUE self, VALUE event, VALUE time)
 
 static VALUE timeUntilNextEvent(VALUE self)
 {
-    struct lora_device_lib *this;    
+    struct lora_mac *this;    
     uint64_t next;
-    Data_Get_Struct(self, struct lora_device_lib, this);
+    Data_Get_Struct(self, struct lora_mac, this);
     
-    next = Event_timeUntilNextEvent(this);
+    next = MAC_timeUntilNextEvent(this);
     
     return (next == UINT64_MAX) ? Qnil : ULL2NUM(next);
 }
@@ -710,4 +1007,9 @@ static VALUE calculateOnAirTime(VALUE self, VALUE bandwidth, VALUE spreading_fac
     }
     
     return UINT2NUM(MAC_calculateOnAirTime(bw[bw_i], sf[sf_i], (uint8_t)NUM2UINT(size)));
+}
+
+static VALUE ptrToValue(const void *ptr)
+{
+    return (VALUE)(((uint8_t *)ptr) - offsetof(struct RData, data));
 }

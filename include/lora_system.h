@@ -59,7 +59,7 @@ void System_atomic_setPtr(void **receiver, void *value);
  * @param[out] eui 8 byte buffer
  * 
  * */
-void System_getAppEUI(void *owner, uint8_t *eui);
+void System_getAppEUI(void *owner, void *eui);
 
 /** Retrieve the Device EUI
  *
@@ -67,7 +67,7 @@ void System_getAppEUI(void *owner, uint8_t *eui);
  * @param[out] eui 8 byte buffer
  * 
  * */
-void System_getDevEUI(void *owner, uint8_t *eui);
+void System_getDevEUI(void *owner, void *eui);
 
 /** Retrieve the Application Key
  *
@@ -75,16 +75,15 @@ void System_getDevEUI(void *owner, uint8_t *eui);
  * @param[out] key 16 byte buffer
  * 
  * */
-void System_getAppKey(void *owner, uint8_t *key);
+void System_getAppKey(void *owner, void *key);
 
-void System_getNwkSKey(void *owner, uint8_t *key);
-void System_getAppSKey(void *owner, uint8_t *key);
+void System_getNwkSKey(void *owner, void *key);
+void System_getAppSKey(void *owner, void *key);
 
 uint32_t System_getDevAddr(void *owner);
 
-void System_setNwkSKey(void *owner, const uint8_t *key);
-void System_setAppSKey(void *owner, const uint8_t *key);
-
+void System_setNwkSKey(void *owner, const void *key);
+void System_setAppSKey(void *owner, const void *key);
 void System_setDevAddr(void *owner, uint32_t devAddr);
 
 /** Get the current value of the up counter

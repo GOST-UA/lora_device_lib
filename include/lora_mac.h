@@ -178,6 +178,13 @@ void MAC_unmaskChannel(struct lora_mac *self, uint8_t chIndex);
 bool MAC_maskChannel(struct lora_mac *self, uint8_t chIndex);
 void MAC_removeChannel(struct lora_mac *self, uint8_t chIndex);
 
+uint64_t MAC_timeUntilNextEvent(struct lora_mac *self);
+
+bool MAC_setRate(struct lora_mac *self, uint8_t rate);
+bool MAC_setPower(struct lora_mac *self, uint8_t power);
+
+void MAC_restoreDefaults(struct lora_mac *self);
+
 #ifdef __cplusplus
 }
 #endif

@@ -380,8 +380,39 @@ void MAC_restoreDefaults(struct lora_mac *self)
         
         System_setRX1Delay(self, defaults.rx1_delay);
         
-        System_setRX1DROffset(self, defaults.rx1_offset);        
+        System_setRX1DROffset(self, defaults.rx1_offset);                
     }
+}
+
+uint64_t MAC_timeUntilNextEvent(struct lora_mac *self)
+{
+    return Event_timeUntilNextEvent(&self->events);
+}
+
+bool MAC_setRate(struct lora_mac *self, uint8_t rate)
+{
+    bool retval = false;
+    
+    if(rate <= 0xfU){
+        
+        System_setTXRate(self, rate);
+        retval = true;
+    }
+    
+    return retval;
+}
+
+bool MAC_setPower(struct lora_mac *self, uint8_t power)
+{
+    bool retval = false;
+    
+    if(power <= 0xfU){
+    
+        System_setTXPower(self, power);    
+        retval = true;
+    }
+    
+    return retval;    
 }
 
 /* static functions ***************************************************/
