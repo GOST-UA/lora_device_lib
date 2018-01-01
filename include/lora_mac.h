@@ -91,6 +91,8 @@ struct lora_mac {
     
     uint64_t bands[6U];
     
+    uint16_t devNonce;
+    
     struct {
         
         uint8_t chIndex;
@@ -172,11 +174,6 @@ void MAC_radioEvent(void *receiver, enum lora_radio_event event, uint64_t time);
 uint32_t MAC_calculateOnAirTime(enum lora_signal_bandwidth bw, enum lora_spreading_factor sf, uint8_t payloadLen);
 
 void MAC_tick(struct lora_mac *self);
-
-bool MAC_addChannel(struct lora_mac *self, uint8_t chIndex, uint32_t freq, uint8_t minRate, uint8_t maxRate);
-void MAC_unmaskChannel(struct lora_mac *self, uint8_t chIndex);
-bool MAC_maskChannel(struct lora_mac *self, uint8_t chIndex);
-void MAC_removeChannel(struct lora_mac *self, uint8_t chIndex);
 
 uint64_t MAC_timeUntilNextEvent(struct lora_mac *self);
 

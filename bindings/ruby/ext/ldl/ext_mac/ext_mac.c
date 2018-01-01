@@ -41,10 +41,6 @@ static VALUE alloc_state(VALUE klass);
 
 static VALUE personalize(VALUE self, VALUE devAddr, VALUE nwkSKey, VALUE appSKey);
 static VALUE tick(VALUE self);
-static VALUE addChannel(VALUE self, VALUE freq, VALUE chIndex);
-static VALUE removeChannel(VALUE self, VALUE chIndex);
-static VALUE maskChannel(VALUE self, VALUE chIndex);
-static VALUE unmaskChannel(VALUE self, VALUE chIndex);
 static VALUE setRate(VALUE self, VALUE rate);
 static VALUE setPower(VALUE self, VALUE power);
 static VALUE join(int argc, VALUE *argv, VALUE self);
@@ -374,10 +370,6 @@ void Init_ext_mac(void)
     
     rb_define_method(cExtMAC, "personalize", personalize, 3);
     rb_define_method(cExtMAC, "tick", tick, 0);
-    rb_define_method(cExtMAC, "addChannel", addChannel, 2);
-    rb_define_method(cExtMAC, "removeChannel", removeChannel, 1);
-    rb_define_method(cExtMAC, "maskChannel", maskChannel, 1);
-    rb_define_method(cExtMAC, "unmaskChannel", unmaskChannel, 1);
     rb_define_method(cExtMAC, "rate=", setRate, 1);
     rb_define_method(cExtMAC, "power=", setPower, 1);
     rb_define_method(cExtMAC, "join", join, -1);
@@ -664,53 +656,6 @@ static VALUE personalize(VALUE self, VALUE devAddr, VALUE nwkSKey, VALUE appSKey
     
     return self;
 }
-
-static VALUE addChannel(VALUE self, VALUE freq, VALUE chIndex)
-{
-    struct lora_mac *this;    
-    Data_Get_Struct(self, struct lora_mac, this);
-    
-    if(!MAC_addChannel(this, (uint8_t)NUM2UINT(chIndex), (uint32_t)NUM2UINT(freq), 0, 0)){
-        
-        rb_raise(cError, "MAC_addChannel() failed");    
-    }
-    
-    return self;
-}
-
-static VALUE removeChannel(VALUE self, VALUE chIndex)
-{
-    struct lora_mac *this;    
-    Data_Get_Struct(self, struct lora_mac, this);
-    
-    MAC_removeChannel(this, (uint8_t)NUM2UINT(chIndex));
-    
-    return self;
-}
-
-static VALUE maskChannel(VALUE self, VALUE chIndex)
-{
-    struct lora_mac *this;    
-    Data_Get_Struct(self, struct lora_mac, this);
-    
-    if(!MAC_maskChannel(this, (uint8_t)NUM2UINT(chIndex))){
-        
-        rb_raise(cError, "MAC_maskChannel() failed");
-    }
-    
-    return self;
-}
-
-static VALUE unmaskChannel(VALUE self, VALUE chIndex)
-{
-    struct lora_mac *this;    
-    Data_Get_Struct(self, struct lora_mac, this);
-    
-    MAC_unmaskChannel(this, (uint8_t)NUM2UINT(chIndex));
-    
-    return self;
-}
-
 
 static VALUE setRate(VALUE self, VALUE rate)
 {

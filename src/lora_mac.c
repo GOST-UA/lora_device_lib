@@ -177,9 +177,11 @@ bool MAC_join(struct lora_mac *self)
                 System_getAppEUI(self, f.appEUI);
                 System_getDevEUI(self, f.devEUI);            
                 
-                f.devNonce = System_rand();
-                f.devNonce <<= 8;
-                f.devNonce |= System_rand();
+                self->devNonce = System_rand();
+                self->devNonce <<= 8;
+                self->devNonce |= System_rand();
+                
+                f.devNonce = self->devNonce;
 
                 self->bufferLen = Frame_putJoinRequest(appKey, &f, self->buffer, sizeof(self->buffer));
                 
@@ -316,54 +318,6 @@ uint32_t MAC_calculateOnAirTime(enum lora_signal_bandwidth bw, enum lora_spreadi
 void MAC_tick(struct lora_mac *self)
 {
     Event_tick(&self->events);
-}
-
-bool MAC_addChannel(struct lora_mac *self, uint8_t chIndex, uint32_t freq, uint8_t minRate, uint8_t maxRate)
-{
-    bool retval = false;
-    
-    if(Region_isDynamic(self->region)){
-
-        if(Region_validateFreq(self->region, chIndex, freq)){
-            
-            if(Region_validateRate(self->region, chIndex, minRate, maxRate)){
-
-                retval = System_setChannel(self, chIndex, freq, minRate, maxRate);                                 
-            }
-            else{
-                
-                LORA_ERROR("invalid rate")
-            }
-        }
-        else{
-            
-            LORA_ERROR("invalid frequency")
-        }
-    }
-    else{
-        
-        LORA_ERROR("region is not dynamic")
-    }
-    
-    return retval;
-}
-
-void MAC_removeChannel(struct lora_mac *self, uint8_t chIndex)
-{    
-    if(Region_isDynamic(self->region)){
-        
-        (void)System_setChannel(self, chIndex, 0U, 0U, 0U);
-    }    
-}
-
-bool MAC_maskChannel(struct lora_mac *self, uint8_t chIndex)
-{
-    return System_maskChannel(self, chIndex);
-}
-
-void MAC_unmaskChannel(struct lora_mac *self, uint8_t chIndex)
-{
-    System_unmaskChannel(self, chIndex);
 }
 
 void MAC_restoreDefaults(struct lora_mac *self)
@@ -713,6 +667,31 @@ static void collect(struct lora_mac *self)
                         }                           
                     }                    
                 }   
+                
+                struct lora_aes_ctx ctx;
+                LoraAES_init(&ctx, appKey);
+                
+                (void)memset(nwkSKey, 0U, sizeof(nwkSKey));
+                
+                nwkSKey[0] = 1U;                
+                nwkSKey[1] = result.fields.joinAccept.appNonce;
+                nwkSKey[2] = result.fields.joinAccept.appNonce >> 8;
+                nwkSKey[3] = result.fields.joinAccept.appNonce >> 16;
+                nwkSKey[4] = result.fields.joinAccept.netID;
+                nwkSKey[5] = result.fields.joinAccept.netID >> 8;
+                nwkSKey[6] = result.fields.joinAccept.netID >> 16;
+                nwkSKey[7] = self->devNonce;
+                nwkSKey[8] = self->devNonce >> 8;
+                
+                (void)memcpy(appSKey, nwkSKey, sizeof(appSKey));
+                
+                appSKey[0] = 2U;                
+                
+                LoraAES_encrypt(&ctx, nwkSKey);
+                LoraAES_encrypt(&ctx, appSKey);
+                                
+                System_setAppSKey(self, nwkSKey);                
+                System_setAppSKey(self, appSKey);
             }
             else{
                 

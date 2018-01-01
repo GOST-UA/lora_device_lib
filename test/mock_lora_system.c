@@ -22,17 +22,17 @@ void System_atomic_setPtr(void **receiver, void *value)
     *receiver = value;
 }
 
-void System_getAppEUI(void *owner, uint8_t *eui)
+void System_getAppEUI(void *owner, void *eui)
 {
     (void)memcpy(eui, mock_ptr_type(uint8_t *), 8U);
 }
 
-void System_getDevEUI(void *owner, uint8_t *eui)
+void System_getDevEUI(void *owner, void *eui)
 {
     (void)memcpy(eui, mock_ptr_type(uint8_t *), 8U);
 }
 
-void System_getAppKey(void *owner, uint8_t *key)
+void System_getAppKey(void *owner, void *key)
 {
     (void)memcpy(key, mock_ptr_type(uint8_t *), 16U);
 }

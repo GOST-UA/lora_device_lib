@@ -203,9 +203,19 @@ uint8_t System_getTXPower(void *owner)
     return eeprom_read_byte(&params.tx_power);
 }
 
+void System_setTXPower(void *owner, uint8_t value)
+{
+    eeprom_update_byte(&params.tx_power, value);
+}
+
 uint8_t System_getTXRate(void *owner)
 {
     return eeprom_read_byte(&params.tx_rate);
+}
+
+void System_setTXRate(void *owner, uint8_t value)
+{
+    eeprom_update_byte(&params.tx_rate, value);
 }
 
 void System_getAppEUI(void *owner, void *eui)
