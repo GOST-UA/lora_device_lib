@@ -1,21 +1,47 @@
 module LDL
 
+    # SystemTime is used as a constant only so that it can be  
+    # referenced from within ExtMAC.
+    #
+    # It delegates a number of methods to a TimeSource instance.
     class SystemTime
     
-        @time = 0
+        @source = nil
     
+        # assign a time source
+        # @param src [TimeSource]
+        def source=(src)
+            @source = src
+            self
+        end
+    
+        # @see TimeSource#time
         def self.time
-            @time
+            if @source
+                @source.time
+            else
+                raise "need a time source"
+            end
         end
         
-        def self.time=(usec)
-            @time = usec
+        # @see TimeSource#onTimeout
+        def self.onTimeout(interval, &block)
+            if @source
+                @source.onTimeout(interval, &block)
+            else
+                raise "need a time source"
+            end
         end
         
-        def increment(usec)            
-            @time += usec
+        # @see TimeSource#wait
+        def self.wait(interval)
+            if @source
+                @source.wait(interval)
+            else
+                raise "need a time source"
+            end
         end
-    
+        
     end
     
 end

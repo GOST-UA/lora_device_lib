@@ -36,12 +36,12 @@ extern "C" {
 struct lora_mac;
 
 enum lora_mac_response_type {
-    LORA_MAC_TX_COMPLETE,
-    LORA_MAC_TX_CONFIRMED,
-    LORA_MAC_TX_TIMEOUT,
-    LORA_MAC_RX,
-    LORA_MAC_JOIN_SUCCESS,
-    LORA_MAC_JOIN_TIMEOUT    
+    
+    LORA_MAC_DATA_COMPLETE, /**< cycle is complete */ 
+    LORA_MAC_DATA_TIMEOUT,  /**< cycle is complete but ack was not received */ 
+    LORA_MAC_RX,            /**< received a data frame */
+    LORA_MAC_JOIN_SUCCESS,  /**< sent join request, received join response in either RX1 or RX2 */
+    LORA_MAC_JOIN_TIMEOUT   /**< sent join request, did not receive join response in either RX1 or RX2 */    
 };
 
 union lora_mac_response_arg {
@@ -165,9 +165,12 @@ bool MAC_personalize(struct lora_mac *self, uint32_t devAddr, const void *nwkSKe
  * */
 bool MAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *data, uint8_t len);
 
-void MAC_setResponseHandler(struct lora_mac *self, void *receiver, lora_mac_response_fn cb);
-
 bool MAC_join(struct lora_mac *self);
+
+bool MAC_setRate(struct lora_mac *self, uint8_t rate);
+bool MAC_setPower(struct lora_mac *self, uint8_t power);
+
+void MAC_setResponseHandler(struct lora_mac *self, void *receiver, lora_mac_response_fn cb);
 
 void MAC_radioEvent(void *receiver, enum lora_radio_event event, uint64_t time);
 
@@ -177,10 +180,9 @@ void MAC_tick(struct lora_mac *self);
 
 uint64_t MAC_timeUntilNextEvent(struct lora_mac *self);
 
-bool MAC_setRate(struct lora_mac *self, uint8_t rate);
-bool MAC_setPower(struct lora_mac *self, uint8_t power);
+bool MAC_isJoined(struct lora_mac *self);
+bool MAC_isPersonalised(struct lora_mac *self);
 
-void MAC_restoreDefaults(struct lora_mac *self);
 
 #ifdef __cplusplus
 }

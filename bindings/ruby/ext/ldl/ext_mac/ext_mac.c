@@ -44,8 +44,7 @@ static VALUE tick(VALUE self);
 static VALUE setRate(VALUE self, VALUE rate);
 static VALUE setPower(VALUE self, VALUE power);
 static VALUE join(int argc, VALUE *argv, VALUE self);
-static VALUE send_unconfirmed(int argc, VALUE *argv, VALUE self);
-static VALUE send_confirmed(int argc, VALUE *argv, VALUE self);
+static VALUE send(int argc, VALUE *argv, VALUE self);
 static VALUE io_event(VALUE self, VALUE event, VALUE time);
 
 static void _response(void *receiver, enum lora_mac_response_type type, const union lora_mac_response_arg *arg);
@@ -69,7 +68,7 @@ uint64_t System_getTime(void)
 
 void System_usleep(uint32_t interval)
 {
-    //fixme
+    (void)rb_funcall(rb_const_get(cLDL, rb_intern("SystemTime")), rb_intern("wait"), 1, UINT2NUM(interval));
 }
 
 uint8_t System_rand(void)
@@ -373,8 +372,7 @@ void Init_ext_mac(void)
     rb_define_method(cExtMAC, "rate=", setRate, 1);
     rb_define_method(cExtMAC, "power=", setPower, 1);
     rb_define_method(cExtMAC, "join", join, -1);
-    rb_define_method(cExtMAC, "send_unconfirmed", send_unconfirmed, -1);
-    rb_define_method(cExtMAC, "send_confirmed", send_confirmed, -1);    
+    rb_define_method(cExtMAC, "send", send, -1);
     rb_define_method(cExtMAC, "io_event", io_event, 2);    
     rb_define_method(cExtMAC, "timeUntilNextEvent", timeUntilNextEvent, 0);    
     rb_define_method(cExtMAC, "onAirTime", calculateOnAirTime, 3);    
@@ -613,8 +611,6 @@ static VALUE initialize(int argc, VALUE *argv, VALUE self)
     rb_iv_set(self, "@rx_handler", Qnil);
     rb_iv_set(self, "@join_handler", Qnil);
     
-    rb_iv_set(self, "@rx_queue", rb_funcall(rb_const_get(rb_cObject, rb_intern("Queue")), rb_intern("new"), 0));
- 
     initChannels(self, region_id);
     
     MAC_restoreDefaults(this);
@@ -700,10 +696,13 @@ static VALUE join(int argc, VALUE *argv, VALUE self)
     
     rb_iv_set(self, "@join_handler", handler);
     
+    MAC_tick(this);
+    uint32_t interval = MAC_timeUntilNextEvent(this);
+    
     return self;
 }
 
-static VALUE send_unconfirmed(int argc, VALUE *argv, VALUE self)
+static VALUE send(int argc, VALUE *argv, VALUE self)
 {
     struct lora_mac *this;    
     Data_Get_Struct(self, struct lora_mac, this);
@@ -711,34 +710,29 @@ static VALUE send_unconfirmed(int argc, VALUE *argv, VALUE self)
     VALUE port;
     VALUE data;
     VALUE handler;
+    VALUE opts;
     
-    (void)rb_scan_args(argc, argv, "20&", &port, &data, &handler);
+    (void)rb_scan_args(argc, argv, "20:&", &port, &data, &handler, &opts);
     
-    if(!MAC_send(this, false, NUM2UINT(port), RSTRING_PTR(data), RSTRING_LEN(data))){
+    if(opts != Qnil){
         
-        rb_raise(cError, "MAC_send() failed");
+        opts = rb_hash_new();
     }
     
-    rb_iv_set(self, "@tx_handler", handler);
-    
-    return self;
-}
-
-static VALUE send_confirmed(int argc, VALUE *argv, VALUE self)
-{
-    struct lora_mac *this;    
-    Data_Get_Struct(self, struct lora_mac, this);
-  
-    VALUE port;
-    VALUE data;
-    VALUE handler;
-    
-    (void)rb_scan_args(argc, argv, "20&", &port, &data, &handler);
-    
-    if(MAC_send(this, true, NUM2UINT(port), RSTRING_PTR(data), RSTRING_LEN(data))){
-    
-        rb_raise(cError, "MAC_send() failed");
+    if(rb_hash_aref(opts, ID2SYM(rb_intern("confirmed"))) == Qnil){
+        
+        if(!MAC_send(this, false, NUM2UINT(port), RSTRING_PTR(data), RSTRING_LEN(data))){
+            
+            rb_raise(cError, "MAC_send() failed");
+        }            
     }
+    else{
+        
+        if(!MAC_send(this, true, NUM2UINT(port), RSTRING_PTR(data), RSTRING_LEN(data))){
+            
+            rb_raise(cError, "MAC_send() failed");
+        }            
+    }   
     
     rb_iv_set(self, "@tx_handler", handler);
     
@@ -762,9 +756,8 @@ static void _response(void *receiver, enum lora_mac_response_type type, const un
     VALUE handler;
     
     VALUE type_to_sym[] = {
-        ID2SYM(rb_intern("tx_complete")),
-        ID2SYM(rb_intern("tx_confirmed")),
-        ID2SYM(rb_intern("tx_timeout")),
+        ID2SYM(rb_intern("data_complete")),
+        ID2SYM(rb_intern("data_timeout")),
         ID2SYM(rb_intern("rx")),
         ID2SYM(rb_intern("join_success")),
         ID2SYM(rb_intern("join_timeout"))
@@ -772,28 +765,19 @@ static void _response(void *receiver, enum lora_mac_response_type type, const un
 
     switch(type){
     default:
-    case LORA_MAC_TX_COMPLETE:
-    case LORA_MAC_TX_CONFIRMED:
-    case LORA_MAC_TX_TIMEOUT:
+    case LORA_MAC_DATA_COMPLETE:
+    case LORA_MAC_DATA_TIMEOUT:
         handler = rb_iv_get(self, "@tx_handler");                        
         rb_funcall(handler, rb_intern("call"), 1, type_to_sym[type]);
         break;
     case LORA_MAC_RX:
-    {
-        VALUE rx_queue = rb_iv_get(self, "@rx_queue");
-        VALUE hash = rb_hash_new();
-        rb_hash_aset(hash, ID2SYM(rb_intern("port")), UINT2NUM(arg->rx.port));
-        rb_hash_aset(hash, ID2SYM(rb_intern("msg")), rb_str_new((const char *)arg->rx.data, arg->rx.len));
-        
-        rb_funcall(rx_queue, rb_intern("push"), 1, hash);
     
         handler = rb_iv_get(self, "@rx_handler");    
         
         if(handler != Qnil){
         
-            rb_funcall(handler, rb_intern("call"), 0);
+            rb_funcall(handler, rb_intern("call"), 2, UINT2NUM(arg->rx.port), rb_str_new((const char *)arg->rx.data, arg->rx.len));
         }
-    }
         break;
     case LORA_MAC_JOIN_SUCCESS:
     case LORA_MAC_JOIN_TIMEOUT:

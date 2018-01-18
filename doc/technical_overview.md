@@ -31,13 +31,25 @@ Below is a simplified sequence of recieving data:
 ## Timing Requirements
 
 LoRaWAN requires that receive windows open at a precise interval measured
-from the end of the TX. This can be challenging to implement on a busy system
+from the end of the TX. The diagram below illustrates the TX -> RX1 -> RX2 pattern:
+
+![image missing](/doc/plantuml/rx_windows.png "RX Timing")
+
+- RX1_INTERVAL will be in the range of 1..16 seconds
+- RX2_INTERVAL is always RX1_INTERVAL + 1 second
+
+The software stack needs to be able to measure with precision of at least 20us the time
+from end of TX (signalled with 
+
+
+
+This can be challenging to implement on a busy system
 that doesn't use an RTOS since other tasks in the mainloop will add
 jitter to when LDL can open the RX window.
 
-The diagram below illustrates the TX -> RX1 -> RX2 pattern:
 
-![image missing](/doc/plantuml/rx_windows.png "RX Timing")
+
+
 
 The architecture handles RX windows as follows:
 
@@ -65,14 +77,12 @@ In summary:
     - Clock cycles may be wasted blocking
     - RX windows may be missed
 
-## Channel Schedule / Hopping Algorithm
+## Upstream Channel Schedule Algorithm
 
-### Data
-
-LDL implements the following algorithm for data messages:
+LDL implements the following algorithm for selecting an upstream channel:
 
 - Let `B` be a set of all bands for the current region.
-- Let `b` be a subset of B where the band is ready to be used: 
+- Let `b` be a subset of B where the band is ready to be used:
 - Let `f` be a set of frequencies that belong to bands in `b` which are not masked and which support the current datarate setting:
 - Let `s` be a randomly selected frequency from `f` 
 

@@ -86,6 +86,9 @@ void System_setNwkSKey(void *owner, const void *key);
 void System_setAppSKey(void *owner, const void *key);
 void System_setDevAddr(void *owner, uint32_t devAddr);
 
+void System_setStatus(void *owner, uint8_t value);
+uint8_t System_getStatus(void *owner);
+    
 /** Get the current value of the up counter
  * 
  * */

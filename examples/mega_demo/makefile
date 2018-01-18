@@ -28,7 +28,7 @@ CFLAGS += -DLORA_DEVICE
 # avr-gcc specific optimisations
 CFLAGS += -DLORA_AVR
 
-CLFAGS += -DLORA_REGION_EU_863_870
+CLFAGS += -DLORA_REGION_EU_863_870=EU_863_870
 
 mega_demo.elf: $(addprefix $(DIR_BUILD)/, $(OBJ))
 	@ echo building $@

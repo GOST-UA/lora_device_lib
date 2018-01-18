@@ -46,10 +46,10 @@ struct lora_frame_data {
     
     uint32_t devAddr;
     uint16_t counter;
-    bool ack;
-    bool adr;
-    bool adrAckReq;
-    bool pending;
+    bool ack : 1U;
+    bool adr : 1U;
+    bool adrAckReq : 1U;
+    bool pending : 1U;
 
     const uint8_t *opts;
     uint8_t optsLen;

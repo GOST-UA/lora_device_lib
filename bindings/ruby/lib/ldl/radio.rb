@@ -2,80 +2,114 @@ module LDL
 
     class Radio
     
-        def initialize(fixture)
+        attr_accessor :buffer, :mode
+    
+        def initialize(broker)
+            
             @mode = :sleep
             @events = []  
             @rx = nil
             @tx = nil     
-            @buffer = nil      
-            @fixture = fixture           
-            @mac = nil
+            @buffer = nil     
+            @broker = broker 
+            
         end
     
         def resetHardware
-            0   # todo add the reset delay and work that into the eventing system
+            SystemTime.wait(1)        
         end
     
         def transmit(data, **settings)            
             
-            @mode = :tx
-            @buffer = data.dup
+            @broker.publish({
+                :time => System.time,
+                :tx_time => @mac.onAirTime(settings[:bw], settings[:sf], data.size),
+                :data => data.dup,
+                :sf => settings[:sf],
+                :bw => settings[:bw],
+                :cr => settings[:cr],
+                :freq => settings[:freq],
+                :power => settings[:power]            
+            }, "device_tx")
             
-            # what does it do?
-            #
-            # 1. At end of transmit time, it should pass entirety of message
-            #    to the ???
-            #
-            # 2. It should pass the entirety of the message to the tx medium (which can work out if there is interference with other nodes)
-            #
+            mac = @mac
             
-            @events << {
-                :type => :tx_complete,
-                :time => System.time + transmit_time
-            }        
+            SystemTime.onTimeout(@mac.onAirTime(settings[:bw], settings[:sf], data.size)) do
             
-            # we need to know transmit time
+                mac.io_event :tx_complete, SystemTime.time
+            
+            end           
             
             true
-        end
         
+        end
+            
         def receive(**settings)
             
-            @events << {
-                :type => :rx_timeout,
-                :time => settings[:timeout] # this will be a symbol timeout so convert to ticks
-            }
+            broker = @broker
+            mac = self
             
-            @mode = :rx
-            @rx = settings
+            # this is only accessed within the block below
+            state = :listening
+        
+            rx_event = broker.subscribe "mac_#{mac.id}" do |msg,topic|            
+            
+                case msg[:type]
+                when :rx_timeout
+                
+                    if state == :listening
                     
+                        @mac.io_event :rx_timeout, System.time
+                        broker.unsubscribe rx_event
+                        
+                    end
+                       
+                when :rx_start
+                
+                    case state
+                    when :listening
+                    
+                        if msg[:sf] == settings[:sf] and msg[:bw] == settings[:bw] and msg[:freq] == settings[:freq]
+                    
+                            state = :rx
+                            
+                            SystemTime.onTimeout msg[:tx_time] do 
+                            
+                                broker.unsubscribe rx_event
+                                @mac.io_event :rx_ready, System.time
+                                
+                            end
+                            
+                        end
+                        
+                    end
+                
+                else
+                    raise
+                end
+                
+            end
+            
+            SystemTime.onTimeout(settings[:interval]) do
+            
+                broker.publish({
+            
+                    :type => :rx_timeout
+                
+                }, "mac_#{mac.id}")
+            
+            end
+
             true
                     
         end
         
         def collect        
-            ""
+            buffer
         end
         
         def sleep
-            @mode = :sleep
-        end
-        
-        def tick        
-            @events.select{|e|e[:time] >= SystemTime.time}.each do |e|
-                @events.delete(e)                
-                case e[:type]
-                when :rx_timeout, :rx_ready, :tx_finished
-                    if @mac
-                        @mac.io_event(e[:type], SystemTime.time)
-                    end 
-                end                                
-            end
-        end
-        
-        # receive a message from the fixture
-        def fixture_msg(msg)
-            
+            mode = :sleep
         end
         
         def set_mac(mac)
