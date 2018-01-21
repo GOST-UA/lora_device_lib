@@ -47,7 +47,7 @@ module LDL
         
             if timeout
                         
-                end_time = Time.now + timeout.to_i
+                end_time = Time.now + timeout.to_f
             
             end
             
@@ -55,7 +55,7 @@ module LDL
             
                 while @queue.empty?
                 
-                    if opt.has_key? :timeout
+                    if timeout
                     
                         break unless ((time_now = Time.now) < end_time)
                     
@@ -81,12 +81,18 @@ module LDL
             @queue.size        
         end
         
+        def clear
+            with_mutex do
+                @queue.clear
+            end
+        end
+
         def with_mutex
             @mutex.synchronize do
                 yield
             end
         end
-        
+
         private :with_mutex
     
     end

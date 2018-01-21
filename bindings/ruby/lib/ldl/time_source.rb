@@ -19,21 +19,22 @@ module LDL
         def initialize        
         
             @running = false
-            @mutex = Mutex.new
-            @queue = []
+            @mutex = Mutex.new            
             @time = 0      
-            @base = 0
-            @prevTime = Time.now              
+            base = 0
+            prevTime = Time.now              
             @update = TimeoutQueue.new
-           
+
             @ticker = Thread.new do             
             
+                queue = []
+
                 loop do
                         
                     begin
-                        
-                        event = update.pop( @queue.empty? ? nil : @queue.first[:interval] )
-                        
+
+                        event = @update.pop( queue.empty? ? nil : to_sec(queue.first[:interval]) )
+
                         if event.nil?
                             break
                         end
@@ -41,15 +42,16 @@ module LDL
                     rescue ThreadError
                     
                         event = nil
-                        
+
                     end
-            
+
                     if event.kind_of? Hash
                     
                         case event[:op]
                         when :add
-                            @queue << event
-                            @queue.sort_by! { |e| e[:interval] }
+
+                            queue << event
+                            queue.sort_by! { |e| e[:interval] }
                         else
                             raise
                         end
@@ -58,15 +60,16 @@ module LDL
             
                     timeNow = Time.now
                     
-                    delta = timeNow - @prevTime
+                    delta = to_ticks(timeNow - prevTime)
+
+                    prevTime = timeNow
                     
-                    @prevTime = timeNow
-                        
-                    @queue = @queue.map do |v|
+                    queue = queue.map do |v|
                     
                         if v[:interval] <= delta
                         
-                            @time = @base + v[:interval]
+                            @time = base + v[:interval]
+
                             v[:block].call
                             nil
                             
@@ -79,8 +82,8 @@ module LDL
                         
                     end.compact
                     
-                    @base += delta
-                    @time = @base
+                    base += delta
+                    @time = base
                     
                 end
             
@@ -119,20 +122,24 @@ module LDL
         # start the time source
         #
         def start
-            if not running?
-                @ticker.run
+            with_mutex do
+                if not running?
+                    @ticker.run
+                end
+                self
             end
-            self
         end
         
         # stop the time source
         #
         def stop
-            if running?
-                @update.push(nil, :head => true)
-                @ticker.join
-            end        
-            self
+            with_mutex do
+                if running?
+                    @update.push(nil, :head => true)
+                    @ticker.join
+                end        
+                self
+            end
         end
         
         def with_mutex
@@ -140,8 +147,20 @@ module LDL
                 yield
             end
         end
+
+        INTERVAL = 100000.0
+
+        # convert 20us tick interval to seconds
+        def to_sec(interval)
+            interval / INTERVAL
+        end
+
+        # convert seconds to 20us ticks
+        def to_ticks(sec)
+            (sec * INTERVAL).to_i
+        end
         
-        private :with_mutex
+        private :with_mutex, :to_sec, :to_ticks
     
     end
 
