@@ -4,6 +4,7 @@
 *.o
 *.so
 *.dll
+*.sublime*
 tmp/*
 !.gitignore
 Gemfile.lock
