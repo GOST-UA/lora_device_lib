@@ -85,6 +85,7 @@ module LDL
             with_mutex do
                 @queue.clear
             end
+            self
         end
 
         def with_mutex

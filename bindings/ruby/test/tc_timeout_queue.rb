@@ -14,9 +14,9 @@ class TestTimeoutQueue < Minitest::Test
 
     	assert_raises ThreadError do
 
-	    	Timeout::timeout 0.25 do
+	    	Timeout::timeout 0.5 do
 
-	    		@queue.pop 0.5
+	    		@queue.pop 0.25
 
 	    	end
 
