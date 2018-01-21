@@ -147,6 +147,20 @@ bool Region_getRX1Freq(const struct lora_region *self, uint32_t txFreq, uint32_t
 
 uint16_t Region_getMaxFCNTGap(const struct lora_region *self);
 
+/** derive the rate integer from bandwidth and spreading factor for a given region
+ *
+ * @note useful for semtech gateway protocol
+ *
+ * @param[in] region
+ * @param[in] sf
+ * @param[in] bw
+ * @param[out] rate
+ *
+ * @return true if settings are valid for region
+ *
+ * */
+bool Region_rateFromParameters(const struct lora_region *self, enum lora_spreading_factor sf, enum lora_signal_bandwidth bw, uint8_t *rate);
+
 #ifdef __cplusplus
 }
 #endif

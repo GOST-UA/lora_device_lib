@@ -740,6 +740,32 @@ uint8_t Region_getJA1Delay(const struct lora_region *self)
     return retval;
 }
 
+#ifndef LORA_DEVICE
+bool Region_rateFromParameters(const struct lora_region *self, enum lora_spreading_factor sf, enum lora_signal_bandwidth bw, uint8_t *rate)
+{
+    LORA_PEDANTIC(rate != NULL)
+    LORA_PEDANTIC(self != NULL)
+
+    uint8_t i;
+    bool retval = false;
+    struct lora_data_rate setting;
+
+    for(i=0U; i < self->num_rates; i++){
+
+        memcpy_P(&setting, self->rates, sizeof(setting));
+
+        if(setting.bw == bw && setting.sf == sf){
+
+            *rate = setting.rate;
+            retval = true;
+            break;
+        }
+    }
+
+    return retval;
+}
+#endif
+
 /* static functions ***************************************************/
 
 static bool getRateRange(const struct lora_region *self, uint8_t chIndex, uint8_t *minRate, uint8_t *maxRate)
