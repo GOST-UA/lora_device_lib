@@ -34,4 +34,8 @@ class TestPushAck < Minitest::Test
         
     end
 
+    def test_encode_decode        
+        assert_kind_of Semtech::PushAck, Semtech::Message.decode(@state.encode)        
+    end
+
 end

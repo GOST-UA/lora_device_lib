@@ -44,11 +44,11 @@ module LDL::Semtech
                 end
                 
                 if root.has_key? "stat"
-                    stat = Status.from_h(root["stat"])
+                    stat = StatusPacket.from_h(root["stat"])
                 end
                 
-            rescue       
-                raise ArgumentError.new "payload is not valid"            
+            rescue => e  
+                raise ArgumentError.new "payload is not valid: #{e}"            
             end
             
             self.new(
@@ -105,7 +105,7 @@ module LDL::Semtech
             [super, eui.bytes, obj.to_json].pack("a*a*a*")
 
         end
-    
+        
     end
 
 end

@@ -18,4 +18,8 @@ class TestRXPacket < Minitest::Test
         Semtech::RXPacket.from_h(input)
     end
     
+    def test_encode_decode
+        Semtech::RXPacket.from_h(JSON.parse(@state.to_json))        
+    end
+    
 end

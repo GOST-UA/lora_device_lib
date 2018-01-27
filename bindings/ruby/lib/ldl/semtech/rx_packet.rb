@@ -76,7 +76,7 @@ module LDL::Semtech
                     freq: msg["freq"],
                     chan: msg["chan"],
                     rfch: msg["rfch"],
-                    stat: msg["stat"],
+                    stat: stat,
                     modu: msg["modu"],
                     datr: msg["datr"],
                     codr: msg["codr"],
@@ -85,8 +85,8 @@ module LDL::Semtech
                     size: msg["size"],
                     data: data
                 )                    
-            rescue
-                raise ArgumentError
+            rescue => e
+                raise ArgumentError.new "invalid message: #{e}"
             end            
         end
     
@@ -94,7 +94,7 @@ module LDL::Semtech
 
             init = Proc.new do |iv_name, klass, default|                
                 if param[iv_name]
-                    raise TypeError unless klass.nil? or param[iv_name].kind_of? klass                                        
+                    raise TypeError.new "expecting #{klass} but got #{param[iv_name]}" unless klass.nil? or param[iv_name].kind_of? klass                                        
                     if block_given?
                         value = yield(param[iv_name])
                     else
@@ -197,7 +197,7 @@ module LDL::Semtech
             when 0
                 :nocrc
             else
-                raise
+                raise ArgumentError.new "invalid status '#{s}' must be one of [-1, 0, 1]"
             end
         end
     end

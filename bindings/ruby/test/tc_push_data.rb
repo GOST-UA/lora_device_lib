@@ -37,5 +37,9 @@ class TestPushData < Minitest::Test
         assert_nil decoded.stat        
         
     end
+    
+    def test_encode_decode        
+        assert_kind_of Semtech::PushData, Semtech::Message.decode(@state.encode)        
+    end
 
 end

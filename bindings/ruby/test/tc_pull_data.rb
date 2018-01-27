@@ -33,5 +33,9 @@ class TestPullAck < Minitest::Test
         assert_equal 0,  decoded.token
         
     end
+    
+    def test_encode_decode        
+        assert_kind_of Semtech::PullData, Semtech::Message.decode(@state.encode)        
+    end
 
 end

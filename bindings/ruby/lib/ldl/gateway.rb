@@ -136,6 +136,7 @@ module LDL
                             :task => :upstream,
                             :rxpk => Semtech::RXPacket.new(
                                 time: Time.now,
+                                tmst: SystemTime.time & 0xffffffff,
                                 freq: msg[:freq],
                                 chan: @channel.index(chan),
                                 rfch: 0,

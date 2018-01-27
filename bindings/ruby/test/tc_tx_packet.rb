@@ -18,4 +18,8 @@ class TestTXPacket < Minitest::Test
         Semtech::TXPacket.from_h(input)
     end
     
+    def test_encode_decode
+        Semtech::TXPacket.from_h(JSON.parse(@state.to_json))        
+    end
+    
 end

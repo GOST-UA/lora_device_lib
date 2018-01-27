@@ -42,7 +42,7 @@ module LDL::Semtech
             self.new(
                 version: version,
                 token: token,
-                eui: eui,
+                eui: LDL::EUI64.new(eui),
                 txpk_ack: txpk_ack                
             )
         end
