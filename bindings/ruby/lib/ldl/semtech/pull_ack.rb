@@ -26,10 +26,6 @@ module LDL::Semtech
             )
         end
     
-        def encode
-            super
-        end
-    
     end
 
 end

@@ -33,7 +33,7 @@ module LDL::Semtech
                     raise ArgumentError.new "root must contain the key 'txpk_ack'"
                 end
                 
-                txpk_ack = root["txpk_ack"].map{|p|TXPacketAck.from_h(root["txpk_ack"])}
+                txpk_ack = TXPacketAck.from_h(root["txpk_ack"])
                 
             rescue           
                 ArgumentError.new "payload is not valid"            
@@ -48,19 +48,20 @@ module LDL::Semtech
         end
 
         attr_reader :eui
-        attr_reader :rxpk_ack
+        attr_reader :txpk_ack
 
-        def initialize(**param)
+        def initialize(**params)
         
             super(**params)
                                
-            if params[:txpk_ack]
+            if params.has_key? :txpk_ack
+                raise TypeError unless params[:txpk_ack].kind_of? TXPacketAck
                 @rxpk_ack = params[:txpk_ack]
             else
-                @rxpk_ack = {:txpk_ack => {}}     
+                @txpk_ack = TXPacketAck.new   
             end
             
-            if params[:eui]
+            if params.has_key? :eui
                 raise TypeError unless params[:eui].kind_of? LDL::EUI64
                 @eui = params[:eui]                
             else
@@ -70,7 +71,7 @@ module LDL::Semtech
         end
 
         def encode
-            [super, eui, rxpk_ack.to_json].pack("a*a*a*")
+            [super, eui.bytes, {:txpk_ack => txpk_ack}.to_json].pack("a*a*a*")
         end
 
     end

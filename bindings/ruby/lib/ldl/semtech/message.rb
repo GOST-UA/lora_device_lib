@@ -14,6 +14,10 @@ module LDL::Semtech
         def self.inherited(subclass)
             @subclasses << subclass
         end
+
+        def self.===(other)
+            self.==(other)
+        end
     
         def self.decode(msg)
         

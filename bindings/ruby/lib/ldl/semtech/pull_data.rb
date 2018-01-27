@@ -34,7 +34,7 @@ module LDL::Semtech
             
             super(**params)
             
-            if params[:eui]
+            if params.has_key? :eui
                 raise TypeError unless params[:eui].kind_of? LDL::EUI64
                 @eui = params[:eui]                
             else
