@@ -2,21 +2,22 @@ require 'minitest/autorun'
 require 'ldl'
 require 'timeout'
 
-Thread.abort_on_exception = true
-
 class TestTimeSource < Minitest::Test
 
     include LDL
 
+    attr_reader :state
+
     def setup
-        @source = TimeSource.new
-        @source.start
+        Thread.abort_on_exception = true
+        @state = TimeSource.new
+        state.start
     end
 
     def test_wait
 
         Timeout::timeout 1 do
-            @source.wait 9999
+            state.wait 9999
         end
 
     end
@@ -25,10 +26,10 @@ class TestTimeSource < Minitest::Test
 
         q = Queue.new
     
-        @source.onTimeout 999 do
+        state.onTimeout 999 do
         
             # #time must be predictable
-            assert_equal 999, @source.time
+            assert_equal 999, state.time
 
             q.push nil
         
@@ -41,7 +42,8 @@ class TestTimeSource < Minitest::Test
     end
     
     def teardown
-        @source.stop
+        @state.stop
+        Thread.abort_on_exception = false
     end
 
 

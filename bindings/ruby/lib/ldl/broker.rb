@@ -53,7 +53,6 @@ module LDL
             self
         end
         
-        # @private
         def with_mutex
             @mutex.synchronize do
                 yield

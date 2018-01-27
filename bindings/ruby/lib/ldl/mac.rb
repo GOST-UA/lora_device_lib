@@ -13,6 +13,9 @@ module LDL
         # @option opts [Symbol] :region
         #
         def initialize(broker, **opts)
+        
+            raise "SystemTime must be defined" unless defined? SystemTime
+        
             @mutex = Mutex.new            
             super Radio.new(broker), **opts
             

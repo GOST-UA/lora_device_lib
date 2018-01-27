@@ -5,6 +5,8 @@ module LDL
         attr_accessor :buffer, :mode
     
         def initialize(broker)
+
+            raise "SystemTime must be defined" unless defined? SystemTime
             
             @mode = :sleep
             @events = []  
@@ -29,7 +31,9 @@ module LDL
                 :bw => settings[:bw],
                 :cr => settings[:cr],
                 :freq => settings[:freq],
-                :power => settings[:power]            
+                :power => settings[:power],
+                :modu => "LORA",
+                :codr => 5            
             }, "device_tx")
             
             mac = @mac
@@ -37,7 +41,8 @@ module LDL
             SystemTime.onTimeout(@mac.onAirTime(settings[:bw], settings[:sf], data.size)) do
             
                 mac.io_event :tx_complete, SystemTime.time
-            
+                @broker.publish()
+
             end           
             
             true
@@ -52,7 +57,7 @@ module LDL
             # this is only accessed within the block below
             state = :listening
         
-            rx_event = broker.subscribe "mac_#{mac.id}" do |msg,topic|            
+            rx_event = broker.subscribe "gateway_tx" do |msg,topic|            
             
                 case msg[:type]
                 when :rx_timeout

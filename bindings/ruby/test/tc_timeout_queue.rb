@@ -7,20 +7,20 @@ class TestTimeoutQueue < Minitest::Test
     include LDL
 
     def setup
-    	@queue = TimeoutQueue.new
+        @queue = TimeoutQueue.new
     end
 
     def test_pop_with_timeout
 
-    	assert_raises ThreadError do
+        assert_raises ThreadError do
 
-	    	Timeout::timeout 0.5 do
+            Timeout::timeout 0.5 do
 
-	    		@queue.pop 0.25
+                @queue.pop 0.25
 
-	    	end
+            end
 
-	    end
+        end
 
     end
 
