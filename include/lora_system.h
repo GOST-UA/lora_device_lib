@@ -55,99 +55,99 @@ void System_atomic_setPtr(void **receiver, void *value);
 
 /** Retrieve the Application EUI
  * 
- * @param[in] owner the owner of this EUI
+ * @param[in] receiver the receiver of this EUI
  * @param[out] eui 8 byte buffer
  * 
  * */
-void System_getAppEUI(void *owner, void *eui);
+void System_getAppEUI(void *receiver, void *eui);
 
 /** Retrieve the Device EUI
  *
- * @param[in] owner the owner of this EUI
+ * @param[in] receiver the receiver of this EUI
  * @param[out] eui 8 byte buffer
  * 
  * */
-void System_getDevEUI(void *owner, void *eui);
+void System_getDevEUI(void *receiver, void *eui);
 
 /** Retrieve the Application Key
  *
- * @param[in] owner the owner of this AppKey
+ * @param[in] receiver the receiver of this AppKey
  * @param[out] key 16 byte buffer
  * 
  * */
-void System_getAppKey(void *owner, void *key);
+void System_getAppKey(void *receiver, void *key);
 
-void System_getNwkSKey(void *owner, void *key);
-void System_getAppSKey(void *owner, void *key);
+void System_getNwkSKey(void *receiver, void *key);
+void System_getAppSKey(void *receiver, void *key);
 
-uint32_t System_getDevAddr(void *owner);
+uint32_t System_getDevAddr(void *receiver);
 
-void System_setNwkSKey(void *owner, const void *key);
-void System_setAppSKey(void *owner, const void *key);
-void System_setDevAddr(void *owner, uint32_t devAddr);
+void System_setNwkSKey(void *receiver, const void *key);
+void System_setAppSKey(void *receiver, const void *key);
+void System_setDevAddr(void *receiver, uint32_t devAddr);
 
-void System_setStatus(void *owner, uint8_t value);
-uint8_t System_getStatus(void *owner);
+void System_setStatus(void *receiver, uint8_t value);
+uint8_t System_getStatus(void *receiver);
     
 /** Get the current value of the up counter
  * 
  * */
-uint16_t System_getUp(void *owner);
+uint16_t System_getUp(void *receiver);
 
 /** Return the current value of the upcounter and post increment
  * 
  * */
-uint16_t System_incrementUp(void *owner);
+uint16_t System_incrementUp(void *receiver);
 
 /** Reset the up counter 
  * 
  * */
-void System_resetUp(void *owner);
+void System_resetUp(void *receiver);
 
 /** Get the last received down counter
  * 
  * */
-uint16_t System_getDown(void *owner);
+uint16_t System_getDown(void *receiver);
 
 /** Receive a downcounter value
  * 
  * 
  * */
-bool System_receiveDown(void *owner, uint16_t counter, uint16_t maxGap);
+bool System_receiveDown(void *receiver, uint16_t counter, uint16_t maxGap);
 
 /** Reset teh the down counter
  * 
  * 
  * */
-void System_resetDown(void *owner);
+void System_resetDown(void *receiver);
 
-bool System_getChannel(void *owner, uint8_t chIndex, uint32_t *freq, uint8_t *minRate, uint8_t *maxRate);
-bool System_setChannel(void *owner, uint8_t chIndex, uint32_t freq, uint8_t minRate, uint8_t maxRate);
-bool System_maskChannel(void *owner, uint8_t chIndex);
-bool System_unmaskChannel(void *owner, uint8_t chIndex);
-bool System_channelIsMasked(void *owner, uint8_t chIndex);
+bool System_getChannel(void *receiver, uint8_t chIndex, uint32_t *freq, uint8_t *minRate, uint8_t *maxRate);
+bool System_setChannel(void *receiver, uint8_t chIndex, uint32_t freq, uint8_t minRate, uint8_t maxRate);
+bool System_maskChannel(void *receiver, uint8_t chIndex);
+bool System_unmaskChannel(void *receiver, uint8_t chIndex);
+bool System_channelIsMasked(void *receiver, uint8_t chIndex);
 
-uint8_t System_getBatteryLevel(void *owner);
+uint8_t System_getBatteryLevel(void *receiver);
 
-uint8_t System_getRX1DROffset(void *owner);
-uint8_t System_getMaxDutyCycle(void *owner);
-uint8_t System_getRX1Delay(void *owner);
-uint8_t System_getNbTrans(void *owner);
-uint8_t System_getTXPower(void *owner);
-uint8_t System_getTXRate(void *owner);
-uint32_t System_getRX2Freq(void *owner);
-uint8_t System_getRX2DataRate(void *owner);
+uint8_t System_getRX1DROffset(void *receiver);
+uint8_t System_getMaxDutyCycle(void *receiver);
+uint8_t System_getRX1Delay(void *receiver);
+uint8_t System_getNbTrans(void *receiver);
+uint8_t System_getTXPower(void *receiver);
+uint8_t System_getTXRate(void *receiver);
+uint32_t System_getRX2Freq(void *receiver);
+uint8_t System_getRX2DataRate(void *receiver);
 
-void System_setRX1DROffset(void *owner, uint8_t value);
-void System_setMaxDutyCycle(void *owner, uint8_t value);
-void System_setRX1Delay(void *owner, uint8_t value);
-void System_setTXPower(void *owner, uint8_t value);
-void System_setNbTrans(void *owner, uint8_t value);
-void System_setTXRate(void *owner, uint8_t value);
-void System_setRX2Freq(void *owner, uint32_t value);
-void System_setRX2DataRate(void *owner, uint8_t value);
+void System_setRX1DROffset(void *receiver, uint8_t value);
+void System_setMaxDutyCycle(void *receiver, uint8_t value);
+void System_setRX1Delay(void *receiver, uint8_t value);
+void System_setTXPower(void *receiver, uint8_t value);
+void System_setNbTrans(void *receiver, uint8_t value);
+void System_setTXRate(void *receiver, uint8_t value);
+void System_setRX2Freq(void *receiver, uint32_t value);
+void System_setRX2DataRate(void *receiver, uint8_t value);
 
-void System_logLinkStatus(void *owner, uint8_t margin, uint8_t gwCount);
+void System_logLinkStatus(void *receiver, uint8_t margin, uint8_t gwCount);
 
 uint8_t System_rand(void);
 

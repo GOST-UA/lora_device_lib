@@ -57,8 +57,6 @@ static VALUE timeUntilNextEvent(VALUE self);
 
 static VALUE calculateOnAirTime(VALUE self, VALUE bw, VALUE sf, VALUE payloadLen);
 
-static VALUE ptrToValue(const void *ptr);
-
 /* functions **********************************************************/
 
 uint64_t System_getTime(void)
@@ -81,70 +79,70 @@ void System_atomic_setPtr(void **receiver, void *value)
     *receiver = value;  //fixme
 }
 
-void System_getAppEUI(void *owner, void *eui)
+void System_getAppEUI(void *receiver, void *eui)
 {
-    VALUE self = (VALUE)owner;
+    VALUE self = (VALUE)receiver;
     
     VALUE appEUI = rb_iv_get(self, "@appEUI");
     
     (void)memcpy(eui, RSTRING_PTR(rb_funcall(appEUI, rb_intern("bytes"), 0)), sizeof(default_eui));
 }
 
-void System_getDevEUI(void *owner, void *eui)
+void System_getDevEUI(void *receiver, void *eui)
 {
-    VALUE self = (VALUE)owner;    
+    VALUE self = (VALUE)receiver;    
     VALUE devEUI = rb_iv_get(self, "@devEUI");
     
     (void)memcpy(eui, RSTRING_PTR(rb_funcall(devEUI, rb_intern("bytes"), 0)), sizeof(default_eui));
 }
 
-void System_getAppKey(void *owner, void *key)
+void System_getAppKey(void *receiver, void *key)
 {
-    VALUE self = (VALUE)owner;    
+    VALUE self = (VALUE)receiver;    
     VALUE appKey = rb_iv_get(self, "@appKey");
     
     (void)memcpy(key, RSTRING_PTR(rb_funcall(appKey, rb_intern("value"), 0)), sizeof(default_key));
 }
 
-void System_getNwkSKey(void *owner, void *key)
+void System_getNwkSKey(void *receiver, void *key)
 {
-    VALUE k = rb_iv_get(ptrToValue(owner), "@nwkSKey");
+    VALUE k = rb_iv_get((VALUE)receiver, "@nwkSKey");
  
     (void)memcpy(key, RSTRING_PTR(k), RSTRING_LEN(k));    
 }
 
-void System_getAppSKey(void *owner, void *key)
+void System_getAppSKey(void *receiver, void *key)
 {
-    VALUE k = rb_iv_get(ptrToValue(owner), "@appSKey");
+    VALUE k = rb_iv_get((VALUE)receiver, "@appSKey");
  
     (void)memcpy(key, RSTRING_PTR(k), RSTRING_LEN(k));
 }
 
-void System_setNwkSKey(void *owner, const void *key)
+void System_setNwkSKey(void *receiver, const void *key)
 {
-    rb_iv_set(ptrToValue(owner), "@nwkSKey", rb_str_new((const char *)key, 16U));
+    rb_iv_set((VALUE)receiver, "@nwkSKey", rb_str_new((const char *)key, 16U));
 }
 
-void System_setAppSKey(void *owner, const void *key)
+void System_setAppSKey(void *receiver, const void *key)
 {
-    rb_iv_set(ptrToValue(owner), "@appSKey", rb_str_new((const char *)key, 16U));
+    rb_iv_set((VALUE)receiver, "@appSKey", rb_str_new((const char *)key, 16U));
 }
 
-void System_setDevAddr(void *owner, uint32_t devAddr)
+void System_setDevAddr(void *receiver, uint32_t devAddr)
 {
-    rb_iv_set(ptrToValue(owner), "@devAddr", UINT2NUM(devAddr));
+    rb_iv_set((VALUE)receiver, "@devAddr", UINT2NUM(devAddr));
 }
 
-uint32_t System_getDevAddr(void *owner)
+uint32_t System_getDevAddr(void *receiver)
 {
-    return NUM2UINT(rb_iv_get(ptrToValue(owner), "@devAddr"));
+    return NUM2UINT(rb_iv_get((VALUE)receiver, "@devAddr"));
 }
 
-bool System_getChannel(void *owner, uint8_t chIndex, uint32_t *freq, uint8_t *minRate, uint8_t *maxRate)
+bool System_getChannel(void *receiver, uint8_t chIndex, uint32_t *freq, uint8_t *minRate, uint8_t *maxRate)
 {
     bool retval = false;
     
-    VALUE channels = rb_iv_get(ptrToValue(owner), "@channels");    
+    VALUE channels = rb_iv_get((VALUE)receiver, "@channels");    
     VALUE channel = rb_ary_entry(channels, UINT2NUM(chIndex));
     
     if(channel != Qnil){
@@ -159,11 +157,11 @@ bool System_getChannel(void *owner, uint8_t chIndex, uint32_t *freq, uint8_t *mi
     return retval;    
 }
 
-bool System_setChannel(void *owner, uint8_t chIndex, uint32_t freq, uint8_t minRate, uint8_t maxRate)
+bool System_setChannel(void *receiver, uint8_t chIndex, uint32_t freq, uint8_t minRate, uint8_t maxRate)
 {
     bool retval = false;
     
-    VALUE channels = rb_iv_get(ptrToValue(owner), "@channels");    
+    VALUE channels = rb_iv_get((VALUE)receiver, "@channels");    
     VALUE channel = rb_ary_entry(channels, UINT2NUM(chIndex));
     
     if(channel != Qnil){
@@ -180,11 +178,11 @@ bool System_setChannel(void *owner, uint8_t chIndex, uint32_t freq, uint8_t minR
     return retval;    
 }
 
-bool System_maskChannel(void *owner, uint8_t chIndex)
+bool System_maskChannel(void *receiver, uint8_t chIndex)
 {
     bool retval = false;
     
-    VALUE channels = rb_iv_get(ptrToValue(owner), "@channels");    
+    VALUE channels = rb_iv_get((VALUE)receiver, "@channels");    
     VALUE channel = rb_ary_entry(channels, UINT2NUM(chIndex));
     
     if(channel != Qnil){
@@ -197,11 +195,11 @@ bool System_maskChannel(void *owner, uint8_t chIndex)
     return retval;
 }
 
-bool System_unmaskChannel(void *owner, uint8_t chIndex)
+bool System_unmaskChannel(void *receiver, uint8_t chIndex)
 {
     bool retval = false;
     
-    VALUE channels = rb_iv_get(ptrToValue(owner), "@channels");    
+    VALUE channels = rb_iv_get((VALUE)receiver, "@channels");    
     VALUE channel = rb_ary_entry(channels, UINT2NUM(chIndex));
     
     if(channel != Qnil){
@@ -214,11 +212,11 @@ bool System_unmaskChannel(void *owner, uint8_t chIndex)
     return retval;
 }
 
-bool System_channelIsMasked(void *owner, uint8_t chIndex)
+bool System_channelIsMasked(void *receiver, uint8_t chIndex)
 {
     bool retval = false;
     
-    VALUE channels = rb_iv_get(ptrToValue(owner), "@channels");    
+    VALUE channels = rb_iv_get((VALUE)receiver, "@channels");    
     VALUE channel = rb_ary_entry(channels, UINT2NUM(chIndex));
     
     if(channel != Qnil){
@@ -229,132 +227,132 @@ bool System_channelIsMasked(void *owner, uint8_t chIndex)
     return retval;
 }
 
-uint8_t System_getRX1DROffset(void *owner)
+uint8_t System_getRX1DROffset(void *receiver)
 {
-    return NUM2UINT(rb_iv_get(ptrToValue(owner), "@rx1DROffset"));
+    return NUM2UINT(rb_iv_get((VALUE)receiver, "@rx1DROffset"));
 }
 
-uint8_t System_getMaxDutyCycle(void *owner)
+uint8_t System_getMaxDutyCycle(void *receiver)
 {    
-    return NUM2UINT(rb_iv_get(ptrToValue(owner), "@maxDutyCycle"));
+    return NUM2UINT(rb_iv_get((VALUE)receiver, "@maxDutyCycle"));
 }
 
-uint8_t System_getRX1Delay(void *owner)
+uint8_t System_getRX1Delay(void *receiver)
 {
-    return NUM2UINT(rb_iv_get(ptrToValue(owner), "@rx1Delay"));
+    return NUM2UINT(rb_iv_get((VALUE)receiver, "@rx1Delay"));
 }
 
-uint8_t System_getNbTrans(void *owner)
+uint8_t System_getNbTrans(void *receiver)
 {
-    return NUM2UINT(rb_iv_get(ptrToValue(owner), "@nbTrans"));
+    return NUM2UINT(rb_iv_get((VALUE)receiver, "@nbTrans"));
 }
 
-uint8_t System_getTXPower(void *owner)
+uint8_t System_getTXPower(void *receiver)
 {
-    return NUM2UINT(rb_iv_get(ptrToValue(owner), "@txPower"));
+    return NUM2UINT(rb_iv_get((VALUE)receiver, "@txPower"));
 }
 
-uint8_t System_getTXRate(void *owner)
+uint8_t System_getTXRate(void *receiver)
 {
-    return NUM2UINT(rb_iv_get(ptrToValue(owner), "@txRate"));
+    return NUM2UINT(rb_iv_get((VALUE)receiver, "@txRate"));
 }
 
-uint32_t System_getRX2Freq(void *owner)
+uint32_t System_getRX2Freq(void *receiver)
 {
-    return NUM2UINT(rb_iv_get(ptrToValue(owner), "@rx2Freq"));
+    return NUM2UINT(rb_iv_get((VALUE)receiver, "@rx2Freq"));
 }
 
-uint8_t System_getRX2DataRate(void *owner)
+uint8_t System_getRX2DataRate(void *receiver)
 {
-    return NUM2UINT(rb_iv_get(ptrToValue(owner), "@rx2DataRate"));
+    return NUM2UINT(rb_iv_get((VALUE)receiver, "@rx2DataRate"));
 }
 
-void System_setRX1DROffset(void *owner, uint8_t value)
+void System_setRX1DROffset(void *receiver, uint8_t value)
 {
-    rb_iv_set(ptrToValue(owner), "@rx1DROffset", UINT2NUM(value));
+    rb_iv_set((VALUE)receiver, "@rx1DROffset", UINT2NUM(value));
 }
 
-void System_setMaxDutyCycle(void *owner, uint8_t value)
+void System_setMaxDutyCycle(void *receiver, uint8_t value)
 {
-    rb_iv_set(ptrToValue(owner), "@maxDutyCycle", UINT2NUM(value));
+    rb_iv_set((VALUE)receiver, "@maxDutyCycle", UINT2NUM(value));
 }
 
-void System_setRX1Delay(void *owner, uint8_t value)
+void System_setRX1Delay(void *receiver, uint8_t value)
 {
-    rb_iv_set(ptrToValue(owner), "@rx1Delay", UINT2NUM(value));
+    rb_iv_set((VALUE)receiver, "@rx1Delay", UINT2NUM(value));
 }
 
-void System_setTXPower(void *owner, uint8_t value)
+void System_setTXPower(void *receiver, uint8_t value)
 {
-    rb_iv_set(ptrToValue(owner), "@txPower", UINT2NUM(value));
+    rb_iv_set((VALUE)receiver, "@txPower", UINT2NUM(value));
 }
 
-void System_setNbTrans(void *owner, uint8_t value)
+void System_setNbTrans(void *receiver, uint8_t value)
 {
-    rb_iv_set(ptrToValue(owner), "@nbTrans", UINT2NUM(value));
+    rb_iv_set((VALUE)receiver, "@nbTrans", UINT2NUM(value));
 }
 
-void System_setTXRate(void *owner, uint8_t value)
+void System_setTXRate(void *receiver, uint8_t value)
 {
-    rb_iv_set(ptrToValue(owner), "@txRate", UINT2NUM(value));
+    rb_iv_set((VALUE)receiver, "@txRate", UINT2NUM(value));
 }
 
-void System_setRX2Freq(void *owner, uint32_t value)
+void System_setRX2Freq(void *receiver, uint32_t value)
 {
-    rb_iv_set(ptrToValue(owner), "@rx2Freq", UINT2NUM(value));
+    rb_iv_set((VALUE)receiver, "@rx2Freq", UINT2NUM(value));
 }
 
-void System_setRX2DataRate(void *owner, uint8_t value)
+void System_setRX2DataRate(void *receiver, uint8_t value)
 {
-    rb_iv_set(ptrToValue(owner), "@rx2DataRate", UINT2NUM(value));
+    rb_iv_set((VALUE)receiver, "@rx2DataRate", UINT2NUM(value));
 }
 
-uint16_t System_getUp(void *owner)
+uint16_t System_getUp(void *receiver)
 {
-    return NUM2UINT(rb_iv_get(ptrToValue(owner), "@upCount"));
+    return NUM2UINT(rb_iv_get((VALUE)receiver, "@upCount"));
 }
 
-uint16_t System_incrementUp(void *owner)
+uint16_t System_incrementUp(void *receiver)
 {
-    uint16_t retval = NUM2UINT(rb_iv_get(ptrToValue(owner), "@upCount"));
+    uint16_t retval = NUM2UINT(rb_iv_get((VALUE)receiver, "@upCount"));
     
-    rb_iv_set(ptrToValue(owner), "@upCount", retval + 1U);
+    rb_iv_set((VALUE)receiver, "@upCount", retval + 1U);
     
     return retval;    
 }
 
-void System_resetUp(void *owner)
+void System_resetUp(void *receiver)
 {
-    rb_iv_set(ptrToValue(owner), "@upCount", 0U);
+    rb_iv_set((VALUE)receiver, "@upCount", 0U);
 }
 
-uint16_t System_getDown(void *owner)
+uint16_t System_getDown(void *receiver)
 {
-    return NUM2UINT(rb_iv_get(ptrToValue(owner), "@downCount"));
+    return NUM2UINT(rb_iv_get((VALUE)receiver, "@downCount"));
 }
 
-uint8_t System_getBatteryLevel(void *owner)
+uint8_t System_getBatteryLevel(void *receiver)
 {
     return 255U;
 }
 
-bool System_receiveDown(void *owner, uint16_t counter, uint16_t maxGap)
+bool System_receiveDown(void *receiver, uint16_t counter, uint16_t maxGap)
 {
     bool retval = false;
-    uint16_t value = NUM2UINT(rb_iv_get(ptrToValue(owner), "@upCount"));
+    uint16_t value = NUM2UINT(rb_iv_get((VALUE)receiver, "@upCount"));
     
     if((uint32_t)counter < ((uint32_t)value + (uint32_t)maxGap)){
         
-        rb_iv_set(ptrToValue(owner), "@downCount", UINT2NUM(counter));        
+        rb_iv_set((VALUE)receiver, "@downCount", UINT2NUM(counter));        
         retval = true;
     }
     
     return retval;
 }
 
-void System_resetDown(void *owner)
+void System_resetDown(void *receiver)
 {
-    rb_iv_set(ptrToValue(owner), "@downCount", 0U);
+    rb_iv_set((VALUE)receiver, "@downCount", 0U);
 }
 
 void Init_ext_mac(void)
@@ -554,7 +552,7 @@ static VALUE initialize(int argc, VALUE *argv, VALUE self)
         region_id = EU_863_870;
     }
     
-    MAC_init(this, region_id, (struct lora_radio *)radio);
+    MAC_init(this, (void *)self, region_id, (struct lora_radio *)radio);
     
     MAC_setResponseHandler(this, (void *)self, _response);
     
@@ -936,9 +934,4 @@ static VALUE calculateOnAirTime(VALUE self, VALUE bandwidth, VALUE spreading_fac
     }
     
     return UINT2NUM(MAC_calculateOnAirTime(bw[bw_i], sf[sf_i], (uint8_t)NUM2UINT(size)));
-}
-
-static VALUE ptrToValue(const void *ptr)
-{
-    return (VALUE)(((uint8_t *)ptr) - offsetof(struct RData, data));
 }

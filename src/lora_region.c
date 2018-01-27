@@ -440,9 +440,6 @@ static const struct lora_region regions[] = {
         .off_time_factors = off_time_factors_US_902_928,
         .num_off_time_factors = (uint8_t)sizeof(off_time_factors_US_902_928) / sizeof(*off_time_factors_US_902_928),    
         
-        .rate_allocation = rate_allocation_US_902_928,
-        .num_rate_allocation = (uint8_t)sizeof(rate_allocation_US_902_928)/sizeof(*rate_allocation_US_902_928),
-        
         .numChannels = 72U
     }         
 };

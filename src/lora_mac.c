@@ -64,13 +64,14 @@ static void restoreDefaults(struct lora_mac *self);
 
 /* functions **********************************************************/
 
-void MAC_init(struct lora_mac *self, enum lora_region_id region, struct lora_radio *radio)
+void MAC_init(struct lora_mac *self, void *system, enum lora_region_id region, struct lora_radio *radio)
 {
     LORA_PEDANTIC(self != NULL)
     LORA_PEDANTIC(radio != NULL)
 
     (void)memset(self, 0, sizeof(*self));
     
+    self->system = system;
     self->radio = radio;    
     self->region = Region_getRegion(region);
     
@@ -99,12 +100,12 @@ bool MAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *d
         
             if((port > 0U) && (port <= 223U)){
                 
-                if(len <= Region_getPayload(self->region, System_getTXRate(self))){
+                if(len <= Region_getPayload(self->region, System_getTXRate(self->system))){
 
-                    if(selectChannel(self, timeNow, System_getTXRate(self), &self->tx.chIndex, &self->tx.freq)){
+                    if(selectChannel(self, timeNow, System_getTXRate(self->system), &self->tx.chIndex, &self->tx.freq)){
                 
-                        f.devAddr = System_getDevAddr(self);
-                        f.counter = System_incrementUp(self);
+                        f.devAddr = System_getDevAddr(self->system);
+                        f.counter = System_incrementUp(self->system);
                         f.ack = false;
                         f.adr = false;
                         f.adrAckReq = false;
@@ -117,11 +118,11 @@ bool MAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *d
                         
                         if(port == 0U){
                             
-                            System_getNwkSKey(self, key);
+                            System_getNwkSKey(self->system, key);
                         }
                         else{
                             
-                            System_getAppSKey(self, key);
+                            System_getAppSKey(self->system, key);
                         }
                         
                         self->bufferLen = Frame_putData(FRAME_TYPE_DATA_UNCONFIRMED_UP, key, &f, self->buffer, sizeof(self->buffer));
@@ -173,15 +174,15 @@ bool MAC_join(struct lora_mac *self)
     
         if(self->state == IDLE){
 
-            if(selectChannel(self, timeNow, System_getTXRate(self), &self->tx.chIndex, &self->tx.freq)){
+            if(selectChannel(self, timeNow, System_getTXRate(self->system), &self->tx.chIndex, &self->tx.freq)){
 
                 struct lora_frame_join_request f;      
                 uint8_t appKey[16U];      
                 
-                System_getAppKey(self, appKey);
+                System_getAppKey(self->system, appKey);
                 
-                System_getAppEUI(self, f.appEUI);
-                System_getDevEUI(self, f.devEUI);            
+                System_getAppEUI(self->system, f.appEUI);
+                System_getDevEUI(self->system, f.devEUI);            
                 
                 self->devNonce = System_rand();
                 self->devNonce <<= 8;
@@ -232,9 +233,9 @@ bool MAC_personalize(struct lora_mac *self, uint32_t devAddr, const void *nwkSKe
     
     if(self->state == IDLE){
     
-        System_setDevAddr(self, devAddr);
-        System_setNwkSKey(self, nwkSKey);
-        System_setAppSKey(self, appSKey);
+        System_setDevAddr(self->system, devAddr);
+        System_setNwkSKey(self->system, nwkSKey);
+        System_setAppSKey(self->system, appSKey);
      
         retval = true;
     }
@@ -337,7 +338,7 @@ bool MAC_setRate(struct lora_mac *self, uint8_t rate)
     
     if(rate <= 0xfU){
         
-        System_setTXRate(self, rate);
+        System_setTXRate(self->system, rate);
         retval = true;
     }
     
@@ -350,7 +351,7 @@ bool MAC_setPower(struct lora_mac *self, uint8_t power)
     
     if(power <= 0xfU){
     
-        System_setTXPower(self, power);    
+        System_setTXPower(self->system, power);    
         retval = true;
     }
     
@@ -365,13 +366,13 @@ static void restoreDefaults(struct lora_mac *self)
     
     Region_getDefaultSettings(self->region, &defaults);
         
-    System_setRX1DROffset(self, defaults.rx1_offset);
-    System_setRX1Delay(self, defaults.rx1_delay);
+    System_setRX1DROffset(self->system, defaults.rx1_offset);
+    System_setRX1Delay(self->system, defaults.rx1_delay);
     
-    System_setRX2DataRate(self, defaults.rx2_rate);
-    System_setRX2Freq(self, defaults.rx2_freq);
+    System_setRX2DataRate(self->system, defaults.rx2_rate);
+    System_setRX2Freq(self->system, defaults.rx2_freq);
     
-    System_setMaxDutyCycle(self, 1U);        
+    System_setMaxDutyCycle(self->system, 1U);        
 }
 
 static void tx(void *receiver, uint64_t time)
@@ -381,7 +382,7 @@ static void tx(void *receiver, uint64_t time)
     struct lora_mac *self = (struct lora_mac *)receiver;        
     struct lora_data_rate rate_setting;
     
-    if(Region_getRate(self->region, System_getTXRate(self), &rate_setting)){
+    if(Region_getRate(self->region, System_getTXRate(self->system), &rate_setting)){
     
         struct lora_radio_tx_setting radio_setting = {
             
@@ -389,7 +390,7 @@ static void tx(void *receiver, uint64_t time)
             .bw = rate_setting.bw,
             .sf = rate_setting.sf,
             .cr = CR_5,
-            .power = System_getTXPower(self)         
+            .power = System_getTXPower(self->system)         
         };
     
         LORA_PEDANTIC((self->state == JOIN_WAIT_TX) || (self->state == WAIT_TX))
@@ -431,7 +432,7 @@ static void txComplete(void *receiver, uint64_t time)
     
     self->txCompleteTime = time;
         
-    futureTime = self->txCompleteTime + (self->state == TX) ? timeBase(System_getRX1Delay(self)) : timeBase(Region_getJA1Delay(self->region));
+    futureTime = self->txCompleteTime + (self->state == TX) ? timeBase(System_getRX1Delay(self->system)) : timeBase(Region_getJA1Delay(self->region));
     
     self->state = (self->state == TX) ? WAIT_RX1 : JOIN_WAIT_RX1;                
 
@@ -478,7 +479,7 @@ static void rxStart(void *receiver, uint64_t time)
         case JOIN_WAIT_RX1:
         case WAIT_RX1:
         
-            (void)Region_getRX1DataRate(self->region, System_getTXRate(self), System_getRX1DROffset(self), &rate);
+            (void)Region_getRX1DataRate(self->region, System_getTXRate(self->system), System_getRX1DROffset(self->system), &rate);
             (void)Region_getRX1Freq(self->region, self->tx.freq, &freq);
             
             self->state = (self->state == WAIT_RX1) ? RX1 : JOIN_RX1;                            
@@ -487,8 +488,8 @@ static void rxStart(void *receiver, uint64_t time)
         case JOIN_WAIT_RX2:    
         case WAIT_RX2:    
         
-            rate = System_getRX2DataRate(self);    
-            freq = System_getRX2Freq(self);
+            rate = System_getRX2DataRate(self->system);    
+            freq = System_getRX2Freq(self->system);
         
             self->state = (self->state == WAIT_RX2) ? RX2 : JOIN_RX2;                
             break;
@@ -578,7 +579,7 @@ static void rxFinish(struct lora_mac *self)
     default:
     case RX1:        
         self->state = WAIT_RX2;    
-        (void)Event_onTimeout(&self->events, self->txCompleteTime + timeBase(System_getRX1Delay(self) + 1U), self, rxStart);
+        (void)Event_onTimeout(&self->events, self->txCompleteTime + timeBase(System_getRX1Delay(self->system) + 1U), self, rxStart);
         break;
     
     case JOIN_RX1:        
@@ -638,9 +639,9 @@ static void collect(struct lora_mac *self)
     uint8_t appSKey[16U];
     uint8_t nwkSKey[16U];
         
-    System_getAppKey(self, appKey);
-    System_getAppSKey(self, appSKey);
-    System_getNwkSKey(self, nwkSKey);
+    System_getAppKey(self->system, appKey);
+    System_getAppSKey(self->system, appSKey);
+    System_getNwkSKey(self->system, nwkSKey);
     
     self->bufferLen = Radio_collect(self->radio, self->buffer, sizeof(self->buffer));        
     
@@ -654,13 +655,13 @@ static void collect(struct lora_mac *self)
                 self->status.joinPending = false;
                 self->status.joined = true;                
 
-                System_resetUp(self);
-                System_resetDown(self);
+                System_resetUp(self->system);
+                System_resetDown(self->system);
                 
-                restoreDefaults(self);
+                restoreDefaults(self->system);
                 
-                System_setRX1DROffset(self, result.fields.joinAccept.rx1DataRateOffset);
-                System_setRX2DataRate(self, result.fields.joinAccept.rx2DataRate);
+                System_setRX1DROffset(self->system, result.fields.joinAccept.rx1DataRateOffset);
+                System_setRX2DataRate(self->system, result.fields.joinAccept.rx2DataRate);
 
                 if(result.fields.joinAccept.cfListPresent){
                     
@@ -674,7 +675,7 @@ static void collect(struct lora_mac *self)
                             
                             //Region_validateFreq(self, chIndex, result.fields.joinAccept.cflist[i]);
                             
-                            (void)System_setChannel(self, chIndex, result.fields.joinAccept.cfList[i], 0U, 5U);
+                            (void)System_setChannel(self->system, chIndex, result.fields.joinAccept.cfList[i], 0U, 5U);
                         }                           
                     }                    
                 }   
@@ -701,8 +702,8 @@ static void collect(struct lora_mac *self)
                 LoraAES_encrypt(&ctx, nwkSKey);
                 LoraAES_encrypt(&ctx, appSKey);
                                 
-                System_setAppSKey(self, nwkSKey);                
-                System_setAppSKey(self, appSKey);
+                System_setAppSKey(self->system, nwkSKey);                
+                System_setAppSKey(self->system, appSKey);
             }
             else{
                 
@@ -715,9 +716,9 @@ static void collect(struct lora_mac *self)
             
             if(self->status.personalised || self->status.joined){
             
-                if(System_getDevAddr(self) == result.fields.data.devAddr){
+                if(System_getDevAddr(self->system) == result.fields.data.devAddr){
                 
-                    if(System_receiveDown(self, result.fields.data.counter, Region_getMaxFCNTGap(self->region))){
+                    if(System_receiveDown(self->system, result.fields.data.counter, Region_getMaxFCNTGap(self->region))){
                     
                         processCommands(self, result.fields.data.opts, result.fields.data.optsLen);
                         
@@ -764,7 +765,7 @@ static void handleCommands(void *receiver, const struct lora_downstream_cmd *cmd
     default:
     case LINK_CHECK:
     
-        System_logLinkStatus(self, cmd->fields.linkCheckAns.margin, cmd->fields.linkCheckAns.gwCount);
+        System_logLinkStatus(self->system, cmd->fields.linkCheckAns.margin, cmd->fields.linkCheckAns.gwCount);
         break;
         
     case LINK_ADR:                    
@@ -772,7 +773,7 @@ static void handleCommands(void *receiver, const struct lora_downstream_cmd *cmd
         break;
     
     case DUTY_CYCLE:                
-        System_setMaxDutyCycle(self, cmd->fields.dutyCycleReq.maxDutyCycle);
+        System_setMaxDutyCycle(self->system, cmd->fields.dutyCycleReq.maxDutyCycle);
         break;
     
     case RX_PARAM_SETUP:
@@ -783,7 +784,7 @@ static void handleCommands(void *receiver, const struct lora_downstream_cmd *cmd
     {
         struct lora_dev_status_ans ans;
                 
-        ans.battery = System_getBatteryLevel(self);
+        ans.battery = System_getBatteryLevel(self->system);
         ans.margin = 0U;
     }
         break;
@@ -799,7 +800,7 @@ static void handleCommands(void *receiver, const struct lora_downstream_cmd *cmd
             
             if(ans.dataRateRangeOK && ans.channelFrequencyOK){
                 
-                (void)System_setChannel(self, cmd->fields.newChannelReq.chIndex, cmd->fields.newChannelReq.freq, cmd->fields.newChannelReq.minDR, cmd->fields.newChannelReq.maxDR);                        
+                (void)System_setChannel(self->system, cmd->fields.newChannelReq.chIndex, cmd->fields.newChannelReq.freq, cmd->fields.newChannelReq.minDR, cmd->fields.newChannelReq.maxDR);                        
             }            
         }
         break;        
@@ -912,7 +913,7 @@ static bool isAvailable(struct lora_mac *self, uint8_t chIndex, uint64_t timeNow
     uint8_t maxRate;    
     uint8_t band;
     
-    if(!System_channelIsMasked(self, chIndex)){
+    if(!System_channelIsMasked(self->system, chIndex)){
     
         if(getChannel(self, chIndex, &freq, &minRate, &maxRate)){
             
@@ -943,7 +944,7 @@ static uint64_t timeNextAvailable(struct lora_mac *self, uint64_t timeNow, uint8
     
     for(i=0U; i < Region_numChannels(self->region); i++){
      
-        if(!System_channelIsMasked(self, i)){
+        if(!System_channelIsMasked(self->system, i)){
         
             if(getChannel(self, i, &freq, &minRate, &maxRate)){
                 
@@ -980,7 +981,7 @@ static bool getChannel(struct lora_mac *self, uint8_t chIndex, uint32_t *freq, u
     
     if(Region_isDynamic(self->region)){
         
-        retval = System_getChannel(self, chIndex, freq, minRate, maxRate);                        
+        retval = System_getChannel(self->system, chIndex, freq, minRate, maxRate);                        
     }
     else{
         

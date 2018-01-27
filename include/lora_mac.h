@@ -124,9 +124,11 @@ struct lora_mac {
 
     lora_mac_response_fn responseHandler;
     void *responseReceiver;
+    
+    void *system;
 };
 
-void MAC_init(struct lora_mac *self, enum lora_region_id region, struct lora_radio *radio);
+void MAC_init(struct lora_mac *self, void *system, enum lora_region_id region, struct lora_radio *radio);
 
 /** Set join parameters locally
  * 

@@ -10,7 +10,7 @@ VPATH += .
 INCLUDES += -I$(DIR_ROOT)/include
 INCLUDES += -I.
 
-SRC := $(notdir $(wildcard $(DIR_ROOT)/src/*.c)) mega_demo.c system.c store.c
+SRC := $(notdir $(wildcard $(DIR_ROOT)/src/*.c)) mega_demo.c uart.c ldl.c
 OBJ := $(SRC:.c=.o)
 
 MCU := atmega328p
