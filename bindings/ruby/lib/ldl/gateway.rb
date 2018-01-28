@@ -3,18 +3,37 @@ require 'socket'
 module LDL
 
     class Gateway
-
+    
+        MAX_TOKENS = 100
+        
+        # maximum allowable advance send scheduling
+        MAX_ADVANCE_TIME = 
+        
         attr_reader :eui
         
-        attr_reader :lati
-        attr_reader :long
-        attr_reader :alti
-        attr_reader :rxnb
-        attr_reader :rxok
-        attr_reader :rxfw
-        attr_reader :dwnb
-        attr_reader :txnb
-        attr_reader :ackr
+        # GPS latitude of the gateway in degree (float, N is +)
+        attr_reader :lati 
+        
+        # GPS latitude of the gateway in degree (float, E is +)
+        attr_reader :long 
+        
+        # GPS altitude of the gateway in meter RX (integer)
+        attr_reader :alti 
+        
+        # Number of radio packets received (unsigned integer)
+        attr_reader :rxnb 
+        
+        # Number of radio packets received with a valid PHY CRC
+        attr_reader :rxok 
+        
+        # Number of radio packets forwarded (unsigned integer)
+        attr_reader :rxfw 
+        
+        # Number of downlink datagrams received (unsigned integer)
+        attr_reader :dwnb 
+        
+        # Number of packets emitted (unsigned integer)
+        attr_reader :txnb 
         
         attr_reader :host
         attr_reader :port
@@ -36,6 +55,8 @@ module LDL
         # @option opts [String] :host upstream hostname
         # @option opts [Integer] :port upstream port
         #
+        # @option opts [Array<Hash>]
+        #
         # @option opts [Integer] :keepalive pull-data interval (seconds)
         #
         def initialize(broker, eui, **opts)            
@@ -53,8 +74,9 @@ module LDL
             @rxfw = 0   # radio packets forwarded (upstream?)            
             @dwnb = 0   # number of downlink datagrams received
             @txnb = 0   # number of datagrams emmitted
-            @ackr = 0   # percentage of upstream datagrams acked
-
+            
+            @tokens = []            
+            
             # use as message token, increment for each message sent
             @token = rand 0..0xffff
 
@@ -100,10 +122,6 @@ module LDL
                 @status_interval = 10
             end
 
-            @tx_buffer = []
-
-            @channel = []
-
             @q = Queue.new
 
             @t = []
@@ -120,37 +138,30 @@ module LDL
                 # start the status push
                 @q << {:task => :status}
 
-                # receive radio messages
+                # receive radio messages on all channels ;)
                 rx_event = @broker.subscribe "device_tx" do |msg|
 
-                    if chan = @channel.detect{|c|c[:freq] == msg[:freq]}
+                    raise ArgumentError unless msg.kind_of? Hash
+                    raise ArgumentError unless msg.has_key? :freq
+                    raise ArgumentError unless msg.has_key? :data
+                    raise ArgumentError unless msg.has_key? :sf
+                    raise ArgumentError unless msg.has_key? :bw
 
-                        @rxnb += 1
-                        @rxok += 1
-                        @rxfw += 1
+                    @rxnb += 1
+                    @rxok += 1
+                    @rxfw += 1
 
-                        # todo rethink signal quality numbers
-                        
-                        
-                        @q << {
-                            :task => :upstream,
-                            :rxpk => Semtech::RXPacket.new(
-                                time: Time.now,
-                                tmst: SystemTime.time & 0xffffffff,
-                                freq: msg[:freq],
-                                chan: @channel.index(chan),
-                                rfch: 0,
-                                stat: :ok,
-                                modu: msg[:modu],                
-                                datar: 0,
-                                codr: 5,
-                                rssi: -25,
-                                lsnr: 8,
-                                data: msg[:data]
-                            )
-                        }
-                        
-                    end
+                    # todo rethink signal quality numbers
+                    
+                    @q << {
+                        :task => :upstream,
+                        :rxpk => Semtech::RXPacket.new(
+                            tmst: tmst,
+                            freq: msg[:freq],
+                            data: msg[:data],
+                            datr: "SF#{msg[:sf]}BW#{msg[:bw]}",                                                        
+                        )
+                    }
 
                 end
                 
@@ -188,9 +199,11 @@ module LDL
                     when :keepalive
 
                         m = Semtech::PullData.new(token: @token, eui: eui)
-
-                        @txnb += 1
-                        @token += 1
+                        
+                        add_token @token
+                        
+                        @token += 1 # advance our token
+                        @txnb += 1  # number of packets emitted
 
                         # schedule keep alive: note this will probably fire once after we stop this thread
                         SystemTime.onTimeout (keepalive_interval * TimeSource::INTERVAL) do
@@ -220,8 +233,10 @@ module LDL
                             )
                         )
                         
-                        @txnb += 1
-                        @token += 1
+                        add_token @token
+                        
+                        @token += 1 # advance our token
+                        @txnb += 1  # number of packets emitted
                         
                         # recur on this interval
                         SystemTime.onTimeout (status_interval * TimeSource::INTERVAL) do
@@ -235,13 +250,33 @@ module LDL
                     # send upstream
                     when :upstream
 
-                        m = Semtech::PushData.new(token: @token, eui: eui, rxpk: job[:rxpk])
+                        @rxnb += 1  # number radio packets received
+                        @rxok += 1  # number radio packets received (with ok CRC)
+                        @rxfw += 1  # number radio packets forwarded
                         
-                        @txnb += 1
-                        @token += 1
+                        m = Semtech::PushData.new(token: @token, eui: eui, rxpk: [job[:rxpk]])
+                        
+                        add_token @token
+                        
+                        @token += 1 # advance our token
+                        @txnb += 1  # number of packets emitted
                         
                         s.write m.encode
 
+                    # actually send on the radio
+                    when :tx
+                    
+                        m = Semtech::TXAck.new(
+                            token: msg.token,
+                            eui: eui,
+                            txpk_ack: Semtech::TXPacketAck.new
+                        )
+                        
+                        @token += 1 # advance our token
+                        @txnb += 1  # number of packets emitted
+                        
+                        s.write m.encode
+                            
                     # message received from network
                     when :downstream
 
@@ -249,25 +284,31 @@ module LDL
 
                             msg = Semtech::Message.decode(job[:data])    
 
-
                             case msg.class
-                            # network acks PullData (holepunch)
-                            when Semtech::PullAck
-                            
-                            
-                            # network acks PushData
-                            when Semtech::PushAck
-
-                                m = unacked.detect { |m| m.token ==  job[:msg] }
-
-                            
-                            # network wants to send over radio
+                            when Semtech::PushAck, Semtech::PullAck                                
+                                ack_token msg.token                                
                             when Semtech::PullResp
-                            
+
+                                @dwnb += 1  # number of downlink datagrams received
+
+                                # send now
+                                if msg.txpk.imme
+                                    
+                                    s.write(tx_ack('NONE'))
+                                    
+                                    @q << {:task => :tx, :txpk => msg.txpk}                
+                                                                
+                                # send according to last timestamp
+                                elsif not msg.txpk.tmst.nil?
                                 
+                                    
+                                # don't support the use of time field 
+                                elsif msg.tkpk.time
+                                
+                                    s.write(tx_ack('GPS_UNLOCKED'))
+                                
+                                end
                             
-                            else
-                                puts "unexpected"
                             end
 
                         rescue
@@ -306,21 +347,53 @@ module LDL
             self
         end
 
-        def add_rx_channel(chIndex, freq, bw)
-            @channel[chIndex] = {
-
-                :freq => freq.to_i,
-                :bw => bw,
-            }
-        end
-
         def with_mutex
             @mutex.synchronize do
                 yield
             end
         end
 
-        private :with_mutex, :add_rx_channel
+        def add_token(token)            
+            if @tokens.size == MAX_TOKENS
+                @tokens.pop                
+            end            
+            @tokens.unshift([token,false])
+            self
+        end
+        
+        def ack_token(token)
+            @tokens.each do |t|
+                if t.first == token
+                    t.last = true
+                end
+            end
+            self
+        end
+        
+        def ackr
+            (@tokens.select{|t|t.last}.size.to_f / @tokens.size.to_f ) * 100.0
+        end
+        
+        def tmst
+            (SystemTime.time * 20) & 0xffffffff
+        end
+        
+        def tx_ack(error)
+            
+            m = Semtech::TXAck.new(
+                token: msg.token,
+                eui: eui,
+                txpk_ack: Semtech::TXPacketAck.new
+            )
+            
+            @token += 1 # advance our token
+            @txnb += 1  # number of packets emitted
+            
+            
+            
+        end
+        
+        private :with_mutex, :add_token, :ack_token, :tmst, :tx_ack
     
     end
 

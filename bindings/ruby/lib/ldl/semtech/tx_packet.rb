@@ -8,8 +8,8 @@ module LDL::Semtech
          Name |  Type  | Function
         :----:|:------:|--------------------------------------------------------------
          imme | bool   | Send packet immediately (will ignore tmst & time)
-         tmst | number | Send packet on a certain timestamp value (will ignore time)
-         tmms | number | Send packet at a certain GPS time (GPS synchronization required)
+         tmst | number | Send packet on a certain timestamp value (will ignore time) (assume us based on other gateway implementation)
+         time | number | Send packet at a certain GPS time (GPS synchronization required)
          freq | number | TX central frequency in MHz (unsigned float, Hz precision)
          rfch | number | Concentrator "RF chain" used for TX (unsigned integer)
          powe | number | TX output power in dBm (unsigned integer, dBm precision)
@@ -30,7 +30,7 @@ module LDL::Semtech
                 self.new(
                     imme: msg["imme"],
                     tmst: msg["tmst"],
-                    tmms: msg["tmms"],
+                    time: msg["time"],
                     freq: msg["freq"],
                     rfch: msg["rfch"],
                     powe: msg["powe"],
@@ -51,7 +51,7 @@ module LDL::Semtech
         
         attr_reader :imme
         attr_reader :tmst
-        attr_reader :tmms
+        attr_reader :time
         attr_reader :freq
         attr_reader :rfch
         attr_reader :powe
@@ -88,11 +88,11 @@ module LDL::Semtech
                 ( value ? true : false )
             end 
             
-            init.call(:tmst, Integer, 0) 
-            init.call(:tmms, Integer, 0) 
-            init.call(:freq, Numeric, 0) 
-            init.call(:rfch, Integer, 0) 
-            init.call(:powe, Integer, 0) 
+            init.call(:tmst, Integer, nil) 
+            init.call(:time, Integer, nil) 
+            init.call(:freq, Numeric, nil) 
+            init.call(:rfch, Integer, nil) 
+            init.call(:powe, Integer, nil) 
             
             init.call(:modu, String, "LORA") do |value|
                 raise RangeError unless ["LORA", "FSK"].include? value
@@ -125,9 +125,9 @@ module LDL::Semtech
                 value
             end
             
-            init.call(:fdev, Integer, 0) 
-            init.call(:ipol, Integer, 0) 
-            init.call(:prea, Integer, 0) 
+            init.call(:fdev, Integer, nil) 
+            init.call(:ipol, Integer, nil) 
+            init.call(:prea, Integer, nil) 
             init.call(:data, String, "") 
             
             if param[:size]            
@@ -145,7 +145,7 @@ module LDL::Semtech
             {
                 :imme => imme,
                 :tmst => tmst,
-                :tmms => tmms,
+                :time => time,
                 :freq => freq,
                 :rfch => rfch,
                 :powe => powe,
@@ -158,7 +158,7 @@ module LDL::Semtech
                 :size => size,
                 :data => Base64.strict_encode64(@data),
                 :ncrc => ncrc
-            }.to_json
+            }.delete_if{|k,v|v.nil?}.to_json
         end
     
     end

@@ -78,7 +78,7 @@ module LDL::Semtech
             init.call(:rxnb, Integer, 0)
             init.call(:rxok, Integer, 0)
             init.call(:rxfw, Integer, 0)
-            init.call(:ackr, Integer, 0)
+            init.call(:ackr, Numeric, 0)
             init.call(:dwnb, Integer, 0)
             init.call(:txnb, Integer, 0)
             

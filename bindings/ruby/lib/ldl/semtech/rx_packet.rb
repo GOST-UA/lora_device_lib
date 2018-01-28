@@ -94,7 +94,7 @@ module LDL::Semtech
 
             init = Proc.new do |iv_name, klass, default|                
                 if param[iv_name]
-                    raise TypeError.new "expecting #{klass} but got #{param[iv_name]}" unless klass.nil? or param[iv_name].kind_of? klass                                        
+                    raise TypeError.new "expecting #{klass} for param[:#{iv_name}] but got #{param[iv_name].class}" unless klass.nil? or param[iv_name].kind_of? klass                                        
                     if block_given?
                         value = yield(param[iv_name])
                     else
@@ -109,8 +109,8 @@ module LDL::Semtech
             init.call(:time, Time, Time.now) 
             init.call(:tmst, Integer, 0) 
             init.call(:freq, Numeric, 868.10)
-            init.call(:chan, Integer, 0)
-            init.call(:rfch, Integer, 0) 
+            init.call(:chan, Integer, nil)
+            init.call(:rfch, Integer, nil) 
             init.call(:stat, Symbol, :ok) do |value|
                 raise RangeError unless [:ok, :fail, :nocrc].include? value
                 value
@@ -126,8 +126,8 @@ module LDL::Semtech
                         raise ArgumentError
                     end
                     @datr = param[:datr]
-                    @sf = match[:sf]
-                    @bw = match[:bw]
+                    @sf = match[:sf].to_i
+                    @bw = match[:bw].to_i
                 else
                     raise ArugmentError unless not(param[:datr].kind_of? Numeric)
                 end
@@ -146,8 +146,8 @@ module LDL::Semtech
                 value
             end
             
-            init.call(:rssi, Numeric, 0) 
-            init.call(:lsnr, Numeric, 0)             
+            init.call(:rssi, Integer, 0) 
+            init.call(:lsnr, Integer, 0)             
             init.call(:data, String, "") 
             
             if param[:size]            
@@ -172,7 +172,7 @@ module LDL::Semtech
                 :lsnr => lsnr,
                 :size => size,
                 :data => Base64.strict_encode64(@data)
-            }.to_json
+            }.delete_if{|k,v|v.nil?}.to_json
         end
     
         def self.sym_to_stat(s)

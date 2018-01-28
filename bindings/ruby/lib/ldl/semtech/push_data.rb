@@ -70,7 +70,7 @@ module LDL::Semtech
             super(**params)
             
             if params[:rxpk]
-                raise TypeError unless params[:rxpk].kind_of? Array
+                raise TypeError.new "expecting params[:rxpk] to be kind of Array" unless params[:rxpk].kind_of? Array
                 raise TypeError unless params[:rxpk].select{|p| not p.kind_of? RXPacket}.empty?
                 @rxpk = params[:rxpk]
             else
@@ -94,14 +94,10 @@ module LDL::Semtech
         def encode
         
             obj = {
-                :rxpk => rxpk
-            }
-            if stat
-                obj[:stat] = stat
-            end
-
-            obj.to_json
-
+                :rxpk => rxpk,
+                :stat => stat
+            }.delete_if { |k,v|v.nil? }
+            
             [super, eui.bytes, obj.to_json].pack("a*a*a*")
 
         end

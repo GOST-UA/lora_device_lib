@@ -31,9 +31,7 @@ module LDL
                 :bw => settings[:bw],
                 :cr => settings[:cr],
                 :freq => settings[:freq],
-                :power => settings[:power],
-                :modu => "LORA",
-                :codr => 5            
+                :power => settings[:power],                    
             }, "device_tx")
             
             mac = @mac

@@ -9,10 +9,11 @@ class TestGateway < Minitest::Test
 
     attr_reader :state
     attr_reader :s
+    attr_reader :broker
 
     def rx_message
         msg, from = s.recvfrom(2048, 0)
-        Semtech::Message.decode msg
+        Semtech::Message.decode msg        
     end
 
     def setup
@@ -26,18 +27,20 @@ class TestGateway < Minitest::Test
         
         SystemTime.start
         
-        broker = Broker.new    
+        @broker = Broker.new    
         
         # - talk to localhost on the port we are listening to (above)
         # - shorten keepalive_interval so we can test fast
         # - shorten status_interval so we can test fast
         @state = Gateway.new broker, RandomEUI64.eui, host: 'localhost', port: s.local_address.ip_port, keepalive_interval: 1, status_interval: 1
         
+        state.start
+        
+        sleep 0.1
+        
     end
     
     def test_expect_keep_alive_on_start
-        
-        state.start
         
         Timeout::timeout 0.5 do
         
@@ -56,8 +59,6 @@ class TestGateway < Minitest::Test
     end
     
     def test_expect_keep_alive_on_interval
-        
-        state.start
         
         count = 0
         
@@ -89,8 +90,6 @@ class TestGateway < Minitest::Test
     
     def test_expect_status_on_start
         
-        state.start
-        
         Timeout::timeout 0.5 do
         
             loop do
@@ -108,8 +107,6 @@ class TestGateway < Minitest::Test
     end
     
     def test_expect_status_on_interval
-        
-        state.start
         
         count = 0
         
@@ -137,6 +134,33 @@ class TestGateway < Minitest::Test
         # should have two status
         assert count == 2
             
+    end
+    
+    def test_upstream
+    
+        broker.publish({
+                :data => "hello world",
+                :freq => 0,
+                :sf => 7,
+                :bw => 125
+            },
+            "device_tx"
+        )
+        
+        Timeout::timeout 2 do
+            
+            loop do
+        
+                msg = rx_message
+        
+                if msg.kind_of? Semtech::PushData and not msg.rxpk.empty? and msg.rxpk.first.data == 'hello world'
+                    break                
+                end                
+            
+            end
+            
+        end
+        
     end
     
     def teardown    
