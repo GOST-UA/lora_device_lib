@@ -22,7 +22,7 @@ static int setup_MAC(void **user)
     will_return(System_getDevEUI, eui);
     will_return(System_getAppKey, appKey);
     
-    MAC_init(&self, EU_863_870, &radio);
+    MAC_init(&self, NULL, EU_863_870, &radio);
     
     *user = (void *)&self;
     
@@ -38,7 +38,7 @@ static void test_MAC_init(void **user)
     will_return(System_getDevEUI, eui);
     will_return(System_getAppKey, appKey);
     
-    MAC_init(&self, EU_863_870, &radio);
+    MAC_init(&self, NULL, EU_863_870, &radio);
 }
 
 static void test_MAC_personalize(void **user)
@@ -58,5 +58,3 @@ int main(void)
 
     return cmocka_run_group_tests(tests, NULL, NULL);
 }
-
-

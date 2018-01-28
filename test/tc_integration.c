@@ -22,7 +22,7 @@ static void test_init(void **user)
     will_return(System_getDevEUI, eui);
     will_return(System_getAppKey, appKey);
     
-    MAC_init(&self, EU_863_870, &radio);
+    MAC_init(&self, NULL, EU_863_870, &radio);
 }
 
 int main(void)
