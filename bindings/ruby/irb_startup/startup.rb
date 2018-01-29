@@ -1,3 +1,0 @@
-require 'ldl'
-
-include LDL
