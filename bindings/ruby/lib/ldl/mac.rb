@@ -6,7 +6,7 @@ module LDL
     class MAC < ExtMAC        
 
         attr_reader :ticker
-
+        
         # @param broker [Broker] for sending/recieving events
         # @param opts [Hash]
         #
@@ -17,7 +17,7 @@ module LDL
             raise "SystemTime must be defined" unless defined? SystemTime
         
             @mutex = Mutex.new            
-            super Radio.new(broker), **opts
+            super Radio.new(self, broker), **opts
             
             this = self
             
@@ -28,6 +28,14 @@ module LDL
                 end
             end
             
+        end
+        
+        def devEUI
+            EUI64.new @devEUI
+        end
+        
+        def appEUI
+            EUI64.new @appEUI
         end
 
         def personalize(devAddr, nwkSKey, appSKey)

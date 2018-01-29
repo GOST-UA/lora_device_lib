@@ -2,9 +2,9 @@ module LDL
 
     class Radio
     
-        attr_accessor :buffer, :mode
+        attr_accessor :buffer, :mode, :broker, :mac
     
-        def initialize(broker)
+        def initialize(mac, broker)am
 
             raise "SystemTime must be defined" unless defined? SystemTime
             
@@ -14,6 +14,7 @@ module LDL
             @tx = nil     
             @buffer = nil     
             @broker = broker 
+            @mac = mac
             
         end
     
@@ -25,7 +26,7 @@ module LDL
             
             @broker.publish({
                 :time => System.time,
-                :tx_time => @mac.onAirTime(settings[:bw], settings[:sf], data.size),
+                :tx_time => mac.onAirTime(settings[:bw], settings[:sf], data.size),
                 :data => data.dup,
                 :sf => settings[:sf],
                 :bw => settings[:bw],
@@ -34,13 +35,10 @@ module LDL
                 :power => settings[:power],                    
             }, "send")
             
-            mac = @mac
-            
-            SystemTime.onTimeout(@mac.onAirTime(settings[:bw], settings[:sf], data.size)) do
+            SystemTime.onTimeout(mac.onAirTime(settings[:bw], settings[:sf], data.size)) do
             
                 mac.io_event :tx_complete, SystemTime.time
-                @broker.publish()
-
+                
             end           
             
             true
@@ -50,19 +48,18 @@ module LDL
         def receive(**settings)
             
             broker = @broker
-            mac = self
             
             # this is only accessed within the block below
             state = :listening
         
-            rx_event = broker.subscribe "gateway_tx" do |msg,topic|            
+            rx_event = broker.subscribe eui.to_s do |msg,topic|            
             
                 case msg[:type]
                 when :rx_timeout
                 
                     if state == :listening
                     
-                        @mac.io_event :rx_timeout, System.time
+                        mac.io_event :rx_timeout, System.time
                         broker.unsubscribe rx_event
                         
                     end
@@ -79,7 +76,7 @@ module LDL
                             SystemTime.onTimeout msg[:tx_time] do 
                             
                                 broker.unsubscribe rx_event
-                                @mac.io_event :rx_ready, System.time
+                                mac.io_event :rx_ready, System.time
                                 
                             end
                             
@@ -95,11 +92,7 @@ module LDL
             
             SystemTime.onTimeout(settings[:interval]) do
             
-                broker.publish({
-            
-                    :type => :rx_timeout
                 
-                }, "mac_#{mac.id}")
             
             end
 
@@ -113,10 +106,6 @@ module LDL
         
         def sleep
             mode = :sleep
-        end
-        
-        def set_mac(mac)
-            @mac = mac
         end
         
     end
