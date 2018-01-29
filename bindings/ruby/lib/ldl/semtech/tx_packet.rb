@@ -62,6 +62,10 @@ module LDL::Semtech
         attr_reader :ipol
         attr_reader :prea
         
+        attr_reader :bw
+        attr_reader :sf
+        
+        
         def size
             @data.size
         end

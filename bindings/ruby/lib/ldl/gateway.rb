@@ -139,7 +139,7 @@ module LDL
                 @q << {:task => :status}
 
                 # receive radio messages on all channels ;)
-                rx_event = @broker.subscribe "device_tx" do |msg|
+                rx_event = broker.subscribe "#{eui}" do |msg|
 
                     raise ArgumentError unless msg.kind_of? Hash
                     raise ArgumentError unless msg.has_key? :freq
@@ -183,6 +183,8 @@ module LDL
                     end
                 
                 end.run
+                
+                broker.publish({:eui => eui}, 'up')
 
                 loop do
 
@@ -265,17 +267,19 @@ module LDL
 
                     # actually send on the radio
                     when :tx
-                    
-                        m = Semtech::TXAck.new(
-                            token: msg.token,
-                            eui: eui,
-                            txpk_ack: Semtech::TXPacketAck.new
-                        )
                         
                         @token += 1 # advance our token
-                        @txnb += 1  # number of packets emitted
                         
-                        s.write m.encode
+                        broker.publish(
+                            {
+                                :data => job[:txpk].data,
+                                :bw => job[:txpk].bw,
+                                :sf => job[:txpk].sf,
+                                :tx_time => @mac.onAirTime(job[:txpk].bw, job[:txpk].sf, job[:txpk].data.size),                            
+                                :eui => eui
+                            },
+                            "send"
+                        )
                             
                     # message received from network
                     when :downstream
@@ -318,7 +322,9 @@ module LDL
 
                 end
 
-                @broker.unsubscribe rx_event
+                broker.unsubscribe rx_event
+                
+                broker.publish({:eui => eui}, 'down')
 
             end
 
@@ -388,8 +394,6 @@ module LDL
             
             @token += 1 # advance our token
             @txnb += 1  # number of packets emitted
-            
-            
             
         end
         

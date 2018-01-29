@@ -32,7 +32,7 @@ module LDL
                 :cr => settings[:cr],
                 :freq => settings[:freq],
                 :power => settings[:power],                    
-            }, "device_tx")
+            }, "send")
             
             mac = @mac
             

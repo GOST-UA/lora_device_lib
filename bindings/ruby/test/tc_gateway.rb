@@ -144,7 +144,7 @@ class TestGateway < Minitest::Test
                 :sf => 7,
                 :bw => 125
             },
-            "device_tx"
+            "#{state.eui}"
         )
         
         Timeout::timeout 2 do
@@ -161,6 +161,10 @@ class TestGateway < Minitest::Test
             
         end
         
+    end
+    
+    def test_downstream_immediate
+    
     end
     
     def teardown    

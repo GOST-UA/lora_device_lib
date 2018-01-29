@@ -1,29 +1,31 @@
 module LDL
 
     class Spectrum
+    
+        attr_reader :devices
+    
         def initialize(broker)
             
             @broker = broker
-            @gateway = []
-            @device = []            
+            
+            @devices = {}
+            
+            broker.subscribe 'up' do |msg|       
+                devices[msg[:eui]] = {:eui => msg[:eui]}
+            end
 
-            broker.subscribe "gateway_up", "gateway_down", "device_up", "device_down" do |msg, topic|
+            broker.subscribe 'down' do |msg|
+                devices.delete msg[:eui]
+            end
 
-                case topic
-                when "gateway_up"                    
-                when "device_up"
-                when "gateway_down"
-                when "device_down"
+            broker.subscribe 'send' do |msg|
+                devices.values.each do |d|                
+                    if d[:eui] != msg[:eui]
+                        broker.publish msg, msg[:eui].to_s                        
+                    end
                 end
-
             end
-
-            broker.subscribe "tx" do |msg|
-
-                
-
-            end
-
+               
         end
     end
 
