@@ -373,7 +373,8 @@ void Init_ext_mac(void)
     rb_define_method(cExtMAC, "send", send, -1);
     rb_define_method(cExtMAC, "io_event", io_event, 2);    
     rb_define_method(cExtMAC, "timeUntilNextEvent", timeUntilNextEvent, 0);    
-    rb_define_method(cExtMAC, "onAirTime", calculateOnAirTime, 3);    
+    
+    rb_define_singleton_method(cExtMAC, "onAirTime", calculateOnAirTime, 3);
     
     cEUI64 = rb_const_get(cLDL, rb_intern("EUI64"));
     cKey = rb_const_get(cLDL, rb_intern("Key"));
