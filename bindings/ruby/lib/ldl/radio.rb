@@ -27,7 +27,7 @@ module LDL
             msg = {
                 :eui => mac.devEUI, 
                 :time => System.time,
-                :tx_time => mac.onAirTime(settings[:bw], settings[:sf], data.size),
+                :tx_time => MAC.onAirTime(settings[:bw], settings[:sf], data.size),
                 :data => data.dup,
                 :sf => sf,
                 :bw => bw,
@@ -70,12 +70,12 @@ module LDL
             # begin listening
             tx_begin = broker.subscribe "tx_begin" do |m1|
             
-                if m1[:sf] == freq and m1[:bw] == bw and m1[:freq] == freq
+                if m1[:sf] == sf and m1[:bw] == bw and m1[:freq] == freq
             
                     broker.cancel to
                     broker.unsubscribe tx_begin
                     
-                    tx_end = broker.subscribe "tx_end" do |m1|            
+                    tx_end = broker.subscribe "tx_end" do |m2|            
                     
                         if m1[:eui] == m2[:eui]
                         
