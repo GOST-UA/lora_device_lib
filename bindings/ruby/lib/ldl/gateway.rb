@@ -175,14 +175,14 @@ module LDL
                 s = UDPSocket.new
                 s.connect(host, port)
                 
-                rx = Thread.new do
+                Thread.new do
                 
                     begin
 
                         loop do
 
-                            reply, from = s.recvfrom(1024, 0)
-                            @q << {:task => :downstream, :data => reply}
+                            reply = s.recvfrom(1024, 0)
+                            @q << {:task => :downstream, :data => reply.first}
 
                         end
 
@@ -281,12 +281,12 @@ module LDL
                             :data => job[:txpk].data,
                             :bw => job[:txpk].bw,
                             :sf => job[:txpk].sf,
-                            :tx_time => @mac.onAirTime(job[:txpk].bw, job[:txpk].sf, job[:txpk].data.size),                            
+                            :tx_time => MAC.onAirTime(job[:txpk].bw, job[:txpk].sf, job[:txpk].data.size),                            
                             :eui => eui
                         }
                         
                         m2 = {
-                            eui => m1[:eui]                        
+                            :eui => m1[:eui]                        
                         }
                         
                         broker.publish m1, "tx_begin"
@@ -308,13 +308,21 @@ module LDL
                             when Semtech::PushAck, Semtech::PullAck                                
                                 ack_token msg.token                                
                             when Semtech::PullResp
-
+                            
                                 @dwnb += 1  # number of downlink datagrams received
 
                                 # send now
                                 if msg.txpk.imme
-                                    
-                                    s.write(tx_ack('NONE'))
+                                
+                                    s.write(
+                                        Semtech::TXAck.new(
+                                            token: msg.token,
+                                            eui: eui,
+                                            txpk_ack: Semtech::TXPacketAck.new(error: 'NONE')
+                                        ).encode
+                                    )
+            
+                                    @txnb += 1  # number of packets emitted
                                     
                                     @q << {:task => :tx, :txpk => msg.txpk}                
                                                                 
@@ -325,7 +333,15 @@ module LDL
                                 # don't support the use of time field 
                                 elsif msg.tkpk.time
                                 
-                                    s.write(tx_ack('GPS_UNLOCKED'))
+                                    s.write(
+                                        Semtech::TXAck.new(
+                                            token: msg.token,
+                                            eui: eui,
+                                            txpk_ack: Semtech::TXPacketAck.new(error: 'GPS_UNLOCKED')
+                                        ).encode
+                                    )
+            
+                                    @txnb += 1  # number of packets emitted
                                 
                                 end
                             
@@ -401,20 +417,7 @@ module LDL
             (SystemTime.time * 20) & 0xffffffff
         end
         
-        def tx_ack(error)
-            
-            m = Semtech::TXAck.new(
-                token: msg.token,
-                eui: eui,
-                txpk_ack: Semtech::TXPacketAck.new
-            )
-            
-            @token += 1 # advance our token
-            @txnb += 1  # number of packets emitted
-            
-        end
-        
-        private :with_mutex, :add_token, :ack_token, :tmst, :tx_ack
+        private :with_mutex, :add_token, :ack_token, :tmst
     
     end
 
