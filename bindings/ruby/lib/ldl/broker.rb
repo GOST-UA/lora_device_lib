@@ -30,7 +30,7 @@ module LDL
             with_mutex do                
                 topics.uniq.each do |t|                
                     if subscribers = @subscribers[t]                        
-                        subs << block
+                        subscribers << block
                     else
                         @subscribers[t] = [block]
                     end                    
