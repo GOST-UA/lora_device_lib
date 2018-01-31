@@ -8,11 +8,7 @@ module LDL
 
             raise "SystemTime must be defined" unless defined? SystemTime
             
-            @mode = :sleep
-            @events = []  
-            @rx = nil
-            @tx = nil     
-            @buffer = nil     
+            @buffer = ""     
             @broker = broker 
             @mac = mac
             
@@ -24,20 +20,29 @@ module LDL
     
         def transmit(data, **settings)            
             
-            @broker.publish({
+            bw = settings[:bw]
+            sf = settings[:sf]
+            freq = settings[:freq]
+            
+            msg = {
+                :eui => mac.devEUI, 
                 :time => System.time,
                 :tx_time => mac.onAirTime(settings[:bw], settings[:sf], data.size),
                 :data => data.dup,
-                :sf => settings[:sf],
-                :bw => settings[:bw],
+                :sf => sf,
+                :bw => bw,
                 :cr => settings[:cr],
-                :freq => settings[:freq],
+                :freq => freq,
                 :power => settings[:power],                    
-            }, "send")
+            }
             
-            SystemTime.onTimeout(mac.onAirTime(settings[:bw], settings[:sf], data.size)) do
+            broker.publish msg, "tx_begin"
+            
+            SystemTime.onTimeout(mac.onAirTime(bw, sf, data.size)) do
             
                 mac.io_event :tx_complete, SystemTime.time
+                                
+                broker.publish({:eui => mac.devEUI}, "tx_end")
                 
             end           
             
@@ -47,55 +52,47 @@ module LDL
             
         def receive(**settings)
             
-            broker = @broker
+            bw = settings[:bw]
+            sf = settings[:sf]
+            freq = settings[:freq]
             
-            # this is only accessed within the block below
-            state = :listening
-        
-            rx_event = broker.subscribe eui.to_s do |msg,topic|            
+            tx_begin
             
-                case msg[:type]
-                when :rx_timeout
-                
-                    if state == :listening
+            # listen for the interval
+            to = SystemTime.onTimeout(settings[:interval]) do
+               
+               broker.unsubscribe tx_begin
+               
+               mac.io_event :rx_timeout, SystemTime.time 
+               
+            end
+            
+            # begin listening
+            tx_begin = broker.subscribe "tx_begin" do |m1|
+            
+                if m1[:sf] == freq and m1[:bw] == bw and m1[:freq] == freq
+            
+                    broker.cancel to
+                    broker.unsubscribe tx_begin
                     
-                        mac.io_event :rx_timeout, System.time
-                        broker.unsubscribe rx_event
+                    tx_end = broker.subscribe "tx_end" do |m1|            
+                    
+                        if m1[:eui] == m2[:eui]
                         
-                    end
-                       
-                when :rx_start
-                
-                    case state
-                    when :listening
-                    
-                        if msg[:sf] == settings[:sf] and msg[:bw] == settings[:bw] and msg[:freq] == settings[:freq]
-                    
-                            state = :rx
+                            broker.unsubscribe tx_end
                             
-                            SystemTime.onTimeout msg[:tx_time] do 
+                            mac.io_event :rx_ready, SystemTime.time
                             
-                                broker.unsubscribe rx_event
-                                mac.io_event :rx_ready, System.time
-                                
-                            end
-                            
+                            @buffer = m1[:data].dup
+                        
                         end
                         
                     end
-                
-                else
-                    raise
+                    
                 end
-                
-            end
-            
-            SystemTime.onTimeout(settings[:interval]) do
-            
-                
             
             end
-
+            
             true
                     
         end
@@ -105,7 +102,6 @@ module LDL
         end
         
         def sleep
-            mode = :sleep
         end
         
     end

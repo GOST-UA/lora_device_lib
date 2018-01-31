@@ -138,15 +138,21 @@ class TestGateway < Minitest::Test
     
     def test_upstream
     
-        broker.publish({
-                :data => "hello world",
-                :freq => 0,
-                :sf => 7,
-                :bw => 125
-            },
-            "#{state.eui}"
-        )
+        m1 = {
+            :eui => RandomEUI64.eui,
+            :data => "hello world",
+            :freq => 0,
+            :sf => 7,
+            :bw => 125        
+        }
         
+        m2 = {
+            :eui => m1[:eui]
+        }
+    
+        broker.publish(m1, "tx_begin")
+        broker.publish(m2, "tx_end")
+                
         Timeout::timeout 2 do
             
             loop do

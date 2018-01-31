@@ -138,30 +138,37 @@ module LDL
                 # start the status push
                 @q << {:task => :status}
 
-                # receive radio messages on all channels ;)
-                rx_event = broker.subscribe "#{eui}" do |msg|
+                buffer = []
 
-                    raise ArgumentError unless msg.kind_of? Hash
-                    raise ArgumentError unless msg.has_key? :freq
-                    raise ArgumentError unless msg.has_key? :data
-                    raise ArgumentError unless msg.has_key? :sf
-                    raise ArgumentError unless msg.has_key? :bw
-
-                    @rxnb += 1
-                    @rxok += 1
-                    @rxfw += 1
-
-                    # todo rethink signal quality numbers
+                tx_begin = broker.subscribe "tx_begin" do |m1|
+                
+                    buffer.push m1
                     
-                    @q << {
-                        :task => :upstream,
-                        :rxpk => Semtech::RXPacket.new(
-                            tmst: tmst,
-                            freq: msg[:freq],
-                            data: msg[:data],
-                            datr: "SF#{msg[:sf]}BW#{msg[:bw]}",                                                        
-                        )
-                    }
+                end
+
+                tx_end = broker.subscribe "tx_end" do |m2|
+
+                    if m1 = buffer.detect{ |v| v[:eui] == m2[:eui] }
+
+                        @rxnb += 1
+                        @rxok += 1
+                        @rxfw += 1
+
+                        # todo rethink signal quality numbers
+                        
+                        @q << {
+                            :task => :upstream,
+                            :rxpk => Semtech::RXPacket.new(
+                                tmst: tmst,
+                                freq: m1[:freq],
+                                data: m1[:data],
+                                datr: "SF#{m1[:sf]}BW#{m1[:bw]}",                                                        
+                            )
+                        }
+                        
+                        buffer.delete m1
+                        
+                    end
 
                 end
                 
@@ -322,7 +329,8 @@ module LDL
 
                 end
 
-                broker.unsubscribe rx_event
+                broker.unsubscribe tx_begin
+                broker.unsubscribe tx_end
                 
                 broker.publish({:eui => eui}, 'down')
 

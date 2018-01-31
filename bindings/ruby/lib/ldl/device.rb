@@ -2,7 +2,7 @@ module LDL
 
     class Device
     
-        attr_reader :mac
+        attr_reader :mac, :broker
     
         def initialize(broker, **opts)
         
@@ -12,7 +12,11 @@ module LDL
             
             @worker = Thread.new do
             
+                broker.publish({:eui => devEUI}, "up")
+            
                 yield
+                
+                broker.publish({:eui => devEUI}, "down")
             
             end
             
