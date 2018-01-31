@@ -7,7 +7,7 @@ module LDL
         MAX_TOKENS = 100
         
         # maximum allowable advance send scheduling
-        MAX_ADVANCE_TIME = 
+        MAX_ADVANCE_TIME = 10
         
         attr_reader :eui
         
@@ -277,16 +277,25 @@ module LDL
                         
                         @token += 1 # advance our token
                         
-                        broker.publish(
-                            {
-                                :data => job[:txpk].data,
-                                :bw => job[:txpk].bw,
-                                :sf => job[:txpk].sf,
-                                :tx_time => @mac.onAirTime(job[:txpk].bw, job[:txpk].sf, job[:txpk].data.size),                            
-                                :eui => eui
-                            },
-                            "send"
-                        )
+                        m1 = {
+                            :data => job[:txpk].data,
+                            :bw => job[:txpk].bw,
+                            :sf => job[:txpk].sf,
+                            :tx_time => @mac.onAirTime(job[:txpk].bw, job[:txpk].sf, job[:txpk].data.size),                            
+                            :eui => eui
+                        }
+                        
+                        m2 = {
+                            eui => m1[:eui]                        
+                        }
+                        
+                        broker.publish m1, "tx_begin"
+                        
+                        SystemTime.onTimeout m1[:tx_time] do 
+                            
+                            broker.publish m2, "tx_end"
+                            
+                        end
                             
                     # message received from network
                     when :downstream
