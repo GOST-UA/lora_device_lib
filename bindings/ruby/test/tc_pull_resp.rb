@@ -28,11 +28,11 @@ class TestPullResp < Minitest::Test
         
         input = @state.encode
         
-        input = "\x02\x00\x00\x03#{Semtech::TXPacket.new.to_json}"
+        input = "\x02\x00\x00\x03#{{:txpk => Semtech::TXPacket.new}.to_json}"
         
         decoded = Semtech::PullResp.decode(input)
         
-        assert_equal 0,  decoded.token
+        assert_equal 0, decoded.token
         
     end
     

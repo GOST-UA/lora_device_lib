@@ -64,7 +64,7 @@ module LDL::Semtech
                 end
             
                 if msg["stat"]
-                    state = stat_to_sym(msg["stat"])
+                    stat = stat_to_sym(msg["stat"])
                 else
                     stat = nil
                 end
@@ -127,7 +127,7 @@ module LDL::Semtech
                     end
                     @datr = param[:datr]
                     @sf = match[:sf].to_i
-                    @bw = match[:bw].to_i
+                    @bw = match[:bw].to_i * 1000
                 else
                     raise ArugmentError unless not(param[:datr].kind_of? Numeric)
                 end

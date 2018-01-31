@@ -6,7 +6,7 @@ module LDL::Semtech
         
         def self.decode(msg)
             
-            iter = msg.unpack("CS>Ca").each
+            iter = msg.unpack("CS>Ca*").each
             
             version = iter.next
             token = iter.next
@@ -30,13 +30,13 @@ module LDL::Semtech
                 end
                 
                 if not root.has_key? 'txpk'
-                    raise ArgumentError.new "root should contain key 'txpk'"
+                    raise ArgumentError.new "root must contain key 'txpk'"
                 end
                 
                 txpk = TXPacket.from_h(root["txpk"])
                 
-            rescue           
-                ArgumentError.new "payload is not valid"            
+            rescue => e
+                raise ArgumentError.new "payload is not valid: #{e}"            
             end
             
             self.new(

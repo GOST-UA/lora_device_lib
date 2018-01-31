@@ -16,7 +16,7 @@ module LDL::Semtech
         end
 
         def self.===(other)
-            self.==(other)
+            self == (other)
         end
     
         def self.decode(msg)

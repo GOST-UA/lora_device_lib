@@ -1,4 +1,5 @@
 require 'json'
+require 'base64'
 
 module LDL::Semtech
 
@@ -27,10 +28,23 @@ module LDL::Semtech
     
         def self.from_h(msg)
             begin
+            
+                if msg["data"]
+                    data = Base64.decode64(msg["data"])
+                else
+                    data = ""
+                end
+                
+                if msg["time"]
+                    time = Time.parse(msg["time"])
+                else
+                    time = nil
+                end
+            
                 self.new(
                     imme: msg["imme"],
                     tmst: msg["tmst"],
-                    time: msg["time"],
+                    time: time,
                     freq: msg["freq"],
                     rfch: msg["rfch"],
                     powe: msg["powe"],
@@ -41,11 +55,11 @@ module LDL::Semtech
                     ipol: msg["ipol"],
                     prea: msg["prea"],
                     size: msg["size"],
-                    data: msg["data"],
+                    data: data,
                     ncrc: msg["ncrc"]
                 )        
             rescue
-                raise ArgumentError
+                raise
             end            
         end
         
@@ -106,13 +120,13 @@ module LDL::Semtech
             if param[:datr]
                 if modu == "LORA"
                     if not(match = param[:datr].match(/^SF(?<sf>[0-9])BW(?<bw>[0-9]+)$/))
-                        raise ArgumentError
+                        raise ArgumentError.new("datr")
                     end
                     @datr = param[:datr]
-                    @sf = match[:sf]
-                    @bw = match[:bw]
+                    @sf = match[:sf].to_i
+                    @bw = match[:bw].to_i * 1000
                 else
-                    raise ArugmentError unless not(param[:datr].kind_of? Numeric)
+                    raise ArugmentError.new("datr") unless not(param[:datr].kind_of? Numeric)
                 end
             else
                 if modu == "LORA"            
@@ -125,7 +139,7 @@ module LDL::Semtech
             end
             
             init.call(:codr, String, "4/5") do |value|
-                raise ArgumentError unless value[/^[0-9]+\/[0-9]+$/]
+                raise ArgumentError.new("codr") unless value[/^[0-9]+\/[0-9]+$/]
                 value
             end
             
