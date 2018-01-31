@@ -12,8 +12,8 @@ class TestGateway < Minitest::Test
     attr_reader :broker
 
     def rx_message
-        msg, from = s.recvfrom(2048, 0)
-        Semtech::Message.decode msg        
+        msg = s.recvfrom(2048, 0)
+        Semtech::Message.decode msg.first        
     end
 
     def setup
@@ -170,7 +170,55 @@ class TestGateway < Minitest::Test
     end
     
     def test_downstream_immediate
-    
+        
+        q = Queue.new
+        
+        broker.subscribe "tx_begin" do |msg|                 
+            q.push msg        
+        end
+        
+        broker.subscribe "tx_end" do |msg|
+            q.push msg
+        end
+        
+        txpk = Semtech::TXPacket.new(data: "hello world", imme: true)
+        
+        from = nil
+        
+        # wait for PullData
+        Timeout::timeout 1 do
+            
+            loop do
+        
+                msg, from = s.recvfrom(2048, 0)
+                msg = Semtech::Message.decode msg 
+        
+                if msg.kind_of? Semtech::PullData
+                
+                    break                
+                    
+                end                
+            
+            end
+            
+        end
+        
+        s.send(Semtech::PullResp.new(txpk: txpk, token: 42).encode, 0, 'localhost', from[1])
+        
+        m1 = nil
+        m2 = nil
+        
+        Timeout::timeout 2 do
+            
+            m1 = q.pop
+            m2 = q.pop
+            
+        end
+        
+        assert m1[:eui] == m2[:eui]
+        
+        assert m1[:data] == 'hello world'
+            
     end
     
     def teardown    
