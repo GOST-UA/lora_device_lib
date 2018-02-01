@@ -52,6 +52,11 @@ module LDL
 
                             queue << event
                             queue.sort_by! { |e| e[:interval] }
+                            
+                        when :remove
+                        
+                            queue.delete( event[:ref] )
+                            
                         else
                             raise
                         end
@@ -105,6 +110,13 @@ module LDL
                 :interval => interval,
                 :block => block,
                 :thread => Thread.current
+            })
+        end
+        
+        def cancel(ref)
+            @update.push({
+                :op => :remove,
+                :cb => ref
             })
         end
         

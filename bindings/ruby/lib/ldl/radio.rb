@@ -4,7 +4,7 @@ module LDL
     
         attr_accessor :buffer, :mode, :broker, :mac
     
-        def initialize(mac, broker)am
+        def initialize(mac, broker)
 
             raise "SystemTime must be defined" unless defined? SystemTime
             
@@ -26,8 +26,8 @@ module LDL
             
             msg = {
                 :eui => mac.devEUI, 
-                :time => System.time,
-                :tx_time => MAC.onAirTime(settings[:bw], settings[:sf], data.size),
+                :time => SystemTime.time,
+                :tx_time => MAC.onAirTime(bw, sf, data.size),
                 :data => data.dup,
                 :sf => sf,
                 :bw => bw,

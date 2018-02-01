@@ -60,7 +60,7 @@ static uint64_t timeBase(uint8_t value);
 
 static uint64_t timeNextAvailable(struct lora_mac *self, uint64_t timeNow, uint8_t rate);
 
-static void restoreDefaults(struct lora_mac *self);
+//static void restoreDefaults(struct lora_mac *self);
 
 /* functions **********************************************************/
 
@@ -79,7 +79,7 @@ void MAC_init(struct lora_mac *self, void *system, enum lora_region_id region, s
     
     Radio_setEventHandler(self->radio, self, MAC_radioEvent);
 
-    Region_getDefaultChannels(self->region, self, addDefaultChannel);    
+    //Region_getDefaultChannels(self->region, self, addDefaultChannel);    
 }
 
 bool MAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *data, uint8_t len)
@@ -360,9 +360,11 @@ bool MAC_setPower(struct lora_mac *self, uint8_t power)
 
 /* static functions ***************************************************/
 
-static void restoreDefaults(struct lora_mac *self)
+void MAC_restoreDefaults(struct lora_mac *self)
 {
     struct lora_region_default defaults;
+    
+    Region_getDefaultChannels(self->region, self->system, addDefaultChannel);    
     
     Region_getDefaultSettings(self->region, &defaults);
         
@@ -658,7 +660,7 @@ static void collect(struct lora_mac *self)
                 System_resetUp(self->system);
                 System_resetDown(self->system);
                 
-                restoreDefaults(self->system);
+                MAC_restoreDefaults(self->system);
                 
                 System_setRX1DROffset(self->system, result.fields.joinAccept.rx1DataRateOffset);
                 System_setRX2DataRate(self->system, result.fields.joinAccept.rx2DataRate);

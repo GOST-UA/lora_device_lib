@@ -15,9 +15,13 @@ module LDL
         def initialize(broker, **opts)
         
             raise "SystemTime must be defined" unless defined? SystemTime
-        
+            
             @mutex = Mutex.new            
-            super Radio.new(self, broker), **opts
+            
+            super(Radio.new(self, broker), **opts)
+            
+            @txRate = 0
+            @txPower = 0
             
             this = self
             
@@ -30,30 +34,23 @@ module LDL
             
         end
         
-        def devEUI
-            EUI64.new @devEUI
-        end
+        attr_reader :devEUI, :appEUI
         
-        def appEUI
-            EUI64.new @appEUI
-        end
-
-        def personalize(devAddr, nwkSKey, appSKey)
-            with_mutex do
-                super
-            end
-            self
-        end
-    
         # perform a join
-        def join
+        def join            
             rq = Queue.new
-            with_mutex do
-                super do |result|
+            this = self
+            SystemTime.onTimeout 0 do
+            
+                puts this
+                puts this.method(:join)
+                puts this.method(:join).super_method
+            
+                this.method(:join).super_method.call do |result|
                     rq << result
-                end
+                end            
+                this.ticker.call
             end
-            SystemTime.onTimeout 0, &ticker
             raise JoinTimeout.new "timeout waiting for join confirmation" unless rq.pop == :join_success
             self
         end
@@ -67,12 +64,13 @@ module LDL
         # @option opts [true,false] :confirmed 
         def send(port, data, **opts)        
             rq = Queue.new
-            with_mutex do
-                super(port, data, **opts) do |result|
+            this = self
+            SystemTime.onTimeout 0 do
+                this.method(:send).super_method.call(port, data, **opts) do |result|
                     rq << result
                 end
+                this.ticker.call
             end            
-            SystemTime.onTimeout 0, &ticker
             raise SendTimeout unless rq.pop == :tx_complete
             self
         end
@@ -87,9 +85,12 @@ module LDL
         #   end
         #
         def on_receive(&block)
-            with_mutex do
+            rq = Queue.new
+            SystemTime.onTimeout 0 do
                 @rx_handler = block
+                rq << nil
             end
+            rq.pop
             self
         end
         

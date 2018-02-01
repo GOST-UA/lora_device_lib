@@ -19,5 +19,14 @@ Rake::TestTask.new do |t|
     t.test_files = FileList["test/**/tc_*.rb"]    
 end
 
+
+    
+task :nemiver => :compile do
+    system "nemiver ruby -Ilib test/tc_mac.rb"
+end
+
+
+
+
 task :default => :test
 

@@ -362,7 +362,7 @@ void Init_ext_mac(void)
     cExtMAC = rb_define_class_under(cLDL, "ExtMAC", rb_cObject);
     rb_define_alloc_func(cExtMAC, alloc_state);
     
-    rb_define_method(cExtMAC, "initialize", initialize, 1);
+    rb_define_method(cExtMAC, "initialize", initialize, -1);
     rb_define_method(cExtMAC, "initialize_copy", initialize_copy, 1);
     
     rb_define_method(cExtMAC, "personalize", personalize, 3);
@@ -396,9 +396,9 @@ bool Radio_transmit(struct lora_radio *self, const struct lora_radio_tx_setting 
 {   
     VALUE params = rb_hash_new();
     
-    rb_hash_aset(params, ID2SYM(rb_intern("freq")), NUM2UINT(settings->freq)); 
-    rb_hash_aset(params, ID2SYM(rb_intern("preamble")), NUM2UINT(settings->preamble)); 
-    rb_hash_aset(params, ID2SYM(rb_intern("power")), NUM2INT(settings->power)); 
+    rb_hash_aset(params, ID2SYM(rb_intern("freq")), UINT2NUM(settings->freq)); 
+    rb_hash_aset(params, ID2SYM(rb_intern("preamble")), UINT2NUM(settings->preamble)); 
+    rb_hash_aset(params, ID2SYM(rb_intern("power")), UINT2NUM(settings->power)); 
     
     rb_hash_aset(params, ID2SYM(rb_intern("bw")), bw_to_symbol(settings->bw)); 
     rb_hash_aset(params, ID2SYM(rb_intern("sf")), sf_to_symbol(settings->sf)); 
@@ -411,9 +411,9 @@ bool Radio_receive(struct lora_radio *self, const struct lora_radio_rx_setting *
 {   
     VALUE params = rb_hash_new();
     
-    rb_hash_aset(params, ID2SYM(rb_intern("freq")), NUM2UINT(settings->freq)); 
-    rb_hash_aset(params, ID2SYM(rb_intern("preamble")), NUM2UINT(settings->preamble)); 
-    rb_hash_aset(params, ID2SYM(rb_intern("timeout")), NUM2UINT(settings->timeout)); 
+    rb_hash_aset(params, ID2SYM(rb_intern("freq")), UINT2NUM(settings->freq)); 
+    rb_hash_aset(params, ID2SYM(rb_intern("preamble")), UINT2NUM(settings->preamble)); 
+    rb_hash_aset(params, ID2SYM(rb_intern("timeout")), UINT2NUM(settings->timeout)); 
     
     rb_hash_aset(params, ID2SYM(rb_intern("bw")), bw_to_symbol(settings->bw)); 
     rb_hash_aset(params, ID2SYM(rb_intern("sf")), sf_to_symbol(settings->sf)); 
@@ -435,7 +435,6 @@ uint8_t Radio_collect(struct lora_radio *self, void *data, uint8_t max)
 
 void Radio_setEventHandler(struct lora_radio *self, void *receiver, radioEventCB cb)
 {    
-    rb_funcall((VALUE)self, rb_intern("set_mac"), 1, (VALUE)receiver);
 }
 
 static VALUE alloc_state(VALUE klass)
@@ -521,7 +520,7 @@ static VALUE initialize(int argc, VALUE *argv, VALUE self)
     appKey = rb_hash_aref(options, ID2SYM(rb_intern("appKey")));
     region = rb_hash_aref(options, ID2SYM(rb_intern("region")));
 
-    if(rb_obj_is_kind_of(radio, cRadio) != Qnil){
+    if(rb_obj_is_kind_of(radio, cRadio) != Qtrue){
         
         rb_raise(rb_eTypeError, "radio must be kind of Radio");
     }
@@ -552,11 +551,7 @@ static VALUE initialize(int argc, VALUE *argv, VALUE self)
         region = ID2SYM(rb_intern("eu_863_870"));
         region_id = EU_863_870;
     }
-    
-    MAC_init(this, (void *)self, region_id, (struct lora_radio *)radio);
-    
-    MAC_setResponseHandler(this, (void *)self, _response);
-    
+
     rb_iv_set(self, "@radio", radio);
     
     if(appEUI != Qnil){
@@ -597,8 +592,7 @@ static VALUE initialize(int argc, VALUE *argv, VALUE self)
     
     VALUE appSKey = rb_funcall(cKey, rb_intern("new"), 1, rb_str_new((char *)default_key, sizeof(default_key)-1));
     VALUE nwkSKey = rb_funcall(cKey, rb_intern("new"), 1, rb_str_new((char *)default_key, sizeof(default_key)-1));
-    
-    
+        
     rb_iv_set(self, "@appEUI", appEUI);
     rb_iv_set(self, "@devEUI", devEUI);
     rb_iv_set(self, "@appKey", appKey);
@@ -611,6 +605,10 @@ static VALUE initialize(int argc, VALUE *argv, VALUE self)
     rb_iv_set(self, "@join_handler", Qnil);
     
     initChannels(self, region_id);
+    
+    MAC_init(this, (void *)self, region_id, (struct lora_radio *)radio);
+
+    MAC_setResponseHandler(this, (void *)self, _response);
     
     MAC_restoreDefaults(this);
     
@@ -694,9 +692,6 @@ static VALUE join(int argc, VALUE *argv, VALUE self)
     }
     
     rb_iv_set(self, "@join_handler", handler);
-    
-    MAC_tick(this);
-    uint32_t interval = MAC_timeUntilNextEvent(this);
     
     return self;
 }
