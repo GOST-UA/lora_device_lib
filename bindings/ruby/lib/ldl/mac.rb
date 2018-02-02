@@ -20,7 +20,7 @@ module LDL
             
             super(Radio.new(self, broker), **opts)
             
-            @txRate = 0
+            @txRate = 4
             @txPower = 0
             
             this = self
@@ -36,15 +36,19 @@ module LDL
         
         attr_reader :devEUI, :appEUI
         
+        def io_event(event, time)
+        
+            Logger.debug "io_event #{event} at #{time}"
+        
+            super
+            ticker.call
+        end
+        
         # perform a join
         def join            
             rq = Queue.new
             this = self
             SystemTime.onTimeout 0 do
-            
-                puts this
-                puts this.method(:join)
-                puts this.method(:join).super_method
             
                 this.method(:join).super_method.call do |result|
                     rq << result

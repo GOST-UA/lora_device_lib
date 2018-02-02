@@ -30,6 +30,10 @@ class TestMAC < Minitest::Test
     
         state.join
     
+        broker.subscribe do |msg, topic|
+            puts "#{topic}: #{msg}"
+        end
+    
     end
     
     def teardown    

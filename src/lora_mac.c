@@ -307,7 +307,7 @@ uint32_t MAC_calculateOnAirTime(enum lora_signal_bandwidth bw, enum lora_spreadi
         bool header = true; 
 
         uint32_t Ts = ((1U << sf) * 1000000U) / bw;     //symbol rate (us)
-        uint32_t Tpreamble = (Ts * 12U) +  (Ts / 4U);       //preamble (us)
+        uint32_t Tpreamble = (Ts * 12U) +  (Ts / 4U);   //preamble (us)
 
         uint32_t numerator = (8U * (uint32_t)payloadLen) - (4U * (uint32_t)sf) + 28U + ( crc ? 16U : 0U ) - ( (header) ? 20U : 0U );
         uint32_t denom = 4U * ((uint32_t)sf - ( lowDataRateOptimize ? 2U : 0U ));
@@ -319,7 +319,7 @@ uint32_t MAC_calculateOnAirTime(enum lora_signal_bandwidth bw, enum lora_spreadi
         Tpacket = Tpreamble + Tpayload;
     }
 
-    return Tpacket;
+    return Tpacket / 10U;
 }
 
 void MAC_tick(struct lora_mac *self)
@@ -401,7 +401,7 @@ static void tx(void *receiver, uint64_t time)
 
             registerTime(self, self->tx.freq, System_getTime(), MAC_calculateOnAirTime(radio_setting.bw, radio_setting.sf, self->bufferLen));
             
-            self->state = TX;
+            self->state = (self->state == WAIT_TX) ? TX : JOIN_TX;
                 
             self->txComplete = Event_onInput(&self->events, EVENT_TX_COMPLETE, self, txComplete);
         
@@ -434,11 +434,14 @@ static void txComplete(void *receiver, uint64_t time)
     
     self->txCompleteTime = time;
         
-    futureTime = self->txCompleteTime + (self->state == TX) ? timeBase(System_getRX1Delay(self->system)) : timeBase(Region_getJA1Delay(self->region));
+    futureTime = self->txCompleteTime + ((self->state == TX) ? timeBase(System_getRX1Delay(self->system)) : timeBase(Region_getJA1Delay(self->region)));
+    
+    LORA_DEBUG("txCompleteTime: %llu", self->txCompleteTime)
+    LORA_DEBUG("futureTime: %llu", futureTime)
     
     self->state = (self->state == TX) ? WAIT_RX1 : JOIN_WAIT_RX1;                
 
-    if(futureTime > timeNow){
+    if(futureTime >= timeNow){
 
         (void)Event_onTimeout(&self->events, futureTime, self, rxStart);
     }
@@ -580,16 +583,24 @@ static void rxFinish(struct lora_mac *self)
     switch(self->state){
     default:
     case RX1:        
+    
+        LORA_DEBUG("rx1")
+    
         self->state = WAIT_RX2;    
         (void)Event_onTimeout(&self->events, self->txCompleteTime + timeBase(System_getRX1Delay(self->system) + 1U), self, rxStart);
         break;
     
     case JOIN_RX1:        
+    
+        LORA_DEBUG("join_rx1")
+    
         self->state = JOIN_WAIT_RX2;    
         (void)Event_onTimeout(&self->events, self->txCompleteTime + timeBase(Region_getJA1Delay(self->region) + 1U), self, rxStart);
         break;
         
     case RX2:        
+        
+        LORA_DEBUG("rx2")
         
         if(self->responseHandler != NULL){
 
@@ -599,6 +610,9 @@ static void rxFinish(struct lora_mac *self)
         break;
     
     case JOIN_RX2:   
+        
+        LORA_DEBUG("join_rx2\n")
+    
         if(self->responseHandler != NULL){
             
             self->responseHandler(self->responseReceiver, (self->status.joined) ? LORA_MAC_JOIN_SUCCESS : LORA_MAC_JOIN_TIMEOUT, NULL);

@@ -27,7 +27,6 @@ module LDL
             msg = {
                 :eui => mac.devEUI, 
                 :time => SystemTime.time,
-                :tx_time => MAC.onAirTime(bw, sf, data.size),
                 :data => data.dup,
                 :sf => sf,
                 :bw => bw,
@@ -38,7 +37,7 @@ module LDL
             
             broker.publish msg, "tx_begin"
             
-            SystemTime.onTimeout(mac.onAirTime(bw, sf, data.size)) do
+            SystemTime.onTimeout(mac.class.onAirTime(bw, sf, data.size)) do
             
                 mac.io_event :tx_complete, SystemTime.time
                                 

@@ -49,9 +49,12 @@ static VALUE io_event(VALUE self, VALUE event, VALUE time);
 
 static void _response(void *receiver, enum lora_mac_response_type type, const union lora_mac_response_arg *arg);
 
-static VALUE bw_to_symbol(enum lora_signal_bandwidth bw);
-static VALUE sf_to_symbol(enum lora_spreading_factor sf);
-static VALUE cr_to_symbol(enum lora_coding_rate cr);
+static VALUE bw_to_number(enum lora_signal_bandwidth bw);
+static VALUE sf_to_number(enum lora_spreading_factor sf);
+static VALUE cr_to_number(enum lora_coding_rate cr);
+
+static enum lora_spreading_factor number_to_sf(VALUE sf);
+static enum lora_signal_bandwidth number_to_bw(VALUE bw);
 
 static VALUE timeUntilNextEvent(VALUE self);
 
@@ -400,9 +403,9 @@ bool Radio_transmit(struct lora_radio *self, const struct lora_radio_tx_setting 
     rb_hash_aset(params, ID2SYM(rb_intern("preamble")), UINT2NUM(settings->preamble)); 
     rb_hash_aset(params, ID2SYM(rb_intern("power")), UINT2NUM(settings->power)); 
     
-    rb_hash_aset(params, ID2SYM(rb_intern("bw")), bw_to_symbol(settings->bw)); 
-    rb_hash_aset(params, ID2SYM(rb_intern("sf")), sf_to_symbol(settings->sf)); 
-    rb_hash_aset(params, ID2SYM(rb_intern("cr")), cr_to_symbol(settings->cr)); 
+    rb_hash_aset(params, ID2SYM(rb_intern("bw")), bw_to_number(settings->bw)); 
+    rb_hash_aset(params, ID2SYM(rb_intern("sf")), sf_to_number(settings->sf)); 
+    rb_hash_aset(params, ID2SYM(rb_intern("cr")), cr_to_number(settings->cr)); 
      
     return rb_funcall((VALUE)self, rb_intern("transmit"), 2, rb_str_new(data, len), params) == Qtrue;
 }
@@ -415,9 +418,9 @@ bool Radio_receive(struct lora_radio *self, const struct lora_radio_rx_setting *
     rb_hash_aset(params, ID2SYM(rb_intern("preamble")), UINT2NUM(settings->preamble)); 
     rb_hash_aset(params, ID2SYM(rb_intern("timeout")), UINT2NUM(settings->timeout)); 
     
-    rb_hash_aset(params, ID2SYM(rb_intern("bw")), bw_to_symbol(settings->bw)); 
-    rb_hash_aset(params, ID2SYM(rb_intern("sf")), sf_to_symbol(settings->sf)); 
-    rb_hash_aset(params, ID2SYM(rb_intern("cr")), cr_to_symbol(settings->cr)); 
+    rb_hash_aset(params, ID2SYM(rb_intern("bw")), bw_to_number(settings->bw)); 
+    rb_hash_aset(params, ID2SYM(rb_intern("sf")), sf_to_number(settings->sf)); 
+    rb_hash_aset(params, ID2SYM(rb_intern("cr")), cr_to_number(settings->cr)); 
     
     return rb_funcall((VALUE)self, rb_intern("receive"), 1, params) == Qtrue;
 }
@@ -781,43 +784,79 @@ static void _response(void *receiver, enum lora_mac_response_type type, const un
     }   
 }
 
-static VALUE bw_to_symbol(enum lora_signal_bandwidth bw)
+static VALUE bw_to_number(enum lora_signal_bandwidth bw)
 {
-    VALUE map[] = {
-        ID2SYM(rb_intern("bw_125")),
-        ID2SYM(rb_intern("bw_250")),
-        ID2SYM(rb_intern("bw_500")),
-        ID2SYM(rb_intern("bw_fsk")),
-    };
-    
-    return map[bw];
+    return UINT2NUM(bw);
 }
 
-static VALUE sf_to_symbol(enum lora_spreading_factor sf)
+static VALUE sf_to_number(enum lora_spreading_factor sf)
 {
-    VALUE map[] = {
-        ID2SYM(rb_intern("sf_7")),
-        ID2SYM(rb_intern("sf_8")),
-        ID2SYM(rb_intern("sf_9")),
-        ID2SYM(rb_intern("sf_10")),
-        ID2SYM(rb_intern("sf_11")),
-        ID2SYM(rb_intern("sf_12")),
-        ID2SYM(rb_intern("sf_fsk")),
-    };
-    
-    return map[sf];
+    return UINT2NUM(sf);
 }
 
-static VALUE cr_to_symbol(enum lora_coding_rate cr)
+
+static VALUE cr_to_number(enum lora_coding_rate cr)
 {
-    VALUE map[] = {
-        ID2SYM(rb_intern("cr_5")),
-        ID2SYM(rb_intern("cr_6")),
-        ID2SYM(rb_intern("cr_7")),
-        ID2SYM(rb_intern("cr_8"))
+    return UINT2NUM(cr);
+}
+
+static enum lora_signal_bandwidth number_to_bw(VALUE bw)
+{
+    enum lora_signal_bandwidth retval;
+    size_t i;
+    
+    static const enum lora_signal_bandwidth map[] = {
+        BW_125,
+        BW_250,
+        BW_500
     };
     
-    return map[cr];    
+    for(i=0U; i < sizeof(map)/sizeof(*map); i++){
+        
+        if(map[i] == NUM2UINT(bw)){
+           
+            retval = map[i];            
+            break;
+        }        
+    }
+    
+    if(i == sizeof(map)/sizeof(*map)){
+        
+        rb_raise(rb_eRangeError, "not a valid bandwidth");
+    }
+    
+    return retval;
+}
+
+static enum lora_spreading_factor number_to_sf(VALUE sf)
+{
+    enum lora_spreading_factor retval;
+    size_t i;
+    
+    static const enum lora_spreading_factor map[] = {
+        SF_7,
+        SF_8,
+        SF_9,
+        SF_10,
+        SF_11,
+        SF_12
+    };
+    
+    for(i=0U; i < sizeof(map)/sizeof(*map); i++){
+        
+        if(map[i] == NUM2UINT(sf)){
+           
+            retval = map[i];            
+            break;
+        }        
+    }
+    
+    if(i == sizeof(map)/sizeof(*map)){
+        
+        rb_raise(rb_eRangeError, "not a valid spreading factor");
+    }
+    
+    return retval;
 }
 
 static VALUE io_event(VALUE self, VALUE event, VALUE time)
@@ -869,65 +908,7 @@ static VALUE timeUntilNextEvent(VALUE self)
     return (next == UINT64_MAX) ? Qnil : ULL2NUM(next);
 }
 
-/* Calculate milliseconds of air-time required to transmit message of size bytes
- * 
- * @param bandwidth [Integer]
- * @param spreading_factor [Integer]
- * @param size [Integer] size in bytes
- * 
- * @return [Integer] milliseconds of air-time required to transmit size bytes
- * 
- * */
 static VALUE calculateOnAirTime(VALUE self, VALUE bandwidth, VALUE spreading_factor, VALUE size)
 {
-    size_t bw_i;
-    size_t sf_i;
-    
-    static const enum lora_signal_bandwidth bw[] = {
-        BW_125,
-        BW_250,
-        BW_500
-    };
-    
-    static const enum lora_spreading_factor sf[] = {
-        SF_7,
-        SF_8,
-        SF_9,
-        SF_10,
-        SF_11,
-        SF_12
-    };
-    
-    for(bw_i=0U; bw_i < sizeof(bw)/sizeof(*bw); bw_i++){
-        
-        if(bw[bw_i] == NUM2UINT(bandwidth)){
-            
-            break;
-        }
-    }
-    
-    if(bw_i == sizeof(bw)/sizeof(*bw)){
-        
-        rb_raise(rb_eRangeError, "bandwidth must be 125K, 250K, or 500K");
-    }
-    
-    for(sf_i=0U; sf_i < sizeof(sf)/sizeof(*sf); sf_i++){
-        
-        if(sf[sf_i] == NUM2UINT(spreading_factor)){
-            
-            break;
-        }
-    }
-    
-    if(sf_i == sizeof(sf)/sizeof(*sf)){
-        
-        rb_raise(rb_eRangeError, "spreading_factor must be in range 7..12");
-    }
-    
-    if(NUM2UINT(size) > UINT8_MAX){
-        
-        rb_raise(rb_eRangeError, "size must be in range 0..255");
-    }
-    
-    return UINT2NUM(MAC_calculateOnAirTime(bw[bw_i], sf[sf_i], (uint8_t)NUM2UINT(size)));
+    return UINT2NUM(MAC_calculateOnAirTime(number_to_bw(bandwidth), number_to_sf(spreading_factor), (uint8_t)NUM2UINT(size)));
 }

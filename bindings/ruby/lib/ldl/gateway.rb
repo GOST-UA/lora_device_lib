@@ -278,11 +278,14 @@ module LDL
                         @token += 1 # advance our token
                         
                         m1 = {
-                            :data => job[:txpk].data,
-                            :bw => job[:txpk].bw,
+                            :eui => eui,
+                            :time => SystemTime.time,
+                            :data => job[:txpk].data,                            
                             :sf => job[:txpk].sf,
-                            :tx_time => MAC.onAirTime(job[:txpk].bw, job[:txpk].sf, job[:txpk].data.size),                            
-                            :eui => eui
+                            :bw => job[:txpk].bw,
+                            :cr => job[:txpk].codr,
+                            :freq => job[:txpk].freq,
+                            :power => 0                            
                         }
                         
                         m2 = {
@@ -291,7 +294,7 @@ module LDL
                         
                         broker.publish m1, "tx_begin"
                         
-                        SystemTime.onTimeout m1[:tx_time] do 
+                        SystemTime.onTimeout MAC.onAirTime(job[:txpk].bw, job[:txpk].sf, job[:txpk].data.size) do 
                             
                             broker.publish m2, "tx_end"
                             

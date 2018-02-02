@@ -43,11 +43,12 @@
 #define LORA_INFO(...) \
     do{\
         VALUE args[] = {\
+            ULL2NUM(System_getTime()),\
             rb_funcall(rb_cFile, rb_intern("basename"), 1, rb_str_new_cstr(__FILE__)),\
             rb_str_new_cstr(__FUNCTION__),\
             rb_sprintf(__VA_ARGS__)\
         };\
-        VALUE msg = rb_str_format(sizeof(args)/sizeof(*args), args, rb_str_new_cstr("%s: %s(): %s"));\
+        VALUE msg = rb_str_format(sizeof(args)/sizeof(*args), args, rb_str_new_cstr("(%u) %s: %s(): %s"));\
         rb_funcall(rb_const_get(rb_const_get(rb_cObject, rb_intern("LDL")), rb_intern("Logger")), rb_intern("info"), 1, msg);\
     }while(0);
 
@@ -55,11 +56,12 @@
 #define LORA_DEBUG(...) \
     do{\
         VALUE args[] = {\
+            ULL2NUM(System_getTime()),\
             rb_funcall(rb_cFile, rb_intern("basename"), 1, rb_str_new_cstr(__FILE__)),\
             rb_str_new_cstr(__FUNCTION__),\
             rb_sprintf(__VA_ARGS__)\
         };\
-        VALUE msg = rb_str_format(sizeof(args)/sizeof(*args), args, rb_str_new_cstr("%s: %s(): %s"));\
+        VALUE msg = rb_str_format(sizeof(args)/sizeof(*args), args, rb_str_new_cstr("(%u) %s: %s(): %s"));\
         rb_funcall(rb_const_get(rb_const_get(rb_cObject, rb_intern("LDL")), rb_intern("Logger")), rb_intern("debug"), 1, msg);\
     }while(0);
 

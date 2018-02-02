@@ -77,7 +77,7 @@ void Event_tick(struct lora_event *self)
         ptr->next = self->free;
         self->free = ptr;         
         ptr = to.next;
-            
+        
         to.handler(to.receiver, to.time);        
     }
     
@@ -99,6 +99,8 @@ void Event_tick(struct lora_event *self)
 void *Event_onTimeout(struct lora_event *self, uint64_t timeout, void *receiver, event_handler_t handler)
 {
     void *retval = NULL;
+        
+    LORA_DEBUG("timeout at %llu", timeout)
         
     if(self->free != NULL){
 
@@ -220,7 +222,7 @@ uint64_t Event_timeUntilNextEvent(struct lora_event *self)
         
     retval = UINT64_MAX;
     
-    if(self->head){
+    if(self->head != NULL){
         
         time = System_getTime();
         
