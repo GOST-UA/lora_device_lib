@@ -5,155 +5,249 @@
 #include "cmocka.h"
 
 #include "lora_event.h"
+#include "lora_system.h"
 
 #include <string.h>
 
-uint64_t System_getTime(void)
-{
-    return mock();
-}
+#include "mock_system_time.h"
 
-void dummy_handler(void *receiver, uint64_t time)
+/* helpers */
+
+static void eventHandler(void *receiver, uint64_t time)
 {    
-    function_called();
     check_expected_ptr(receiver);
     check_expected(time);
 }
 
-static void test_Event_init(void **user)
-{
-    struct lora_event state;
-    
-    Event_init(&state);
-}
+/* setups */
 
-static int setup_Event_init(void **user)
+static int setup_event(void **user)
 {
     static struct lora_event state;
     Event_init(&state);
-    *user = (void *)&state;            
-    
+    *user = (void *)&state;                
+    system_time = 0U;
     return 0;
 }
 
-static void test_Event_onInput_tx_complete(void **user)
+static int setup_event_and_register_timeout_at_42_ticks(void **user)
 {
-    struct lora_event *state = (struct lora_event *)(*user);
+    int retval = setup_event(user);
     
-    /* this experiment will call dummy_handler() once */
-    expect_function_calls(dummy_handler, 1);
+    if(retval == 0U){
+        
+        struct lora_event *self = (struct lora_event *)(*user);    
+                
+        if(Event_onTimeout(self, 42U, self, eventHandler) == NULL){
+            
+            retval = -1;
+        }
+    }
     
-    /* register the event */    
-    int dummy_receiver = 42;    
-    void *event_ptr = Event_onInput(state, EVENT_TX_COMPLETE, &dummy_receiver, dummy_handler);
-    
-    /* should get a reference back */
-    assert_non_null(event_ptr);
-    
-    /* fire event at time 1 */
-    Event_receive(state, EVENT_TX_COMPLETE, 1);
-    
-    /* tick 30 time units later */
-    will_return(System_getTime, 30);
-    expect_value(dummy_handler, receiver, (void *)&dummy_receiver);     
-    expect_value(dummy_handler, time, 1);       // event occured at time 1                             
-    
-    Event_tick(state);
-    
-    /* fire event at time 40 */
-    Event_receive(state, EVENT_TX_COMPLETE, 40);
-    
-    /* tick again at 60 - no event will be fired */
-    will_return(System_getTime, 60);
-    Event_tick(state);    
+    return retval;    
 }
 
-static void test_Event_onInput_tx_complete_cancel(void **user)
-{
-    struct lora_event *state = (struct lora_event *)(*user);
-    
-    /* can't specify zero function calls */
-    ignore_function_calls(dummy_handler);
-    
-    /* register the event */    
-    int dummy_receiver = 42;    
-    void *event_ptr = Event_onInput(state, EVENT_TX_COMPLETE, &dummy_receiver, dummy_handler);
-    
-    /* should get a reference back */
-    assert_non_null(event_ptr);
-    
-    /* let's cancel it */
-    Event_cancel(state, &event_ptr);
-    
-    assert_null(event_ptr);
-    
-    /* fire event at time 1 */
-    Event_receive(state, EVENT_TX_COMPLETE, 1);
-    
-    /* if we tick 30 units later delay will be 29 */
-    will_return(System_getTime, 30);
+#if 0
 
-    Event_tick(state);
+static int setup_event_and_register_and_answer_onInput(void **user)
+{
+    int retval = setup_event(user);
+    
+    if(retval == 0U){
+        
+        system_time = 42U;
+        
+        struct lora_event *self = (struct lora_event *)(*user);    
+        
+        Event_onInput(self, EVENT_TX_COMPLETE, self, eventHandler);
+        
+        Event_receive(self, EVENT_TX_COMPLETE, System_getTime());
+    }
+    
+    return retval;
 }
 
-static void test_Event_onTimeout(void **user)
+static int setup_event_and_recieve_input(void **user)
 {
-    struct lora_event *state = (struct lora_event *)(*user);
+    int retval = setup_event(user);
     
-    /* this experiment will call dummy_handler() once */
-    expect_function_calls(dummy_handler, 1);
+    if(retval == 0U){
+        
+        system_time = 42U;
+        
+        struct lora_event *self = (struct lora_event *)(*user);    
+        
+        Event_receive(self, EVENT_TX_COMPLETE, System_getTime());
+    }
     
-    /* register the event to timeout in 25 units from now (1) */    
-    int dummy_receiver = 42;    
-    void *event_ptr = Event_onTimeout(state, 25, &dummy_receiver, dummy_handler);
-    
-    /* should get a reference back */
-    assert_non_null(event_ptr);
-    
-    /* tick at 30 time units */
-    will_return(System_getTime, 30);
-    expect_value(dummy_handler, receiver, (void *)&dummy_receiver);     
-    expect_value(dummy_handler, time, 25);                                 
-    Event_tick(state);
-    
-    /* tick again without advancing time...dummy_handler should not be called */
-    will_return(System_getTime, 30);
-    Event_tick(state);
+    return retval;
 }
 
-static void test_Event_onTimeout_cancel(void **user)
+#endif
+
+/* expectations */
+
+static void event_shall_be_initialised(void **user)
 {
-    struct lora_event *state = (struct lora_event *)(*user);
-    
-    /* can't specify zero calls so disable call counter - parameter check will ensure function wont be called */
-    ignore_function_calls(dummy_handler);
-    
-    /* register the event to timeout in 25 units from now (1) */    
-    int dummy_receiver = 42;    
-    
-    void *event_ptr = Event_onTimeout(state, 25, &dummy_receiver, dummy_handler);
-    
-    /* should get a reference back */
-    assert_non_null(event_ptr);
-    
-    /* let's cancel it */
-    Event_cancel(state, &event_ptr);
-    
-    assert_null(event_ptr);
-    
-    /* if we tick 30 units later delay will be 4 ... but the event will not be handled since it cancelled */
-    will_return(System_getTime, 30);
-    Event_tick(state);
+    assert_int_equal(0, setup_event(user));    
 }
+
+static void onTimeout_shall_register_timout_handler(void **user)
+{    
+    struct lora_event *self = (struct lora_event *)(*user);    
+    assert_true( Event_onTimeout(self, 0U, self, eventHandler) != NULL );    
+}
+
+static void onTimeout_shall_return_null_if_resource_not_available(void **user)
+{    
+    struct lora_event *self = (struct lora_event *)(*user);    
+    size_t i;
+    
+    for(i=0U; i < EVENT_NUM_TIMERS; i++){
+        
+        Event_onTimeout(self, 0U, self, eventHandler);
+    }
+    
+    assert_true( Event_onTimeout(self, 0U, self, eventHandler) == NULL );    
+}
+
+static void tick_shall_service_handler_at_timeout(void **user)
+{
+    struct lora_event *self = (struct lora_event *)(*user);    
+    
+    system_time = 42U;
+    
+    expect_value(eventHandler, receiver, self);
+    expect_value(eventHandler, time, 42U);
+    
+    Event_tick(self);    
+}
+
+static void tick_shall_service_handler_after_timeout(void **user)
+{
+    struct lora_event *self = (struct lora_event *)(*user);    
+    
+    system_time = 43U;
+    
+    expect_value(eventHandler, receiver, self);
+    expect_value(eventHandler, time, 42U);
+    
+    Event_tick(self);    
+}
+
+static void tick_shall_not_service_handler_before_timeout(void **user)
+{
+    struct lora_event *self = (struct lora_event *)(*user);    
+    
+    Event_tick(self);    
+}
+
+static void intervalUntilNext_shall_return_max_interval_if_no_event_is_pending(void **user)
+{
+    struct lora_event *self = (struct lora_event *)(*user);    
+    
+    assert_true( Event_intervalUntilNext(self) == UINT64_MAX );
+}
+
+static void intervalUntilNext_shall_return_interval_until_next_pending_event(void **user)
+{
+    struct lora_event *self = (struct lora_event *)(*user);    
+    
+    assert_true( Event_intervalUntilNext(self) == 42U );
+    
+    system_time = 40U;
+    
+    assert_true( Event_intervalUntilNext(self) == 2U );
+    
+    system_time = 50U;
+    
+    assert_true( Event_intervalUntilNext(self) == 0U );
+}
+
+static void cancel_shall_remove_timeout_handler(void **user)
+{
+    struct lora_event *self = (struct lora_event *)(*user);    
+    
+    void *ptr = Event_onTimeout(self, 42U, self, eventHandler);
+    
+    assert_true( ptr != NULL );
+    assert_true( Event_intervalUntilNext(self) == 42U );
+    
+    Event_cancel(self, &ptr);
+    
+    assert_true( ptr == NULL );
+    assert_true( Event_intervalUntilNext(self) == UINT64_MAX );    
+}
+
+static void cancel_shall_remove_input_handler(void **user)
+{
+    struct lora_event *self = (struct lora_event *)(*user);    
+    
+    void *ptr = Event_onInput(self, 42U, self, eventHandler);    
+    Event_cancel(self, &ptr);    
+}
+
+static void onInput_shall_register_input_handler(void **user)
+{    
+    struct lora_event *self = (struct lora_event *)(*user);    
+    
+    assert_true( Event_onInput(self, EVENT_TX_COMPLETE, self, eventHandler) );
+}
+
+/* runner */
 
 int main(void)
 {
     const struct CMUnitTest tests[] = {
-        cmocka_unit_test(test_Event_init),
-        cmocka_unit_test_setup(test_Event_onInput_tx_complete, setup_Event_init),
-        cmocka_unit_test_setup(test_Event_onTimeout, setup_Event_init),
-        cmocka_unit_test_setup(test_Event_onTimeout_cancel, setup_Event_init),
-        cmocka_unit_test_setup(test_Event_onInput_tx_complete_cancel, setup_Event_init),
+        
+        cmocka_unit_test(
+            event_shall_be_initialised
+        ),
+        
+        cmocka_unit_test_setup(
+            onTimeout_shall_register_timout_handler, 
+            setup_event
+        ),
+        cmocka_unit_test_setup(
+            onTimeout_shall_return_null_if_resource_not_available,
+            setup_event
+        ),
+        
+        cmocka_unit_test_setup(
+            tick_shall_service_handler_at_timeout, 
+            setup_event_and_register_timeout_at_42_ticks
+        ),
+        cmocka_unit_test_setup(
+            tick_shall_service_handler_after_timeout, 
+            setup_event_and_register_timeout_at_42_ticks
+        ),
+        cmocka_unit_test_setup(
+            tick_shall_not_service_handler_before_timeout, 
+            setup_event_and_register_timeout_at_42_ticks
+        ),
+        
+        cmocka_unit_test_setup(
+            intervalUntilNext_shall_return_max_interval_if_no_event_is_pending, 
+            setup_event
+        ),
+        cmocka_unit_test_setup(
+            intervalUntilNext_shall_return_interval_until_next_pending_event, 
+            setup_event_and_register_timeout_at_42_ticks
+        ),
+        
+        cmocka_unit_test_setup(
+            onInput_shall_register_input_handler, 
+            setup_event
+        ),            
+        
+        cmocka_unit_test_setup(
+            cancel_shall_remove_timeout_handler, 
+            setup_event
+        ),        
+        cmocka_unit_test_setup(
+            cancel_shall_remove_input_handler, 
+            setup_event
+        ),        
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);

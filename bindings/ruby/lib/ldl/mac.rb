@@ -27,8 +27,8 @@ module LDL
             
             @ticker = Proc.new do
                 this.tick
-                if this.timeUntilNextEvent
-                    SystemTime.onTimeout this.timeUntilNextEvent, &ticker
+                if this.intervalUntilNext
+                    SystemTime.onTimeout this.intervalUntilNext, &ticker
                 end
             end
             

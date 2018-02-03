@@ -58,42 +58,46 @@ void Event_tick(struct lora_event *self)
     struct on_timeout *ptr = self->head;
     struct on_timeout *prev = NULL;
     
-    time = System_getTime();
+    do{
     
-    /* timeouts */
-    while((ptr != NULL) && (time >= ptr->time)){
+        time = System_getTime();
         
-        to = *ptr;
+        /* timeouts */
+        while((ptr != NULL) && (time >= ptr->time)){
             
-        if(prev == NULL){
+            to = *ptr;
+                
+            if(prev == NULL){
+                
+                self->head = ptr->next;
+            }
+            else{
+                
+                prev->next = ptr->next;                
+            }
+             
+            ptr->next = self->free;
+            self->free = ptr;         
+            ptr = to.next;
             
-            self->head = ptr->next;
+            to.handler(to.receiver, to.time);        
         }
-        else{
-            
-            prev->next = ptr->next;                
-        }
-         
-        ptr->next = self->free;
-        self->free = ptr;         
-        ptr = to.next;
         
-        to.handler(to.receiver, to.time);        
-    }
-    
-    /* io events */
-    for(i=0U; i < sizeof(self->onInput)/sizeof(struct on_input); i++){
-        
-        if((self->onInput[i].handler != NULL) && self->onInput[i].state){
+        /* io events */
+        for(i=0U; i < sizeof(self->onInput)/sizeof(struct on_input); i++){
             
-            LORA_ASSERT(time >= self->onInput[i].time)
-            
-            event_handler_t handler = self->onInput[i].handler;
-            self->onInput[i].handler = NULL;
-            
-            handler(self->onInput[i].receiver, self->onInput[i].time);       
-        }
-    }
+            if((self->onInput[i].handler != NULL) && self->onInput[i].state){
+                
+                LORA_ASSERT(time >= self->onInput[i].time)
+                
+                event_handler_t handler = self->onInput[i].handler;
+                self->onInput[i].handler = NULL;
+                
+                handler(self->onInput[i].receiver, self->onInput[i].time);       
+            }
+        }    
+    } 
+    while(Event_intervalUntilNext(self) == 0U);
 }
 
 void *Event_onTimeout(struct lora_event *self, uint64_t timeout, void *receiver, event_handler_t handler)
@@ -213,25 +217,38 @@ void Event_cancel(struct lora_event *self, void **event)
     }
 }
 
-uint64_t Event_timeUntilNextEvent(struct lora_event *self)
+uint64_t Event_intervalUntilNext(struct lora_event *self)
 {
     uint64_t retval;
     uint64_t time;
+    size_t i;
         
     retval = UINT64_MAX;
     
-    if(self->head != NULL){
-        
-        time = System_getTime();
-        
-        if(self->head->time > time){
-         
-            retval = self->head->time - time;
-        }
-        else{
+     for(i=0U; i < sizeof(self->onInput)/sizeof(struct on_input); i++){
+            
+        if((self->onInput[i].handler != NULL) && self->onInput[i].state){
             
             retval = 0U;
-        }        
+            break;
+        }         
+    }
+    
+    if(retval > 0U){
+    
+        if(self->head != NULL){
+            
+            time = System_getTime();
+            
+            if(self->head->time > time){
+             
+                retval = self->head->time - time;
+            }
+            else{
+                
+                retval = 0U;
+            }        
+        }
     }
     
     return retval;

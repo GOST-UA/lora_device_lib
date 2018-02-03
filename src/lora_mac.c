@@ -327,9 +327,9 @@ void MAC_tick(struct lora_mac *self)
     Event_tick(&self->events);
 }
 
-uint64_t MAC_timeUntilNextEvent(struct lora_mac *self)
+uint64_t MAC_intervalUntilNext(struct lora_mac *self)
 {
-    return Event_timeUntilNextEvent(&self->events);
+    return Event_intervalUntilNext(&self->events);
 }
 
 bool MAC_setRate(struct lora_mac *self, uint8_t rate)
@@ -443,15 +443,7 @@ static void txComplete(void *receiver, uint64_t time)
     
     self->state = (self->state == TX) ? WAIT_RX1 : JOIN_WAIT_RX1;                
 
-    if(futureTime >= timeNow){
-
-        (void)Event_onTimeout(&self->events, futureTime, self, rxStart);
-    }
-    else{
-        
-        LORA_INFO("missed RX slot")        
-        rxFinish(self);
-    }         
+    (void)Event_onTimeout(&self->events, (futureTime >= timeNow) ? futureTime : timeNow, self, rxStart);
 }
 
 static void rxStart(void *receiver, uint64_t time)
@@ -465,20 +457,17 @@ static void rxStart(void *receiver, uint64_t time)
     uint32_t freq;
     struct lora_data_rate rate_setting;
     
-    uint64_t targetTime;
     uint64_t timeNow = System_getTime();
+    uint64_t rxWindowTime = time;   // fixme: this handler will always call at or after the fudge factor time
         
     LORA_PEDANTIC((self->state == WAIT_RX1) || (self->state == WAIT_RX2) || (self->state == JOIN_WAIT_RX1) || (self->state == JOIN_WAIT_RX2))
     LORA_PEDANTIC(time <= timeNow)
    
-    targetTime = timeNow - 1U;
+    if(timeNow <= rxWindowTime){
     
-    if(targetTime <= self->txCompleteTime){
-        
-        /* wait until the deadline - todo: add a faff margin */
-        if(targetTime < self->txCompleteTime){
+        if(timeNow < rxWindowTime){
             
-            System_usleep(self->txCompleteTime - targetTime);
+            System_usleep(rxWindowTime - timeNow);
         }
         
         switch(self->state){
@@ -586,23 +575,17 @@ static void rxFinish(struct lora_mac *self)
     default:
     case RX1:        
     
-        LORA_DEBUG("rx1")
-    
         self->state = WAIT_RX2;    
         (void)Event_onTimeout(&self->events, self->txCompleteTime + timeBase(System_getRX1Delay(self->system) + 1U), self, rxStart);
         break;
     
     case JOIN_RX1:        
     
-        LORA_DEBUG("join_rx1")
-    
         self->state = JOIN_WAIT_RX2;    
         (void)Event_onTimeout(&self->events, self->txCompleteTime + timeBase(Region_getJA1Delay(self->region) + 1U), self, rxStart);
         break;
         
     case RX2:        
-        
-        LORA_DEBUG("rx2")
         
         if(self->responseHandler != NULL){
 
@@ -613,8 +596,6 @@ static void rxFinish(struct lora_mac *self)
     
     case JOIN_RX2:   
         
-        LORA_DEBUG("join_rx2\n")
-    
         if(self->responseHandler != NULL){
             
             self->responseHandler(self->responseReceiver, (self->status.joined) ? LORA_MAC_JOIN_SUCCESS : LORA_MAC_JOIN_TIMEOUT, NULL);

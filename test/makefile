@@ -19,7 +19,7 @@ CMOCKA_DEFINES += -DHAVE_MALLOC_H
 
 DEBUG_DEFINES += -D'LORA_DEBUG_INCLUDE="debug_include.h"'
 
-CFLAGS := -Wall -Werror -g -fprofile-arcs -ftest-coverage $(INCLUDES) $(CMOCKA_DEFINES) $(DEBUG_DEFINES)
+CFLAGS := -O0 -Wall -Werror -g -fprofile-arcs -ftest-coverage $(INCLUDES) $(CMOCKA_DEFINES) $(DEBUG_DEFINES)
 LDFLAGS := -fprofile-arcs -g
 
 SRC := $(notdir $(wildcard $(DIR_ROOT)/src/*.c))
@@ -83,7 +83,7 @@ $(DIR_BIN)/tc_radio_sx1272: $(addprefix $(DIR_BUILD)/, tc_radio_sx1272.o lora_ra
 	@ echo linking $@
 	@ $(CC) $(LDFLAGS) $^ -o $@
 
-$(DIR_BIN)/tc_event: $(addprefix $(DIR_BUILD)/, tc_event.o lora_event.o $(OBJ_CMOCKA))
+$(DIR_BIN)/tc_event: $(addprefix $(DIR_BUILD)/, tc_event.o lora_event.o mock_system_time.o $(OBJ_CMOCKA))
 	@ echo linking $@
 	@ $(CC) $(LDFLAGS) $^ -o $@
 

@@ -56,7 +56,7 @@ static VALUE cr_to_number(enum lora_coding_rate cr);
 static enum lora_spreading_factor number_to_sf(VALUE sf);
 static enum lora_signal_bandwidth number_to_bw(VALUE bw);
 
-static VALUE timeUntilNextEvent(VALUE self);
+static VALUE intervalUntilNext(VALUE self);
 
 static VALUE calculateOnAirTime(VALUE self, VALUE bw, VALUE sf, VALUE payloadLen);
 
@@ -375,7 +375,7 @@ void Init_ext_mac(void)
     rb_define_method(cExtMAC, "join", join, -1);
     rb_define_method(cExtMAC, "send", send, -1);
     rb_define_method(cExtMAC, "io_event", io_event, 2);    
-    rb_define_method(cExtMAC, "timeUntilNextEvent", timeUntilNextEvent, 0);    
+    rb_define_method(cExtMAC, "intervalUntilNext", intervalUntilNext, 0);    
     
     rb_define_singleton_method(cExtMAC, "onAirTime", calculateOnAirTime, 3);
     
@@ -897,13 +897,13 @@ static VALUE io_event(VALUE self, VALUE event, VALUE time)
     return self;
 }
 
-static VALUE timeUntilNextEvent(VALUE self)
+static VALUE intervalUntilNext(VALUE self)
 {
     struct lora_mac *this;    
     uint64_t next;
     Data_Get_Struct(self, struct lora_mac, this);
     
-    next = MAC_timeUntilNextEvent(this);
+    next = MAC_intervalUntilNext(this);
     
     return (next == UINT64_MAX) ? Qnil : ULL2NUM(next);
 }

@@ -147,7 +147,7 @@ void Event_cancel(struct lora_event *self, void **event);
  * @retval UINT64_MAX unknown/io event
  * 
  * */
-uint64_t Event_timeUntilNextEvent(struct lora_event *self);
+uint64_t Event_intervalUntilNext(struct lora_event *self);
 
 #ifdef __cplusplus
 }
