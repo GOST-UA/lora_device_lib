@@ -103,7 +103,7 @@ struct lora_mac {
     struct {
         
         bool joined : 1U;
-        bool personalised : 1U;
+        bool personalized : 1U;
         bool joinPending : 1U;
         bool confirmPending : 1U;
         bool confirmed : 1U;

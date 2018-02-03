@@ -93,7 +93,7 @@ bool MAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *d
     uint8_t key[16U];
     uint64_t timeNow = System_getTime();
     
-    if(self->status.personalised || self->status.joined){
+    if(self->status.personalized || self->status.joined){
     
         /* stack must be idle (i.e. not sending) */
         if(self->state == IDLE){
@@ -158,7 +158,7 @@ bool MAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *d
     }
     else{
         
-        LORA_ERROR("stack must be personalised or joined before sending data")
+        LORA_ERROR("stack must be personalized or joined before sending data")
     }
     
     return retval;
@@ -170,7 +170,7 @@ bool MAC_join(struct lora_mac *self)
     
     uint64_t timeNow = System_getTime();
     
-    if(!self->status.personalised){
+    if(!self->status.personalized){
     
         if(self->state == IDLE){
 
@@ -211,7 +211,7 @@ bool MAC_join(struct lora_mac *self)
     }
     else{
         
-        LORA_ERROR("stack has been personalised - join is not possible")
+        LORA_ERROR("stack has been personalized - join is not possible")
     }   
     
     return retval;
@@ -236,6 +236,8 @@ bool MAC_personalize(struct lora_mac *self, uint32_t devAddr, const void *nwkSKe
         System_setDevAddr(self->system, devAddr);
         System_setNwkSKey(self->system, nwkSKey);
         System_setAppSKey(self->system, appSKey);
+     
+        self->status.personalized = true;
      
         retval = true;
     }
@@ -710,7 +712,7 @@ static void collect(struct lora_mac *self)
         case FRAME_TYPE_DATA_UNCONFIRMED_DOWN:
         case FRAME_TYPE_DATA_CONFIRMED_DOWN:
             
-            if(self->status.personalised || self->status.joined){
+            if(self->status.personalized || self->status.joined){
             
                 if(System_getDevAddr(self->system) == result.fields.data.devAddr){
                 
