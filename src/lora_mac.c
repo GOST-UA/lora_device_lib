@@ -438,9 +438,6 @@ static void txComplete(void *receiver, uint64_t time)
         
     futureTime = self->txCompleteTime + ((self->state == TX) ? timeBase(System_getRX1Delay(self->system)) : timeBase(Region_getJA1Delay(self->region)));
     
-    LORA_DEBUG("txCompleteTime: %" PRIu64, self->txCompleteTime)
-    LORA_DEBUG("futureTime: %" PRIu64, futureTime)
-    
     self->state = (self->state == TX) ? WAIT_RX1 : JOIN_WAIT_RX1;                
 
     (void)Event_onTimeout(&self->events, (futureTime >= timeNow) ? futureTime : timeNow, self, rxStart);
@@ -657,7 +654,7 @@ static void collect(struct lora_mac *self)
                 System_resetUp(self->system);
                 System_resetDown(self->system);
                 
-                MAC_restoreDefaults(self->system);
+                MAC_restoreDefaults(self);
                 
                 System_setRX1DROffset(self->system, result.fields.joinAccept.rx1DataRateOffset);
                 System_setRX2DataRate(self->system, result.fields.joinAccept.rx2DataRate);

@@ -180,7 +180,7 @@ uint32_t MAC_calculateOnAirTime(enum lora_signal_bandwidth bw, enum lora_spreadi
 
 void MAC_tick(struct lora_mac *self);
 
-uint64_t MAC_timeUntilNextEvent(struct lora_mac *self);
+uint64_t MAC_intervalUntilNext(struct lora_mac *self);
 
 bool MAC_isJoined(struct lora_mac *self);
 bool MAC_isPersonalised(struct lora_mac *self);

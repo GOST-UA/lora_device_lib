@@ -33,7 +33,7 @@ void Event_cancel(struct lora_event *self, void **event)
 {
 }
 
-uint64_t Event_timeUntilNextEvent(struct lora_event *self)
+uint64_t Event_intervalUntilNext(struct lora_event *self)
 {
     return mock();
 }

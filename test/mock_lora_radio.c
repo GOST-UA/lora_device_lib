@@ -31,15 +31,21 @@ bool Radio_receive(struct lora_radio *self, const struct lora_radio_rx_setting *
     return mock_type(bool);
 }
 
+/* to setup:
+ * 
+ * will_return( <size of data> )
+ * will_return( <pointer to data> )
+ * 
+ * */
 uint8_t Radio_collect(struct lora_radio *self, void *data, uint8_t max)
 {
     uint8_t data_size = mock_type(uint8_t);    
     (void)memcpy(data, mock_ptr_type(uint8_t *), (data_size > max) ? max : data_size);
-    return mock_type(uint8_t);
+    return data_size;
 }
 
 void Radio_interrupt(struct lora_radio *self, uint8_t n, uint64_t time)
-{
+{    
 }
 
 void Radio_setEventHandler(struct lora_radio *self, void *receiver, radioEventCB cb)
