@@ -1,6 +1,7 @@
 #include <stdarg.h>
 #include <stddef.h>
 #include <setjmp.h>
+#include <string.h>
 
 #include "cmocka.h"
 
@@ -8,32 +9,33 @@
 
 struct lora_radio * Radio_init(struct lora_radio *self, const struct lora_board *board)
 {
-    return self;
+    return mock_ptr_type(struct lora_radio *);
 }
 
 uint32_t Radio_resetHardware(struct lora_radio *self)
 {
-    return 0;
+    return mock_type(uint32_t);
 }
 
 void Radio_sleep(struct lora_radio *self)
-{
-    
+{    
 }
 
 bool Radio_transmit(struct lora_radio *self, const struct lora_radio_tx_setting *settings, const void *data, uint8_t len)
 {
-    return true;
+    return mock_type(bool);
 }
 
 bool Radio_receive(struct lora_radio *self, const struct lora_radio_rx_setting *settings)
 {
-    return true;
+    return mock_type(bool);
 }
 
 uint8_t Radio_collect(struct lora_radio *self, void *data, uint8_t max)
 {
-    return 0U;
+    uint8_t data_size = mock_type(uint8_t);    
+    (void)memcpy(data, mock_ptr_type(uint8_t *), (data_size > max) ? max : data_size);
+    return mock_type(uint8_t);
 }
 
 void Radio_interrupt(struct lora_radio *self, uint8_t n, uint64_t time)

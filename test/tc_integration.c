@@ -8,7 +8,7 @@
 #include "lora_radio_sx1272.h"
 
 static const uint8_t eui[] = "\x00\x00\x00\x00\x00\x00\x00\x00";
-static const uint8_t appKey[] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+static const uint8_t key[] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
 
 static void test_init(void **user)
 {
@@ -18,10 +18,6 @@ static void test_init(void **user)
 
     Radio_init(&radio, &board);
 
-    will_return(System_getAppEUI, eui);
-    will_return(System_getDevEUI, eui);
-    will_return(System_getAppKey, appKey);
-    
     MAC_init(&self, NULL, EU_863_870, &radio);
 }
 

@@ -110,7 +110,7 @@ bool System_getChannel(void *receiver, uint8_t chIndex, uint32_t *freq, uint8_t 
         
         eeprom_read_block(&ch, &params.chConfig[chIndex], sizeof(ch));
         
-        *freq = ch.freq;
+        *freq = ch.freq * 100U;
         *minRate = ch.minRate;
         *maxRate = ch.maxRate;
         

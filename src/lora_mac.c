@@ -58,7 +58,7 @@ static bool isAvailable(struct lora_mac *self, uint8_t chIndex, uint64_t timeNow
 
 static uint64_t timeBase(uint8_t value);
 
-static uint64_t timeNextAvailable(struct lora_mac *self, uint64_t timeNow, uint8_t rate);
+//static uint64_t timeNextAvailable(struct lora_mac *self, uint64_t timeNow, uint8_t rate);
 
 //static void restoreDefaults(struct lora_mac *self);
 
@@ -362,6 +362,8 @@ bool MAC_setPower(struct lora_mac *self, uint8_t power)
 
 void MAC_restoreDefaults(struct lora_mac *self)
 {
+    LORA_PEDANTIC(self != NULL)
+    
     struct lora_region_default defaults;
     
     Region_getDefaultChannels(self->region, self->system, addDefaultChannel);    
@@ -436,8 +438,8 @@ static void txComplete(void *receiver, uint64_t time)
         
     futureTime = self->txCompleteTime + ((self->state == TX) ? timeBase(System_getRX1Delay(self->system)) : timeBase(Region_getJA1Delay(self->region)));
     
-    LORA_DEBUG("txCompleteTime: %llu", self->txCompleteTime)
-    LORA_DEBUG("futureTime: %llu", futureTime)
+    LORA_DEBUG("txCompleteTime: %" PRIu64, self->txCompleteTime)
+    LORA_DEBUG("futureTime: %" PRIu64, futureTime)
     
     self->state = (self->state == TX) ? WAIT_RX1 : JOIN_WAIT_RX1;                
 
@@ -798,10 +800,8 @@ static void handleCommands(void *receiver, const struct lora_downstream_cmd *cmd
     
     case DEV_STATUS:
     {
-        struct lora_dev_status_ans ans;
-                
-        ans.battery = System_getBatteryLevel(self->system);
-        ans.margin = 0U;
+        //ans.battery = System_getBatteryLevel(self->system);
+        //ans.margin = 0U;
     }
         break;
         
@@ -949,6 +949,7 @@ static bool isAvailable(struct lora_mac *self, uint8_t chIndex, uint64_t timeNow
     return retval;
 }
 
+#if 0
 static uint64_t timeNextAvailable(struct lora_mac *self, uint64_t timeNow, uint8_t rate)
 {
     uint8_t i;
@@ -990,6 +991,7 @@ static uint64_t timeNextAvailable(struct lora_mac *self, uint64_t timeNow, uint8
     
     return (nextBand == UINT8_MAX) ? UINT64_MAX : self->bands[band];
 }
+#endif
 
 static bool getChannel(struct lora_mac *self, uint8_t chIndex, uint32_t *freq, uint8_t *minRate, uint8_t *maxRate)
 {

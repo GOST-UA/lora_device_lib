@@ -30,7 +30,7 @@ CFLAGS += -DLORA_AVR
 
 CLFAGS += -DLORA_REGION_EU_863_870=EU_863_870
 
-mega_demo.elf: $(addprefix $(DIR_BUILD)/, $(OBJ))
+$(DIR_BIN)/mega_demo.elf: $(addprefix $(DIR_BUILD)/, $(OBJ))
 	@ echo building $@
 	@ $(CC) $(CFLAGS) -Wl,-Map=$@.map,--cref $^ -o $@
 
@@ -42,5 +42,5 @@ clean:
 	@ echo cleaning up objects
 	@ rm -f $(DIR_BUILD)/*
 
-size: mega_demo.elf
+size: $(DIR_BIN)/mega_demo.elf
 	avr-size --format=avr --mcu=$(MCU) $^

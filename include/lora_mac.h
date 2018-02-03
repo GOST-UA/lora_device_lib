@@ -185,6 +185,7 @@ uint64_t MAC_timeUntilNextEvent(struct lora_mac *self);
 bool MAC_isJoined(struct lora_mac *self);
 bool MAC_isPersonalised(struct lora_mac *self);
 
+void MAC_restoreDefaults(struct lora_mac *self);
 
 #ifdef __cplusplus
 }

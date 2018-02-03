@@ -100,8 +100,6 @@ void *Event_onTimeout(struct lora_event *self, uint64_t timeout, void *receiver,
 {
     void *retval = NULL;
         
-    LORA_DEBUG("timeout at %llu", timeout)
-        
     if(self->free != NULL){
 
         struct on_timeout *to = self->free;

@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <assert.h>
+#include <inttypes.h>
 
 #define LORA_ERROR(...) do{fprintf(stderr,  "%s: %u: %s: error: ", __FILE__, __LINE__, __FUNCTION__);fprintf(stderr, __VA_ARGS__);fprintf(stderr, "\n");}while(0);
 #define LORA_DEBUG(...) do{fprintf(stderr,  "%s: %u: %s: debug: ", __FILE__, __LINE__, __FUNCTION__);fprintf(stderr, __VA_ARGS__);fprintf(stderr, "\n");}while(0);

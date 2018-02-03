@@ -83,11 +83,11 @@ $(DIR_BIN)/tc_radio_sx1272: $(addprefix $(DIR_BUILD)/, tc_radio_sx1272.o lora_ra
 	@ echo linking $@
 	@ $(CC) $(LDFLAGS) $^ -o $@
 
-$(DIR_BIN)/tc_event: $(addprefix $(DIR_BUILD)/, tc_event.o lora_event.o mock_lora_system.o $(OBJ_CMOCKA))
+$(DIR_BIN)/tc_event: $(addprefix $(DIR_BUILD)/, tc_event.o lora_event.o $(OBJ_CMOCKA))
 	@ echo linking $@
 	@ $(CC) $(LDFLAGS) $^ -o $@
 
-$(DIR_BIN)/tc_mac: $(addprefix $(DIR_BUILD)/, tc_mac.o lora_mac.o mock_lora_region.o mock_lora_aes.o mock_lora_cmac.o mock_lora_system.o mock_lora_radio.o mock_lora_event.o mock_lora_frame.o $(OBJ_CMOCKA))
+$(DIR_BIN)/tc_mac: $(addprefix $(DIR_BUILD)/, tc_mac.o lora_mac.o mock_lora_mac_commands.o lora_event.o lora_region.o mock_lora_aes.o mock_lora_cmac.o mock_lora_system.o mock_lora_radio.o lora_frame.o mock_system_time.o $(OBJ_CMOCKA))
 	@ echo linking $@
 	@ $(CC) $(LDFLAGS) $^ -o $@
 
@@ -99,7 +99,7 @@ $(DIR_BIN)/tc_region: $(addprefix $(DIR_BUILD)/, tc_region.o lora_region.o $(OBJ
 	@ echo linking $@
 	@ $(CC) $(LDFLAGS) $^ -o $@
 
-$(DIR_BIN)/tc_integration: $(addprefix $(DIR_BUILD)/, tc_integration.o mock_lora_system.o $(OBJ) $(OBJ_CMOCKA))
+$(DIR_BIN)/tc_integration: $(addprefix $(DIR_BUILD)/, tc_integration.o mock_lora_system.o mock_system_time.o $(OBJ) $(OBJ_CMOCKA))
 	@ echo linking $@
 	@ $(CC) $(LDFLAGS) $^ -o $@
 

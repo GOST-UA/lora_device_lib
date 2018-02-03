@@ -83,12 +83,12 @@ size_t Frame_putData(enum lora_frame_type type, const void *key, const struct lo
         }
         else{
 
-            LORA_ERROR("frame size is too large")
+            LORA_INFO("frame size is too large")
         }
     }
     else{
 
-        LORA_ERROR("foptslen must be in range (0..15)")
+        LORA_INFO("foptslen must be in range (0..15)")
     }
     
     return pos;
@@ -109,7 +109,7 @@ size_t Frame_putJoinRequest(const void *key, const struct lora_frame_join_reques
     }
     else{
         
-        LORA_ERROR("buffer too short for join request message")
+        LORA_INFO("buffer too short for join request message")
     }
     
     return pos;
@@ -153,7 +153,7 @@ size_t Frame_putJoinAccept(const void *key, const struct lora_frame_join_accept 
     }
     else{
         
-        LORA_ERROR("buffer too short for join accept message")
+        LORA_INFO("buffer too short for join accept message")
     }
     
     return pos;    
@@ -180,7 +180,7 @@ bool Frame_decode(const void *appKey, const void *nwkSKey, const void *appSKey, 
     
     if(len == 0U){
         
-        LORA_ERROR("frame too short");        
+        LORA_INFO("frame too short");        
     }
     else{
         
@@ -190,11 +190,11 @@ bool Frame_decode(const void *appKey, const void *nwkSKey, const void *appSKey, 
         
         if((tag & 0x1fU) != 0U){
             
-            LORA_ERROR("unsupported MHDR")
+            LORA_INFO("unsupported MHDR")
         }
         else if((tag >> 5) >= (uint8_t)(sizeof(types)/sizeof(*types))){
             
-            LORA_ERROR("unknown frame type")
+            LORA_INFO("unknown frame type")
         }
         else{
 
@@ -205,7 +205,7 @@ bool Frame_decode(const void *appKey, const void *nwkSKey, const void *appSKey, 
             case FRAME_TYPE_JOIN_REQ:
 
 #ifdef LORA_DEVICE
-                LORA_ERROR("device does not need to decode a join-request")
+                LORA_INFO("device does not need to decode a join-request")
 #else                            
                 if(len >= 23U){
                 
@@ -220,7 +220,7 @@ bool Frame_decode(const void *appKey, const void *nwkSKey, const void *appSKey, 
                 }
                 else{
                     
-                    LORA_ERROR("unexpected frame length for join request")
+                    LORA_INFO("unexpected frame length for join request")
                 }
 #endif                
                 break;
@@ -268,7 +268,7 @@ bool Frame_decode(const void *appKey, const void *nwkSKey, const void *appSKey, 
                     retval = true;
                 }
                 else{
-                    LORA_ERROR("unexpected frame length for join accept")
+                    LORA_INFO("unexpected frame length for join accept")
                 }                
                 break;
     
@@ -323,17 +323,17 @@ bool Frame_decode(const void *appKey, const void *nwkSKey, const void *appSKey, 
                         }
                         else{
             
-                            LORA_ERROR("cannot have options and port 0")                            
+                            LORA_INFO("cannot have options and port 0")                            
                         }
                     }
                     else{
                         
-                        LORA_ERROR("frame too short")            
+                        LORA_INFO("frame too short")            
                     }
                 }
                 else{
                     
-                    LORA_ERROR("frame too short")            
+                    LORA_INFO("frame too short")            
                 }
                 break;
             }
