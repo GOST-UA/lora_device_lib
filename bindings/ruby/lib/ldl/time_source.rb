@@ -133,7 +133,15 @@ module LDL
         
         def cancel(ref)
             with_mutex do
-                puts "cancelled"
+                @queue.each.with_index do |v,i|
+                    if v == ref                        
+                        if v != @queue.last
+                            @queue[i+1][:interval] += v[:interval]
+                        end
+                        @queue.delete(v)
+                    end
+                end
+            
                 @queue.delete(ref)            
             end
         end
