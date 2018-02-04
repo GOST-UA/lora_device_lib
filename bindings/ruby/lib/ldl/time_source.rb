@@ -33,13 +33,12 @@ module LDL
                         
                     begin
                     
-                        event = nil
-                    
-                        with_mutex do
-                            event = @queue.first
+                        if @queue.empty?
+                            self.onTimeout INTERVAL do
+                            end                    
                         end
                         
-                        break unless @update.pop( (event.nil? ? nil : to_sec(event[:interval])) )
+                        break unless @update.pop( to_sec(@queue.first[:interval]) )
                         
                     rescue ThreadError
                     end

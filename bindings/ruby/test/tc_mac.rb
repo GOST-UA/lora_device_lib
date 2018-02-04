@@ -26,13 +26,27 @@ class TestMAC < Minitest::Test
     
     end
     
-    def test_join
+    def test_join_timeout
     
         assert_raises JoinTimeout do
     
             state.join
             
         end
+    
+    end
+    
+    def test_send_without_join
+    
+        assert_raises Error do
+    
+            state.send 1, "hello world"
+            
+        end
+        
+    end
+    
+    def test_send_with_abp
     
     end
     
