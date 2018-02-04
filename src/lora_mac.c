@@ -429,7 +429,6 @@ static void txComplete(void *receiver, uint64_t time)
     LORA_PEDANTIC(receiver != NULL)
     
     struct lora_mac *self = (struct lora_mac *)receiver;            
-    uint64_t timeNow = System_getTime();
     uint64_t rx1Time;
         
     LORA_PEDANTIC((self->state == JOIN_TX) || (self->state == TX))
