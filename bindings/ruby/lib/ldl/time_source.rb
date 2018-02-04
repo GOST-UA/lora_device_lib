@@ -25,71 +25,70 @@ module LDL
             prevTime = Time.now              
             @update = TimeoutQueue.new
 
+            @queue = []
+
             @ticker = Thread.new do             
             
-                queue = []
-
                 loop do
                         
                     begin
-
-                        event = @update.pop( queue.empty? ? nil : to_sec(queue.first[:interval]) )
-
-                        if event.nil?
-                            break
-                        end
-                        
-                    rescue ThreadError
                     
                         event = nil
-
-                    end
-
-                    if event.kind_of? Hash
                     
-                        case event[:op]
-                        when :add
-
-                            queue << event
-                            queue.sort_by! { |e| e[:interval] }
-                            
-                        when :remove
-                        
-                            queue.delete( event[:ref] )
-                            
-                        else
-                            raise
-                        end
-                    
-                    end
-            
-                    timeNow = Time.now
-                    
-                    delta = to_ticks(timeNow - prevTime)
-
-                    prevTime = timeNow
-                    
-                    queue = queue.map do |v|
-                    
-                        if v[:interval] <= delta
-                        
-                            @time = base + v[:interval]
-
-                            v[:block].call
-                            nil
-                            
-                        else
-                        
-                            v[:interval] -= delta
-                            v
-                            
+                        with_mutex do
+                            event = @queue.first
                         end
                         
-                    end.compact
-                    
-                    base += delta
-                    @time = base
-                    
+                        break unless @update.pop( (event.nil? ? nil : to_sec(event[:interval])) )
+                        
+                    rescue ThreadError
+                    end
+
+                    loop do
+
+                        # work out time that has passed since last tick
+                        timeNow = Time.now                    
+                        delta = to_ticks(timeNow - prevTime)
+                        prevTime = timeNow
+                        
+                        serviced = 0
+                        
+                        loop do
+                        
+                            event = nil
+                        
+                            with_mutex do
+                            
+                                if not @queue.empty? 
+                                
+                                    if @queue.first[:interval] <= delta
+                                        event = @queue.shift
+                                    else
+                                        @queue.first[:interval] -= delta
+                                    end
+                                end                                                        
+                            end
+                        
+                            if event
+                        
+                                delta -= event[:interval]
+                                @time += event[:interval]
+                                event[:block].call
+                                serviced += 1
+                                
+                            else
+                            
+                                @time += delta
+                                break
+                                
+                            end
+                               
+                        end
+                        
+                        break unless serviced > 0
+                        
+                    end
+                        
                 end
             
             end
@@ -98,26 +97,46 @@ module LDL
         
         # schedule a block to be run after an interval
         #
-        # - non-blocking
-        #
         # @param interval [Integer]
         # @param block [Proc] code to run
         #
         # @return [Hash] scheduled event record
         def onTimeout(interval, &block)
-            @update.push({
-                :op => :add,
-                :interval => interval,
-                :block => block,
-                :thread => Thread.current
-            })
+        
+            
+        
+            raise ArgumentError unless interval.kind_of? Numeric
+        
+            ref = {:interval => interval, :block => block}
+            with_mutex do                
+                if @queue.empty?
+                    @queue << ref
+                else                
+                    @queue.each.with_index do |v, i|
+                        if v[:interval] >= interval
+                            v[:interval] -= interval
+                            @queue.insert(i, ref)                                                    
+                            break
+                        else
+                            ref[:interval] -= v[:interval]                            
+                            if @queue.last == v
+                                @queue << ref
+                                break
+                            end
+                        end
+                    end
+                end                
+                @update.push ref                
+            end
+            
+            ref
         end
         
         def cancel(ref)
-            @update.push({
-                :op => :remove,
-                :cb => ref
-            })
+            with_mutex do
+                puts "cancelled"
+                @queue.delete(ref)            
+            end
         end
         
         # wait (block) for a time interval

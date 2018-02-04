@@ -430,7 +430,7 @@ static void txComplete(void *receiver, uint64_t time)
     
     struct lora_mac *self = (struct lora_mac *)receiver;            
     uint64_t timeNow = System_getTime();
-    uint64_t futureTime;
+    uint64_t rx1Time;
         
     LORA_PEDANTIC((self->state == JOIN_TX) || (self->state == TX))
     
@@ -438,11 +438,11 @@ static void txComplete(void *receiver, uint64_t time)
     
     self->txCompleteTime = time;
         
-    futureTime = self->txCompleteTime + ((self->state == TX) ? timeBase(System_getRX1Delay(self->system)) : timeBase(Region_getJA1Delay(self->region)));
+    rx1Time = self->txCompleteTime + ((self->state == TX) ? timeBase(System_getRX1Delay(self->system)) : timeBase(Region_getJA1Delay(self->region)));
     
     self->state = (self->state == TX) ? WAIT_RX1 : JOIN_WAIT_RX1;                
 
-    (void)Event_onTimeout(&self->events, (futureTime >= timeNow) ? futureTime : timeNow, self, rxStart);
+    (void)Event_onTimeout(&self->events, rx1Time, self, rxStart);
 }
 
 static void rxStart(void *receiver, uint64_t time)
@@ -457,16 +457,17 @@ static void rxStart(void *receiver, uint64_t time)
     struct lora_data_rate rate_setting;
     
     uint64_t timeNow = System_getTime();
-    uint64_t rxWindowTime = time;   // fixme: this handler will always call at or after the fudge factor time
+    uint64_t rxTime = time;   // fixme: need to account for fudge factor (which we don't currently add)
         
     LORA_PEDANTIC((self->state == WAIT_RX1) || (self->state == WAIT_RX2) || (self->state == JOIN_WAIT_RX1) || (self->state == JOIN_WAIT_RX2))
     LORA_PEDANTIC(time <= timeNow)
    
-    if(timeNow <= rxWindowTime){
+    if(timeNow <= rxTime){
     
-        if(timeNow < rxWindowTime){
+        // if we are too early we can block (todo: or something else)
+        if(timeNow < rxTime){
             
-            System_usleep(rxWindowTime - timeNow);
+            System_usleep(rxTime - timeNow);
         }
         
         switch(self->state){
@@ -492,6 +493,8 @@ static void rxStart(void *receiver, uint64_t time)
         
         (void)Region_getRate(self->region, rate, &rate_setting);
         
+        // fixme: where is the transceiver timeout setting?
+        
         radio_setting.freq = freq;
         radio_setting.bw = rate_setting.bw;
         radio_setting.sf = rate_setting.sf;
@@ -509,28 +512,27 @@ static void rxStart(void *receiver, uint64_t time)
             abandonSequence(self);
         }         
     }
-    /* missed deadline */
     else{
         
         switch(self->state){
         default:
         case JOIN_WAIT_RX1:
-            LORA_INFO("missed JOIN RX1 deadline")
+            LORA_INFO("missed JOIN RX1 deadline by %" PRIu64, timeNow - rxTime)
             self->state = JOIN_RX1;
             break;
             
         case WAIT_RX1:
-            LORA_INFO("missed RX1 deadline")
+            LORA_INFO("missed RX1 deadline %" PRIu64, timeNow - rxTime)
             self->state = RX1;
             break;
             
         case JOIN_WAIT_RX2:    
-            LORA_INFO("missed JOIN RX2 deadline")
+            LORA_INFO("missed JOIN RX2 deadline %" PRIu64, timeNow - rxTime)
             self->state = JOIN_RX2;
             break;
         
         case WAIT_RX2:    
-            LORA_INFO("missed RX2 deadline")
+            LORA_INFO("missed RX2 deadline %" PRIu64, timeNow - rxTime)
             self->state = RX2;
             break;
         }

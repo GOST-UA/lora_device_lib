@@ -24,9 +24,7 @@ static bool immediate_event_is_pending(struct lora_mac *self);
 
 static void responseHandler(void *receiver, enum lora_mac_response_type type, const union lora_mac_response_arg *arg)
 {
-    enum lora_mac_response_type expected_type = mock();
-    
-    assert_true(type == expected_type);    
+    check_expected(type);    
 }
 
 static bool future_event_is_pending(struct lora_mac *self)
@@ -134,7 +132,7 @@ static void join_shall_timeout(void **user)
     assert_true(immediate_event_is_pending(self));    
     
     // next tick shall yield a callback to responseHandler
-    will_return(responseHandler, LORA_MAC_JOIN_TIMEOUT);
+    expect_value(responseHandler, type, LORA_MAC_JOIN_TIMEOUT);
     MAC_tick(self);    
 }
 
@@ -192,7 +190,7 @@ static void join_shall_succeed_at_rx1(void **user)
     assert_true(immediate_event_is_pending(self));    
     
     // next tick shall yield a callback to responseHandler
-    will_return(responseHandler, LORA_MAC_JOIN_SUCCESS);
+    expect_value(responseHandler, type, LORA_MAC_JOIN_SUCCESS);
     MAC_tick(self);    
 }
 
@@ -248,7 +246,7 @@ static void join_shall_succeed_at_rx2(void **user)
     assert_true(immediate_event_is_pending(self));    
     
     // next tick shall yield a callback to responseHandler
-    will_return(responseHandler, LORA_MAC_JOIN_SUCCESS);
+    expect_value(responseHandler, type, LORA_MAC_JOIN_SUCCESS);
     MAC_tick(self);    
 }
 
@@ -297,7 +295,7 @@ static void unconfirmed_send_shall_callback_when_cycle_complete(void **user)
     MAC_tick(self);
     
     // next tick shall yield a callback to responseHandler
-    will_return(responseHandler, LORA_MAC_DATA_COMPLETE);
+    expect_value(responseHandler, type, LORA_MAC_DATA_COMPLETE);
     MAC_tick(self);        
 }
 
@@ -346,7 +344,7 @@ static void confirmed_send_shall_timeout(void **user)
     MAC_tick(self);
     
     // next tick shall yield a callback to responseHandler
-    will_return(responseHandler, LORA_MAC_DATA_TIMEOUT);
+    expect_value(responseHandler, type, LORA_MAC_DATA_TIMEOUT);
     MAC_tick(self);        
 }
 

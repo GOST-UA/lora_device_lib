@@ -55,10 +55,12 @@ module LDL
             sf = settings[:sf]
             freq = settings[:freq]
             
-            tx_begin
+            tx_begin = nil
             
+            # fixme: core isn't passing a timeout
             # listen for the interval
-            to = SystemTime.onTimeout(settings[:interval]) do
+            #to = SystemTime.onTimeout(settings[:timeout]) do
+            to = SystemTime.onTimeout(0.001) do
                
                broker.unsubscribe tx_begin
                

@@ -41,6 +41,62 @@ class TestTimeSource < Minitest::Test
         
     end
     
+    def info(time1, time2, time3)
+        #puts "start: #{time1}, now: #{time2}, expected: #{time3}"         
+    end
+    
+    def test_multiple_onTimeout
+    
+        q = Queue.new
+    
+        state.onTimeout 0 do
+    
+            timeNow = state.time
+            
+            info(timeNow, state.time, timeNow)
+    
+            state.onTimeout 5 do
+            
+                info(timeNow, state.time, timeNow + 5)
+            
+                assert_equal timeNow + 5, state.time
+                
+            end
+            
+            state.onTimeout 10 do
+            
+                info(timeNow, state.time, timeNow + 10)
+            
+                assert_equal timeNow + 10, state.time
+            
+            end
+            
+            state.onTimeout 15 do
+            
+                info(timeNow, state.time, timeNow + 15)
+            
+                assert_equal timeNow + 15, state.time
+            
+            end
+            
+            state.onTimeout 20 do
+            
+                info(timeNow, state.time, timeNow + 20)
+            
+                assert_equal timeNow + 20, state.time
+            
+                q.push nil
+            
+            end
+            
+        end
+        
+        Timeout::timeout 1 do
+            q.pop
+        end
+        
+    end
+    
     def teardown
         @state.stop
         Thread.abort_on_exception = false

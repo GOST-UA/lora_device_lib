@@ -28,10 +28,10 @@ class TestMAC < Minitest::Test
     
     def test_join
     
-        state.join
+        assert_raises JoinTimeout do
     
-        broker.subscribe do |msg, topic|
-            puts "#{topic}: #{msg}"
+            state.join
+            
         end
     
     end
