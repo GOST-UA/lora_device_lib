@@ -353,7 +353,7 @@ bool System_receiveDown(void *receiver, uint16_t counter, uint16_t maxGap)
     return retval;
 }
 
-void System_logLinkStatus(void *receiver, uint8_t margin, uint8_t gwCount)
+void System_setLinkStatus(void *receiver, uint8_t margin, uint8_t gwCount)
 {
 }
 

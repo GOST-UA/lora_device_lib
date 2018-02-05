@@ -764,7 +764,7 @@ static void handleCommands(void *receiver, const struct lora_downstream_cmd *cmd
     default:
     case LINK_CHECK:
     
-        System_logLinkStatus(self->system, cmd->fields.linkCheckAns.margin, cmd->fields.linkCheckAns.gwCount);
+        System_setLinkStatus(self->system, cmd->fields.linkCheckAns.margin, cmd->fields.linkCheckAns.gwCount);
         break;
         
     case LINK_ADR:                    

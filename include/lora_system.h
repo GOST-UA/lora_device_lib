@@ -147,7 +147,7 @@ void System_setTXRate(void *receiver, uint8_t value);
 void System_setRX2Freq(void *receiver, uint32_t value);
 void System_setRX2DataRate(void *receiver, uint8_t value);
 
-void System_logLinkStatus(void *receiver, uint8_t margin, uint8_t gwCount);
+void System_setLinkStatus(void *receiver, uint8_t margin, uint8_t gwCount);
 
 uint8_t System_rand(void);
 
