@@ -36,30 +36,40 @@ module LDL
         
         attr_reader :devEUI, :appEUI
         
+        def tick
+            with_mutex do
+                super
+            end
+            self
+        end
+        
         def io_event(event, time)
         
-            Logger.debug "io_event #{event} at #{time}"
+            #Logger.debug "io_event #{event} at #{time}"
         
             super
             ticker.call
         end
         
         # perform a join
+        #
+        # @note blocking call
+        #
         def join            
             rq = Queue.new
-            this = self
-            SystemTime.onTimeout 0 do
-            
-                this.method(:join).super_method.call do |result|
+            with_mutex do
+                super do |result|            
                     rq << result
-                end            
-                this.ticker.call
+                end                            
             end
+            ticker.call
             raise JoinTimeout.new "timeout waiting for join confirmation" unless rq.pop == :join_success
             self
         end
     
         # send data
+        #
+        # @note blocking call
         #
         # @param port [Integer]
         # @param data [String]
@@ -68,15 +78,14 @@ module LDL
         # @option opts [true,false] :confirmed 
         def send(port, data, **opts)        
             rq = Queue.new
-            this = self
-            SystemTime.onTimeout 0 do
-                this.method(:send).super_method.call(port, data, **opts) do |result|
+            with_mutex do
+                super(port, data, **opts) do |result|
                     rq << result
                 end
-                this.ticker.call
-            end            
+            end
+            ticker.call
             raise SendTimeout unless rq.pop == :tx_complete
-            self
+            self            
         end
         
         # action to perform when downstream data is received
@@ -89,12 +98,9 @@ module LDL
         #   end
         #
         def on_receive(&block)
-            rq = Queue.new
-            SystemTime.onTimeout 0 do
+            with_mutex do
                 @rx_handler = block
-                rq << nil
-            end
-            rq.pop
+            end        
             self
         end
         
@@ -126,7 +132,6 @@ module LDL
         # @return [Integer]
         attr_reader :power
         
-        # @private
         def with_mutex
             @mutex.synchronize do
                 yield
