@@ -250,6 +250,8 @@ static void join_shall_succeed_at_rx2(void **user)
     MAC_tick(self);    
 }
 
+
+
 static void unconfirmed_send_shall_callback_when_cycle_complete(void **user)
 {
     struct lora_mac *self = (struct lora_mac *)(*user);
@@ -292,7 +294,6 @@ static void unconfirmed_send_shall_callback_when_cycle_complete(void **user)
     // io event: rx_timeout
     MAC_radioEvent(self, LORA_RADIO_RX_TIMEOUT, System_getTime());
     assert_true(immediate_event_is_pending(self));
-    MAC_tick(self);
     
     // next tick shall yield a callback to responseHandler
     expect_value(responseHandler, type, LORA_MAC_DATA_COMPLETE);
@@ -341,7 +342,6 @@ static void confirmed_send_shall_timeout(void **user)
     // io event: rx_timeout
     MAC_radioEvent(self, LORA_RADIO_RX_TIMEOUT, System_getTime());
     assert_true(immediate_event_is_pending(self));
-    MAC_tick(self);
     
     // next tick shall yield a callback to responseHandler
     expect_value(responseHandler, type, LORA_MAC_DATA_TIMEOUT);
