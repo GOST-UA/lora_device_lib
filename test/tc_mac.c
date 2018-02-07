@@ -62,14 +62,7 @@ static int setup_mac_and_abp(void **user)
 {
     int retval = setup_mac(user);
     
-    if(retval == 0){
-    
-        struct lora_mac *self = (struct lora_mac *)(*user);
-    
-        MAC_personalize(self, 0, key, key);
-        
-    }
-    
+
     return retval;
 }
 
@@ -78,13 +71,6 @@ static int setup_mac_and_abp(void **user)
 static void init_shall_initialise(void **user)
 {
     assert_true( setup_mac(user) == 0 );
-}
-
-static void personalize_shall_perform_abp(void **user)
-{
-    struct lora_mac *self = (struct lora_mac *)(*user);
-    
-    assert_true( MAC_personalize(self, 0, key, key) );
 }
 
 static void join_shall_timeout(void **user)
@@ -102,7 +88,7 @@ static void join_shall_timeout(void **user)
     MAC_tick(self);   
     
     // io event: tx complete
-    MAC_radioEvent(self, LORA_RADIO_TX_COMPLETE, System_getTime());
+    MAC_radioEvent(self, LORA_RADIO_TX_COMPLETE, System_time());
     assert_true(immediate_event_is_pending(self));
     MAC_tick(self);
     assert_true(future_event_is_pending(self));
@@ -115,7 +101,7 @@ static void join_shall_timeout(void **user)
     MAC_tick(self);
     
     // io event: rx_timeout
-    MAC_radioEvent(self, LORA_RADIO_RX_TIMEOUT, System_getTime());
+    MAC_radioEvent(self, LORA_RADIO_RX_TIMEOUT, System_time());
     assert_true(immediate_event_is_pending(self));
     MAC_tick(self);
     assert_true(future_event_is_pending(self));
@@ -128,11 +114,12 @@ static void join_shall_timeout(void **user)
     MAC_tick(self);
     
     // io event: rx_timeout
-    MAC_radioEvent(self, LORA_RADIO_RX_TIMEOUT, System_getTime());
+    MAC_radioEvent(self, LORA_RADIO_RX_TIMEOUT, System_time());
     assert_true(immediate_event_is_pending(self));    
     
     // next tick shall yield a callback to responseHandler
     expect_value(responseHandler, type, LORA_MAC_JOIN_TIMEOUT);
+    expect_value(responseHandler, type, LORA_MAC_READY);
     MAC_tick(self);    
 }
 
@@ -158,7 +145,7 @@ static void join_shall_succeed_at_rx1(void **user)
     MAC_tick(self);   
     
     // io event: tx complete
-    MAC_radioEvent(self, LORA_RADIO_TX_COMPLETE, System_getTime());
+    MAC_radioEvent(self, LORA_RADIO_TX_COMPLETE, System_time());
     assert_true(immediate_event_is_pending(self));
     MAC_tick(self);
     assert_true(future_event_is_pending(self));
@@ -173,24 +160,10 @@ static void join_shall_succeed_at_rx1(void **user)
     // io event: rx_ready
     will_return(Radio_collect, (uint8_t)messageSize);
     will_return(Radio_collect, message);
-    MAC_radioEvent(self, LORA_RADIO_RX_READY, System_getTime());
+    MAC_radioEvent(self, LORA_RADIO_RX_READY, System_time());
     assert_true(immediate_event_is_pending(self));
-    MAC_tick(self);
-    assert_true(future_event_is_pending(self));
-    
-    // advance time to T(rx2)
-    system_time += MAC_intervalUntilNext(self);
-    
-    // next tick will put radio into RX mode
-    will_return(Radio_receive, true);    
-    MAC_tick(self);
-    
-    // io event: rx_timeout
-    MAC_radioEvent(self, LORA_RADIO_RX_TIMEOUT, System_getTime());
-    assert_true(immediate_event_is_pending(self));    
-    
-    // next tick shall yield a callback to responseHandler
     expect_value(responseHandler, type, LORA_MAC_JOIN_SUCCESS);
+    expect_value(responseHandler, type, LORA_MAC_READY);
     MAC_tick(self);    
 }
 
@@ -216,7 +189,7 @@ static void join_shall_succeed_at_rx2(void **user)
     MAC_tick(self);   
     
     // io event: tx complete
-    MAC_radioEvent(self, LORA_RADIO_TX_COMPLETE, System_getTime());
+    MAC_radioEvent(self, LORA_RADIO_TX_COMPLETE, System_time());
     assert_true(immediate_event_is_pending(self));
     MAC_tick(self);
     
@@ -228,7 +201,7 @@ static void join_shall_succeed_at_rx2(void **user)
     MAC_tick(self);
     
     // io event: rx_timeout
-    MAC_radioEvent(self, LORA_RADIO_RX_TIMEOUT, System_getTime());
+    MAC_radioEvent(self, LORA_RADIO_RX_TIMEOUT, System_time());
     assert_true(immediate_event_is_pending(self));
     MAC_tick(self);
     
@@ -242,15 +215,14 @@ static void join_shall_succeed_at_rx2(void **user)
     // io event: rx_ready
     will_return(Radio_collect, (uint8_t)messageSize);
     will_return(Radio_collect, message);
-    MAC_radioEvent(self, LORA_RADIO_RX_READY, System_getTime());
+    MAC_radioEvent(self, LORA_RADIO_RX_READY, System_time());
     assert_true(immediate_event_is_pending(self));    
     
     // next tick shall yield a callback to responseHandler
     expect_value(responseHandler, type, LORA_MAC_JOIN_SUCCESS);
+    expect_value(responseHandler, type, LORA_MAC_READY);
     MAC_tick(self);    
 }
-
-
 
 static void unconfirmed_send_shall_callback_when_cycle_complete(void **user)
 {
@@ -268,7 +240,7 @@ static void unconfirmed_send_shall_callback_when_cycle_complete(void **user)
     MAC_tick(self);   
     
     // io event: tx complete
-    MAC_radioEvent(self, LORA_RADIO_TX_COMPLETE, System_getTime());
+    MAC_radioEvent(self, LORA_RADIO_TX_COMPLETE, System_time());
     assert_true(immediate_event_is_pending(self));
     MAC_tick(self);
     
@@ -280,7 +252,7 @@ static void unconfirmed_send_shall_callback_when_cycle_complete(void **user)
     MAC_tick(self);
     
     // io event: rx_timeout
-    MAC_radioEvent(self, LORA_RADIO_RX_TIMEOUT, System_getTime());
+    MAC_radioEvent(self, LORA_RADIO_RX_TIMEOUT, System_time());
     assert_true(immediate_event_is_pending(self));
     MAC_tick(self);
     
@@ -292,59 +264,11 @@ static void unconfirmed_send_shall_callback_when_cycle_complete(void **user)
     MAC_tick(self);
     
     // io event: rx_timeout
-    MAC_radioEvent(self, LORA_RADIO_RX_TIMEOUT, System_getTime());
+    MAC_radioEvent(self, LORA_RADIO_RX_TIMEOUT, System_time());
     assert_true(immediate_event_is_pending(self));
     
     // next tick shall yield a callback to responseHandler
-    expect_value(responseHandler, type, LORA_MAC_DATA_COMPLETE);
-    MAC_tick(self);        
-}
-
-static void confirmed_send_shall_timeout(void **user)
-{
-    struct lora_mac *self = (struct lora_mac *)(*user);
-    static const char msg[] = "hello world";
-    
-    MAC_setResponseHandler(self, NULL, responseHandler);
-    
-    // initiate unconfirmed data
-    assert_true(MAC_send(self, true, 1U, msg, strlen(msg)));
-    assert_true(immediate_event_is_pending(self));
-    
-    // next tick will put radio into TX mode
-    will_return(Radio_transmit, true);    
-    MAC_tick(self);   
-    
-    // io event: tx complete
-    MAC_radioEvent(self, LORA_RADIO_TX_COMPLETE, System_getTime());
-    assert_true(immediate_event_is_pending(self));
-    MAC_tick(self);
-    
-    // advance time to T(rx1)
-    system_time += MAC_intervalUntilNext(self);
-    
-    // next tick will put radio into RX mode
-    will_return(Radio_receive, true);    
-    MAC_tick(self);
-    
-    // io event: rx_timeout
-    MAC_radioEvent(self, LORA_RADIO_RX_TIMEOUT, System_getTime());
-    assert_true(immediate_event_is_pending(self));
-    MAC_tick(self);
-    
-    // advance time to T(rx2)
-    system_time += MAC_intervalUntilNext(self);
-    
-    // next tick will put radio into RX mode
-    will_return(Radio_receive, true);    
-    MAC_tick(self);
-    
-    // io event: rx_timeout
-    MAC_radioEvent(self, LORA_RADIO_RX_TIMEOUT, System_getTime());
-    assert_true(immediate_event_is_pending(self));
-    
-    // next tick shall yield a callback to responseHandler
-    expect_value(responseHandler, type, LORA_MAC_DATA_TIMEOUT);
+    expect_value(responseHandler, type, LORA_MAC_READY);
     MAC_tick(self);        
 }
 
@@ -356,11 +280,6 @@ int main(void)
         
         cmocka_unit_test(
             init_shall_initialise
-        ),
-        
-        cmocka_unit_test_setup(
-            personalize_shall_perform_abp, 
-            setup_mac
         ),
         
         cmocka_unit_test_setup(
@@ -383,10 +302,6 @@ int main(void)
             setup_mac_and_abp
         ),
         
-        cmocka_unit_test_setup(
-            confirmed_send_shall_timeout, 
-            setup_mac_and_abp
-        )        
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);

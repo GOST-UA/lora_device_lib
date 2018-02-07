@@ -67,7 +67,7 @@ struct on_timeout {
 
 struct lora_event {
 
-    #define EVENT_NUM_TIMERS 2U
+    #define EVENT_NUM_TIMERS 3U
 
     struct on_timeout pool[EVENT_NUM_TIMERS];
     struct on_timeout *free;

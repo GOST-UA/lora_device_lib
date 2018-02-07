@@ -37,7 +37,7 @@ struct lora_mac;
 
 enum lora_mac_response_type {
     
-    LORA_MAC_DATA_COMPLETE, /**< cycle is complete */ 
+    LORA_MAC_READY,         
     LORA_MAC_DATA_TIMEOUT,  /**< cycle is complete but ack was not received */ 
     LORA_MAC_RX,            /**< received a data frame */
     LORA_MAC_JOIN_SUCCESS,  /**< sent join request, received join response in either RX1 or RX2 */
@@ -61,19 +61,12 @@ enum lora_mac_state {
 
     IDLE,
     
-    WAIT_TX,
+    WAIT_TX,    // waiting for channel to become available
     TX,         // radio is TX
     WAIT_RX1,   // waiting for first RX window
     RX1,        // first RX window
     WAIT_RX2,   // waiting for second RX window
     RX2,        // second RX window
-    
-    JOIN_WAIT_TX,
-    JOIN_TX,
-    JOIN_WAIT_RX1,
-    JOIN_RX1,
-    JOIN_WAIT_RX2,
-    JOIN_RX2,
     
     RESET_WAIT, // waiting for reset
     
@@ -84,11 +77,23 @@ struct lora_mac {
 
     enum lora_mac_state state;
     
-    uint64_t txCompleteTime;
+    struct {
+        
+        bool joined : 1U;           /**< MAC is in a joined state */
+        bool joining : 1U;          /**< MAC is waiting to join */
+        bool personalized : 1U;     /**< MAC has been activated by personalization */
+        bool confirmPending : 1U;
+        bool confirmed : 1U;
     
+    } status;
+    
+    /** single buffer for sending and receiving */
     uint8_t buffer[UINT8_MAX];
+    
+    /** size of message in `buffer` */
     uint8_t bufferLen;
     
+    /** tracks system time for when each band will become available */
     uint64_t bands[6U];
     
     uint16_t devNonce;
@@ -100,47 +105,25 @@ struct lora_mac {
         
     } tx;
     
-    struct {
-        
-        bool joined : 1U;
-        bool personalized : 1U;
-        bool joinPending : 1U;
-        bool confirmPending : 1U;
-        bool confirmed : 1U;
-    
-    } status;
-    
     #define RX_WDT_INTERVAL 60000
     
-    struct lora_radio *radio;
-    struct lora_event events;
-    const struct lora_region *region;
+    struct lora_radio *radio;           /**< radio belonging to MAC */
+    struct lora_event events;           /**< event manager */
+    const struct lora_region *region;   /**< region MAC is oeprating in */
     
-    /* these are references to events that we may want to cancel */
-    void *rxReady;
-    void *rxTimeout;
-    void *txComplete;
-    void *resetRadio;
-
+    //void *rx1Ready;     /**< timer callback for RX1 window start */
+    void *rx2Ready;     /**< timer callback for RX2 window start */
+    
+    void *rxComplete;   /**< RX complete IO event */
+    void *rxTimeout;    /**< RX timeout IO event */
+    
     lora_mac_response_fn responseHandler;
     void *responseReceiver;
     
-    void *system;
+    void *system;       /**< passed as receiver in every System_* call */
 };
 
 void MAC_init(struct lora_mac *self, void *system, enum lora_region_id region, struct lora_radio *radio);
-
-/** Set join parameters locally
- * 
- * @param[in] self
- * @param[in] devAddr device address
- * @param[in] nwkSKey network session key
- * @param[in] appSKey application session key
- * 
- * @return true if personalization could be performed
- * 
- * */
-bool MAC_personalize(struct lora_mac *self, uint32_t devAddr, const void *nwkSKey, const void *appSKey);
 
 /** Send a message upstream
  * 

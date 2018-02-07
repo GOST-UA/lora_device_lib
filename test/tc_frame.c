@@ -10,7 +10,7 @@
 
 #include <string.h>
 
-static void test_Frame_data_encode_empty(void **user)
+static void encode_an_empty_frame(void **user)
 {
     uint32_t devAddr = 0U;
     const uint8_t expected[] = "\x40\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00";
@@ -31,7 +31,7 @@ static void test_Frame_data_encode_empty(void **user)
     assert_memory_equal(expected, out, sizeof(expected)-1U);
 }
 
-static void test_Frame_data_decode_empty(void **user)
+static void decode_an_empty_frame(void **user)
 {
     uint32_t devAddr = 0U;
     uint8_t input[] = "\x40\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00";
@@ -82,8 +82,8 @@ static void test_Frame_data_decode_empty(void **user)
 int main(void)
 {
     const struct CMUnitTest tests[] = {
-        cmocka_unit_test(test_Frame_data_encode_empty),        
-        cmocka_unit_test(test_Frame_data_decode_empty),        
+        cmocka_unit_test(encode_an_empty_frame),        
+        cmocka_unit_test(decode_an_empty_frame),        
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);

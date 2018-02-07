@@ -1,4 +1,4 @@
-/* Copyright (c) 2017 Cameron Harper
+/* Copyright (c) 2017-2018 Cameron Harper
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -34,16 +34,15 @@
 
 /* static function prototypes *****************************************/
 
-static void tx(void *receiver, uint64_t time);
-static void txComplete(void *receiver, uint64_t time);
+static void tx(void *receiver, uint64_t error);
+static void txComplete(void *receiver, uint64_t error);
 
-static void rxStart(void *receiver, uint64_t time);
-static void rxReady(void *receiver, uint64_t time);
-static void rxTimeout(void *receiver, uint64_t time);
-static void rxFinish(struct lora_mac *self);
+static void rxStart(void *receiver, uint64_t error);
+static void rxReady(void *receiver, uint64_t error);
+static void rxTimeout(void *receiver, uint64_t error);
 
 //static void resetRadio(void *receiver, uint64_t time);
-static void collect(struct lora_mac *self);
+static bool collect(struct lora_mac *self);
 
 static void abandonSequence(struct lora_mac *self);
 
@@ -91,11 +90,10 @@ bool MAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *d
     
     struct lora_frame_data f;
     uint8_t key[16U];
-    uint64_t timeNow = System_getTime();
+    uint64_t timeNow = System_time();
     
     if(self->status.personalized || self->status.joined){
     
-        /* stack must be idle (i.e. not sending) */
         if(self->state == IDLE){
         
             if((port > 0U) && (port <= 223U)){
@@ -127,12 +125,12 @@ bool MAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *d
                         
                         self->bufferLen = Frame_putData(FRAME_TYPE_DATA_UNCONFIRMED_UP, key, &f, self->buffer, sizeof(self->buffer));
                         
-                        (void)Event_onTimeout(&self->events, 0U, self, tx);
+                        (void)Event_onTimeout(&self->events, 0, self, tx);
                         
                         self->state = WAIT_TX;
                         
                         self->status.confirmPending = true;
-                        self->status.confirmed = false;
+                        self->status.confirmed = confirmed;
                         
                         retval = true;                    
                     }
@@ -168,7 +166,7 @@ bool MAC_join(struct lora_mac *self)
 {
     bool retval = false;
     
-    uint64_t timeNow = System_getTime();
+    uint64_t timeNow = System_time();
     
     if(!self->status.personalized){
     
@@ -192,10 +190,10 @@ bool MAC_join(struct lora_mac *self)
 
                 self->bufferLen = Frame_putJoinRequest(appKey, &f, self->buffer, sizeof(self->buffer));
                 
-                (void)Event_onTimeout(&self->events, 0U, self, tx);
+                (void)Event_onTimeout(&self->events, 0, self, tx);
                 
-                self->state = JOIN_WAIT_TX;
-                self->status.joinPending = true;
+                self->state = WAIT_TX;
+                self->status.joining = true;
                 
                 retval = true;        
             }
@@ -221,32 +219,6 @@ void MAC_setResponseHandler(struct lora_mac *self, void *receiver, lora_mac_resp
 {
     self->responseHandler = cb;
     self->responseReceiver = receiver;
-}
-
-bool MAC_personalize(struct lora_mac *self, uint32_t devAddr, const void *nwkSKey, const void *appSKey)
-{
-    LORA_PEDANTIC(self != NULL)
-    LORA_PEDANTIC(nwkSKey != NULL)
-    LORA_PEDANTIC(appSKey != NULL)
-    
-    bool retval = false;
-    
-    if(self->state == IDLE){
-    
-        System_setDevAddr(self->system, devAddr);
-        System_setNwkSKey(self->system, nwkSKey);
-        System_setAppSKey(self->system, appSKey);
-     
-        self->status.personalized = true;
-     
-        retval = true;
-    }
-    else{
-                
-        LORA_ERROR("cannot personalize while not idle")
-    }
-    
-    return retval;
 }
 
 void MAC_radioEvent(void *receiver, enum lora_radio_event event, uint64_t time)
@@ -381,7 +353,7 @@ void MAC_restoreDefaults(struct lora_mac *self)
     System_setMaxDutyCycle(self->system, 1U);        
 }
 
-static void tx(void *receiver, uint64_t time)
+static void tx(void *receiver, uint64_t error)
 {
     LORA_PEDANTIC(receiver != NULL)
     
@@ -399,17 +371,15 @@ static void tx(void *receiver, uint64_t time)
             .power = System_getTXPower(self->system)         
         };
     
-        LORA_PEDANTIC((self->state == JOIN_WAIT_TX) || (self->state == WAIT_TX))
+        LORA_PEDANTIC(self->state == WAIT_TX)
     
         if(Radio_transmit(self->radio, &radio_setting, self->buffer, self->bufferLen)){
 
-            registerTime(self, self->tx.freq, System_getTime(), MAC_calculateOnAirTime(radio_setting.bw, radio_setting.sf, self->bufferLen));
+            registerTime(self, self->tx.freq, System_time(), MAC_calculateOnAirTime(radio_setting.bw, radio_setting.sf, self->bufferLen));
             
-            self->state = (self->state == WAIT_TX) ? TX : JOIN_TX;
+            self->state = TX;
                 
-            self->txComplete = Event_onInput(&self->events, EVENT_TX_COMPLETE, self, txComplete);
-        
-            self->resetRadio = NULL;    //todo: add a watchdog to catch situation where IO lines don't work as expected    
+            (void)Event_onInput(&self->events, EVENT_TX_COMPLETE, self, txComplete);        
         }
         else{
             
@@ -424,27 +394,26 @@ static void tx(void *receiver, uint64_t time)
     }
 }
 
-static void txComplete(void *receiver, uint64_t time)
+static void txComplete(void *receiver, uint64_t error)
 {
     LORA_PEDANTIC(receiver != NULL)
     
     struct lora_mac *self = (struct lora_mac *)receiver;            
-    uint64_t rx1Time;
+    uint32_t rx1Time;
         
-    LORA_PEDANTIC((self->state == JOIN_TX) || (self->state == TX))
+    LORA_PEDANTIC(self->state == TX)
     
     Radio_sleep(self->radio);
     
-    self->txCompleteTime = time;
-        
-    rx1Time = self->txCompleteTime + ((self->state == TX) ? timeBase(System_getRX1Delay(self->system)) : timeBase(Region_getJA1Delay(self->region)));
-    
-    self->state = (self->state == TX) ? WAIT_RX1 : JOIN_WAIT_RX1;                
+    self->state = WAIT_RX1;                
+    rx1Time = ((self->status.joining) ? timeBase(System_getRX1Delay(self->system)) : timeBase(Region_getJA1Delay(self->region))) - error;
 
-    (void)Event_onTimeout(&self->events, rx1Time, self, rxStart);
+    /* set both events up front, if RX1 is successful, RX2 event may fire while RX1 is in progress */
+    (void)Event_onTimeout(&self->events, rx1Time, self, rxStart);    
+    self->rx2Ready = Event_onTimeout(&self->events, rx1Time + 1U, self, rxStart);
 }
 
-static void rxStart(void *receiver, uint64_t time)
+static void rxStart(void *receiver, uint64_t error)
 {
     LORA_PEDANTIC(receiver != NULL)
     
@@ -455,158 +424,183 @@ static void rxStart(void *receiver, uint64_t time)
     uint32_t freq;
     struct lora_data_rate rate_setting;
     
-    uint64_t timeNow = System_getTime();
-    uint64_t rxTime = time;   // fixme: need to account for fudge factor (which we don't currently add)
+    LORA_PEDANTIC((self->state == WAIT_RX1) || (self->state == WAIT_RX2) || self->state == RX2)
         
-    LORA_PEDANTIC((self->state == WAIT_RX1) || (self->state == WAIT_RX2) || (self->state == JOIN_WAIT_RX1) || (self->state == JOIN_WAIT_RX2))
-    LORA_PEDANTIC(time <= timeNow)
-   
-    if(timeNow <= rxTime){
-    
-        // if we are too early we can block (todo: or something else)
-        if(timeNow < rxTime){
+    /* ignore RX2 if it fires while RX1 is active */
+    if(self->state != RX1){
+        
+        #ifndef RX_MARGIN
+        #define RX_MARGIN 100
+        #endif
+       
+        if(error < RX_MARGIN){
+        
+            // if we are too early we can block (todo: or something else)
+            if((RX_MARGIN - error) > 0U){
+                
+                System_sleep(RX_MARGIN - error);
+            }
             
-            System_usleep(rxTime - timeNow);
-        }
-        
-        switch(self->state){
-        default:
-        case JOIN_WAIT_RX1:
-        case WAIT_RX1:
-        
-            (void)Region_getRX1DataRate(self->region, System_getTXRate(self->system), System_getRX1DROffset(self->system), &rate);
-            (void)Region_getRX1Freq(self->region, self->tx.freq, &freq);
+            switch(self->state){
+            default:
+            case WAIT_RX1:        
             
-            self->state = (self->state == WAIT_RX1) ? RX1 : JOIN_RX1;                            
-            break;
-        
-        case JOIN_WAIT_RX2:    
-        case WAIT_RX2:    
-        
-            rate = System_getRX2DataRate(self->system);    
-            freq = System_getRX2Freq(self->system);
-        
-            self->state = (self->state == WAIT_RX2) ? RX2 : JOIN_RX2;                
-            break;
-        }
-        
-        (void)Region_getRate(self->region, rate, &rate_setting);
-        
-        // fixme: where is the transceiver timeout setting?
-        
-        radio_setting.freq = freq;
-        radio_setting.bw = rate_setting.bw;
-        radio_setting.sf = rate_setting.sf;
-        radio_setting.cr = CR_5;
-        radio_setting.preamble = 8U;                
+                (void)Region_getRX1DataRate(self->region, System_getTXRate(self->system), System_getRX1DROffset(self->system), &rate);
+                (void)Region_getRX1Freq(self->region, self->tx.freq, &freq);            
+                self->state = RX1;                            
+                break;
             
-        if(Radio_receive(self->radio, &radio_setting)){
-             
-            self->rxReady = Event_onInput(&self->events, EVENT_RX_READY, self, rxReady);
-            self->rxTimeout = Event_onInput(&self->events, EVENT_RX_TIMEOUT, self, rxTimeout);                            
+            case WAIT_RX2:    
+            
+                rate = System_getRX2DataRate(self->system);    
+                freq = System_getRX2Freq(self->system);        
+                self->state = RX2;                
+                break;
+            }
+            
+            (void)Region_getRate(self->region, rate, &rate_setting);
+            
+            radio_setting.freq = freq;
+            radio_setting.bw = rate_setting.bw;
+            radio_setting.sf = rate_setting.sf;
+            radio_setting.cr = CR_5;
+            radio_setting.preamble = 8U;
+            radio_setting.timeout = (rate_setting.sf <= SF_9) ? 8U : 5U;
+            
+            if(Radio_receive(self->radio, &radio_setting)){
+                 
+                self->rxComplete = Event_onInput(&self->events, EVENT_RX_READY, self, rxReady);        
+                self->rxTimeout = Event_onInput(&self->events, EVENT_RX_TIMEOUT, self, rxTimeout);                            
+            }
+            else{
+                
+                LORA_INFO("could not apply radio settings")
+                abandonSequence(self);
+            }         
         }
         else{
             
-            LORA_INFO("could not apply radio settings")
-            abandonSequence(self);
-        }         
-    }
-    else{
-        
-        switch(self->state){
-        default:
-        case JOIN_WAIT_RX1:
-            LORA_INFO("missed JOIN RX1 deadline by %" PRIu64, timeNow - rxTime)
-            self->state = JOIN_RX1;
-            break;
+            LORA_INFO("missed RX deadline")
             
-        case WAIT_RX1:
-            LORA_INFO("missed RX1 deadline %" PRIu64, timeNow - rxTime)
-            self->state = RX1;
-            break;
+            /* still time to catch RX2 */
+            if((self->state == WAIT_RX1) && (error < timeBase(1U))){
+                
+                self->state = WAIT_RX2;                                
+            }    
+            else{
             
-        case JOIN_WAIT_RX2:    
-            LORA_INFO("missed JOIN RX2 deadline %" PRIu64, timeNow - rxTime)
-            self->state = JOIN_RX2;
-            break;
-        
-        case WAIT_RX2:    
-            LORA_INFO("missed RX2 deadline %" PRIu64, timeNow - rxTime)
-            self->state = RX2;
-            break;
+                if(self->responseHandler != NULL){
+                
+                    if(self->status.joining){
+                        
+                        self->responseHandler(self->responseReceiver, LORA_MAC_JOIN_TIMEOUT, NULL);
+                    }
+                }
+                
+                self->status.joining = false;            
+                self->state = IDLE;
+                
+                if(self->responseHandler != NULL){    
+                    
+                    self->responseHandler(self->responseReceiver, LORA_MAC_READY, NULL);            
+                }             
+            }        
         }
-        
-        rxFinish(self);
     }
 }
 
-static void rxReady(void *receiver, uint64_t time)
+static void rxReady(void *receiver, uint64_t error)
 {
     LORA_PEDANTIC(receiver != NULL)
         
     struct lora_mac *self = (struct lora_mac *)receiver;    
+    
     Event_cancel(&self->events, &self->rxTimeout);    
     
-    LORA_ASSERT((self->state == RX1) || (self->state == RX2) || (self->state == JOIN_RX1) || (self->state == JOIN_RX2))
-    
-    collect(self);            
-    rxFinish(self);
-}
-
-static void rxTimeout(void *receiver, uint64_t time)
-{
-    LORA_PEDANTIC(receiver != NULL)
-    
-    struct lora_mac *self = (struct lora_mac *)receiver;    
-    Event_cancel(&self->events, &self->rxReady);    
-    
-    LORA_ASSERT((self->state == RX1) || (self->state == RX2) || (self->state == JOIN_RX1) || (self->state == JOIN_RX2))
-    
-    rxFinish(self);
-}
-
-static void rxFinish(struct lora_mac *self)
-{    
-    LORA_PEDANTIC(self != NULL)
+    LORA_ASSERT((self->state == RX1) || (self->state == RX2))
     
     Radio_sleep(self->radio);
     
+    if(collect(self)){
+        
+        Event_cancel(&self->events, &self->rx2Ready);
+    
+        self->state = IDLE;                 
+            
+        if(self->responseHandler != NULL){
+            
+            self->responseHandler(self->responseReceiver, LORA_MAC_READY, NULL);            
+        }                
+    }
+    else{
+        
+        if(self->state == RX2){
+                
+            if(self->responseHandler != NULL){
+                
+                if(self->status.joining){
+                    
+                    self->responseHandler(self->responseReceiver, LORA_MAC_JOIN_TIMEOUT, NULL);
+                }
+            }
+            
+            self->status.joining = false;            
+            self->state = IDLE;
+            
+            if(self->responseHandler != NULL){    
+                
+                self->responseHandler(self->responseReceiver, LORA_MAC_READY, NULL);            
+            }            
+        }
+        else{
+            
+            self->state = WAIT_RX2;
+        }                
+    }    
+}
+
+static void rxTimeout(void *receiver, uint64_t error)
+{
+    LORA_PEDANTIC(receiver != NULL)
+    
+    struct lora_mac *self = (struct lora_mac *)receiver;    
+    Event_cancel(&self->events, &self->rxComplete);    
+    
+    LORA_ASSERT((self->state == RX1) || (self->state == RX2))
+    
+    Radio_sleep(self->radio);
+        
     switch(self->state){
     default:
     case RX1:        
-    
+
         self->state = WAIT_RX2;    
-        (void)Event_onTimeout(&self->events, self->txCompleteTime + timeBase(System_getRX1Delay(self->system) + 1U), self, rxStart);
-        break;
-    
-    case JOIN_RX1:        
-    
-        self->state = JOIN_WAIT_RX2;    
-        (void)Event_onTimeout(&self->events, self->txCompleteTime + timeBase(Region_getJA1Delay(self->region) + 1U), self, rxStart);
+        (void)Event_onTimeout(&self->events, timeBase(1U) - error, self, rxStart);
         break;
         
     case RX2:        
         
         if(self->responseHandler != NULL){
-
-            self->responseHandler(self->responseReceiver, LORA_MAC_DATA_COMPLETE, NULL);
-        }
-        self->state = IDLE;            
-        break;
-    
-    case JOIN_RX2:   
-        
-        if(self->responseHandler != NULL){
             
-            self->responseHandler(self->responseReceiver, (self->status.joined) ? LORA_MAC_JOIN_SUCCESS : LORA_MAC_JOIN_TIMEOUT, NULL);
+            if(self->status.joining){
+                
+                self->responseHandler(self->responseReceiver, LORA_MAC_JOIN_TIMEOUT, NULL);
+            }
         }
-        self->state = IDLE;            
-        break;
-    }        
+        
+        self->status.joining = false;            
+        self->state = IDLE;
+        
+        if(self->responseHandler != NULL){    
+            
+            self->responseHandler(self->responseReceiver, LORA_MAC_READY, NULL);            
+        }
+        break;    
+    }            
 }
 
 #if 0
-static void resetRadio(void *receiver, uint64_t time)
+static void resetRadio(void *receiver, uint32_t error)
 {
     LORA_PEDANTIC(receiver != NULL)
     
@@ -630,8 +624,10 @@ static void resetRadio(void *receiver, uint64_t time)
 }
 #endif
     
-static void collect(struct lora_mac *self)
+static bool collect(struct lora_mac *self)
 {
+    bool retval = false;
+    
     struct lora_frame result;
     
     uint8_t appKey[16U];
@@ -646,114 +642,129 @@ static void collect(struct lora_mac *self)
     
     if(Frame_decode(appKey, nwkSKey, appSKey, self->buffer, self->bufferLen, &result)){
         
-        switch(result.type){
-        case FRAME_TYPE_JOIN_ACCEPT:
-        
-            if(self->status.joinPending){
-                
-                self->status.joinPending = false;
-                self->status.joined = true;                
-
-                System_resetUp(self->system);
-                System_resetDown(self->system);
-                
-                MAC_restoreDefaults(self);
-                
-                System_setRX1DROffset(self->system, result.fields.joinAccept.rx1DataRateOffset);
-                System_setRX2DataRate(self->system, result.fields.joinAccept.rx2DataRate);
-
-                if(result.fields.joinAccept.cfListPresent){
-                    
-                    if(Region_isDynamic(self->region)){
-   
-                        size_t i;
-                    
-                        for(i=0U; i < sizeof(result.fields.joinAccept.cfList)/sizeof(*result.fields.joinAccept.cfList); i++){
-                            
-                            uint8_t chIndex = 4U + i;
-                            
-                            //Region_validateFreq(self, chIndex, result.fields.joinAccept.cflist[i]);
-                            
-                            (void)System_setChannel(self->system, chIndex, result.fields.joinAccept.cfList[i], 0U, 5U);
-                        }                           
-                    }                    
-                }   
-                
-                struct lora_aes_ctx ctx;
-                LoraAES_init(&ctx, appKey);
-                
-                (void)memset(nwkSKey, 0U, sizeof(nwkSKey));
-                
-                nwkSKey[0] = 1U;                
-                nwkSKey[1] = result.fields.joinAccept.appNonce;
-                nwkSKey[2] = result.fields.joinAccept.appNonce >> 8;
-                nwkSKey[3] = result.fields.joinAccept.appNonce >> 16;
-                nwkSKey[4] = result.fields.joinAccept.netID;
-                nwkSKey[5] = result.fields.joinAccept.netID >> 8;
-                nwkSKey[6] = result.fields.joinAccept.netID >> 16;
-                nwkSKey[7] = self->devNonce;
-                nwkSKey[8] = self->devNonce >> 8;
-                
-                (void)memcpy(appSKey, nwkSKey, sizeof(appSKey));
-                
-                appSKey[0] = 2U;                
-                
-                LoraAES_encrypt(&ctx, nwkSKey);
-                LoraAES_encrypt(&ctx, appSKey);
-                                
-                System_setAppSKey(self->system, nwkSKey);                
-                System_setAppSKey(self->system, appSKey);
-            }
-            else{
-                
-                LORA_INFO("ignoring a JOIN Accept we didn't ask for")
-            }
-            break;
-        
-        case FRAME_TYPE_DATA_UNCONFIRMED_DOWN:
-        case FRAME_TYPE_DATA_CONFIRMED_DOWN:
+        if(result.valid){
             
-            if(self->status.personalized || self->status.joined){
+            retval = true;
+        
+            switch(result.type){
+            case FRAME_TYPE_JOIN_ACCEPT:
             
-                if(System_getDevAddr(self->system) == result.fields.data.devAddr){
-                
-                    if(System_receiveDown(self->system, result.fields.data.counter, Region_getMaxFCNTGap(self->region))){
+                if(self->status.joining){
                     
-                        processCommands(self, result.fields.data.opts, result.fields.data.optsLen);
+                    self->status.joining = false;
+                    self->status.joined = true;                
+
+                    System_resetUp(self->system);
+                    System_resetDown(self->system);
+                    
+                    MAC_restoreDefaults(self);
+                    
+                    System_setRX1DROffset(self->system, result.fields.joinAccept.rx1DataRateOffset);
+                    System_setRX2DataRate(self->system, result.fields.joinAccept.rx2DataRate);
+
+                    if(result.fields.joinAccept.cfListPresent){
                         
-                        if(result.fields.data.data != NULL){
-                
-                            if(result.fields.data.port > 0U){
+                        if(Region_isDynamic(self->region)){
+       
+                            size_t i;
+                        
+                            for(i=0U; i < sizeof(result.fields.joinAccept.cfList)/sizeof(*result.fields.joinAccept.cfList); i++){
                                 
-                                if(self->responseHandler != NULL){
+                                uint8_t chIndex = 4U + i;
+                                
+                                //Region_validateFreq(self, chIndex, result.fields.joinAccept.cflist[i]);
+                                
+                                (void)System_setChannel(self->system, chIndex, result.fields.joinAccept.cfList[i], 0U, 5U);
+                            }                           
+                        }                    
+                    }   
+                    
+                    struct lora_aes_ctx ctx;
+                    LoraAES_init(&ctx, appKey);
+                    
+                    (void)memset(nwkSKey, 0U, sizeof(nwkSKey));
+                    
+                    nwkSKey[0] = 1U;                
+                    nwkSKey[1] = result.fields.joinAccept.appNonce;
+                    nwkSKey[2] = result.fields.joinAccept.appNonce >> 8;
+                    nwkSKey[3] = result.fields.joinAccept.appNonce >> 16;
+                    nwkSKey[4] = result.fields.joinAccept.netID;
+                    nwkSKey[5] = result.fields.joinAccept.netID >> 8;
+                    nwkSKey[6] = result.fields.joinAccept.netID >> 16;
+                    nwkSKey[7] = self->devNonce;
+                    nwkSKey[8] = self->devNonce >> 8;
+                    
+                    (void)memcpy(appSKey, nwkSKey, sizeof(appSKey));
+                    
+                    appSKey[0] = 2U;                
+                    
+                    LoraAES_encrypt(&ctx, nwkSKey);
+                    LoraAES_encrypt(&ctx, appSKey);
                                     
-                                    union lora_mac_response_arg arg;
-                                    
-                                    arg.rx.data = result.fields.data.data;
-                                    arg.rx.len = result.fields.data.dataLen;
-                                    arg.rx.port = result.fields.data.port;
-                                    
-                                    self->responseHandler(self->responseReceiver, LORA_MAC_RX, &arg);
-                                }
-                            }
-                            else{
-                                                                
-                                processCommands(self, result.fields.data.data, result.fields.data.dataLen);
-                            }
-                        }
-                    }
-                    else{
-                        
-                        LORA_INFO("discarding frame for counter sync")
+                    System_setAppSKey(self->system, nwkSKey);                
+                    System_setAppSKey(self->system, appSKey);
+                    
+                    if(self->responseHandler != NULL){
+                
+                        self->responseHandler(self->responseReceiver, LORA_MAC_JOIN_SUCCESS, NULL);
                     }
                 }
+                else{
+                    
+                    LORA_INFO("ignoring a JOIN Accept we didn't ask for")
+                }
+                break;
+            
+            case FRAME_TYPE_DATA_UNCONFIRMED_DOWN:
+            case FRAME_TYPE_DATA_CONFIRMED_DOWN:
+                
+                if(self->status.personalized || self->status.joined){
+                
+                    if(System_getDevAddr(self->system) == result.fields.data.devAddr){
+                    
+                        if(System_receiveDown(self->system, result.fields.data.counter, Region_getMaxFCNTGap(self->region))){
+                        
+                            processCommands(self, result.fields.data.opts, result.fields.data.optsLen);
+                            
+                            if(result.fields.data.data != NULL){
+                    
+                                if(result.fields.data.port > 0U){
+                                    
+                                    if(self->responseHandler != NULL){
+                                        
+                                        union lora_mac_response_arg arg;
+                                        
+                                        arg.rx.data = result.fields.data.data;
+                                        arg.rx.len = result.fields.data.dataLen;
+                                        arg.rx.port = result.fields.data.port;
+                                        
+                                        if(self->responseHandler != NULL){
+                                            
+                                            self->responseHandler(self->responseReceiver, LORA_MAC_RX, &arg);
+                                        }
+                                    }
+                                }
+                                else{
+                                                                    
+                                    processCommands(self, result.fields.data.data, result.fields.data.dataLen);
+                                }
+                            }
+                        }
+                        else{
+                            
+                            LORA_INFO("discarding frame for counter sync")
+                        }
+                    }
+                }
+                break;
+            
+            default:
+                break;
             }
-            break;
-        
-        default:
-            break;
         }
     }
+    
+    return retval;
 }
 
 static void handleCommands(void *receiver, const struct lora_downstream_cmd *cmd)
@@ -820,20 +831,6 @@ static void processCommands(struct lora_mac *self, const uint8_t *data, uint8_t 
 
 static void abandonSequence(struct lora_mac *self)
 {
-    switch(self->state){
-    case WAIT_TX:
-    case TX:
-    case WAIT_RX1:
-    case WAIT_RX2:
-        break;
-    case JOIN_WAIT_TX:
-    case JOIN_TX:
-    case JOIN_WAIT_RX1:
-    case JOIN_WAIT_RX2:
-        break;
-    default:
-        break;
-    }
     
     self->state = IDLE;
 }

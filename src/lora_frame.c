@@ -139,6 +139,8 @@ size_t Frame_putJoinAccept(const void *key, const struct lora_frame_join_accept 
                 
                 pos += putU24(&ptr[pos], max - pos, f->cfList[i]);
             }            
+            
+            pos += putU8(&ptr[pos], max - pos, 0U);
         }
         
         pos += putU32(&ptr[pos], max - pos, cmacJoin(key, ptr, pos));
@@ -259,6 +261,8 @@ bool Frame_decode(const void *appKey, const void *nwkSKey, const void *appSKey, 
                         
                             pos += getU24(&ptr[pos], len - pos, &f->fields.joinAccept.cfList[i]);
                         }                            
+                        
+                        pos++;
                     }
                     
                     pos += getU32(&ptr[pos], len - pos, &mic);

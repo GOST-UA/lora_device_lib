@@ -39,7 +39,6 @@ static VALUE initialize(int argc, VALUE *argv, VALUE self);
 static VALUE initialize_copy(VALUE copy, VALUE orig);
 static VALUE alloc_state(VALUE klass);
 
-static VALUE personalize(VALUE self, VALUE devAddr, VALUE nwkSKey, VALUE appSKey);
 static VALUE tick(VALUE self);
 static VALUE setRate(VALUE self, VALUE rate);
 static VALUE setPower(VALUE self, VALUE power);
@@ -62,12 +61,12 @@ static VALUE calculateOnAirTime(VALUE self, VALUE bw, VALUE sf, VALUE payloadLen
 
 /* functions **********************************************************/
 
-uint64_t System_getTime(void)
+uint64_t System_time(void)
 {
     return NUM2ULL(rb_funcall(rb_const_get(cLDL, rb_intern("SystemTime")), rb_intern("time"), 0));
 }
 
-void System_usleep(uint32_t interval)
+void System_sleep(uint32_t interval)
 {
     (void)rb_funcall(rb_const_get(cLDL, rb_intern("SystemTime")), rb_intern("wait"), 1, UINT2NUM(interval));
 }
@@ -367,8 +366,7 @@ void Init_ext_mac(void)
     
     rb_define_method(cExtMAC, "initialize", initialize, -1);
     rb_define_method(cExtMAC, "initialize_copy", initialize_copy, 1);
-    
-    rb_define_method(cExtMAC, "personalize", personalize, 3);
+        
     rb_define_method(cExtMAC, "tick", tick, 0);
     rb_define_method(cExtMAC, "rate=", setRate, 1);
     rb_define_method(cExtMAC, "power=", setPower, 1);
@@ -640,19 +638,6 @@ static VALUE initialize_copy(VALUE copy, VALUE orig)
     return copy;
 }
 
-static VALUE personalize(VALUE self, VALUE devAddr, VALUE nwkSKey, VALUE appSKey)
-{
-    struct lora_mac *this;    
-    Data_Get_Struct(self, struct lora_mac, this);
-    
-    if(!MAC_personalize(this, (uint32_t)NUM2UINT(devAddr), RSTRING_PTR(rb_funcall(nwkSKey, rb_intern("value"), 0)), RSTRING_PTR(rb_funcall(appSKey, rb_intern("value"), 0)))){
-        
-        rb_raise(cError, "MAC_personalize() failed");
-    }
-    
-    return self;
-}
-
 static VALUE setRate(VALUE self, VALUE rate)
 {
     struct lora_mac *this;    
@@ -753,7 +738,7 @@ static void _response(void *receiver, enum lora_mac_response_type type, const un
     VALUE handler;
     
     VALUE type_to_sym[] = {
-        ID2SYM(rb_intern("data_complete")),
+        ID2SYM(rb_intern("ready")),
         ID2SYM(rb_intern("data_timeout")),
         ID2SYM(rb_intern("rx")),
         ID2SYM(rb_intern("join_success")),
@@ -762,10 +747,14 @@ static void _response(void *receiver, enum lora_mac_response_type type, const un
 
     switch(type){
     default:
-    case LORA_MAC_DATA_COMPLETE:
+    case LORA_MAC_READY:
+    
+        break;
     case LORA_MAC_DATA_TIMEOUT:
-        handler = rb_iv_get(self, "@tx_handler");                        
-        rb_funcall(handler, rb_intern("call"), 1, type_to_sym[type]);
+        handler = rb_iv_get(self, "@tx_handler");        
+        if(handler != Qnil){                        
+            rb_funcall(handler, rb_intern("call"), 1, type_to_sym[type]);
+        }
         break;
     case LORA_MAC_RX:
     
@@ -778,8 +767,10 @@ static void _response(void *receiver, enum lora_mac_response_type type, const un
         break;
     case LORA_MAC_JOIN_SUCCESS:
     case LORA_MAC_JOIN_TIMEOUT:
-        handler = rb_iv_get(self, "@join_handler");    
-        rb_funcall(handler, rb_intern("call"), 1, type_to_sym[type]);
+        handler = rb_iv_get(self, "@join_handler"); 
+        if(handler != Qnil){                           
+            rb_funcall(handler, rb_intern("call"), 1, type_to_sym[type]);
+        }           
         break;
     }   
 }

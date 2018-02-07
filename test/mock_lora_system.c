@@ -10,7 +10,7 @@
 
 #include <string.h>
 
-void System_usleep(uint32_t interval)
+void System_sleep(uint32_t interval)
 {    
 }
 

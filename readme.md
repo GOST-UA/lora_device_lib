@@ -7,9 +7,8 @@ A LoRaWAN device implementation still in an early stage of development.
 
 ## Highlights
 
-- Event driven
 - Portable design
-- Randomised channel scheduler
+- Event driven
 - Multiple region database
 - Support for SX1272
 - Build-time options for optimisation and/or conformance to your project requirements
@@ -25,11 +24,11 @@ See [doc/porting_guide.md](doc/porting_guide.md).
 
 See [doc/technical_overview.md](doc/technical_overview.md).
 
+## Examples
+
+- [AVR ATMega328p target](examples/mega_demo)
+
 ## License
 
-LoraDeviceLib has an MIT license.
-
-## Author
-
-Cameron Harper
+LoraDeviceLib has an MIT license. 
 

@@ -43,7 +43,7 @@
 #define LORA_INFO(...) \
     do{\
         VALUE args[] = {\
-            ULL2NUM(System_getTime()),\
+            ULL2NUM(System_time()),\
             rb_funcall(rb_cFile, rb_intern("basename"), 1, rb_str_new_cstr(__FILE__)),\
             rb_str_new_cstr(__FUNCTION__),\
             rb_sprintf(__VA_ARGS__)\
@@ -56,7 +56,7 @@
 #define LORA_DEBUG(...) \
     do{\
         VALUE args[] = {\
-            ULL2NUM(System_getTime()),\
+            ULL2NUM(System_time()),\
             rb_funcall(rb_cFile, rb_intern("basename"), 1, rb_str_new_cstr(__FILE__)),\
             rb_str_new_cstr(__FUNCTION__),\
             rb_sprintf(__VA_ARGS__)\

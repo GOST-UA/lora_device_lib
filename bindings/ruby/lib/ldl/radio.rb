@@ -57,10 +57,9 @@ module LDL
             
             tx_begin = nil
             
-            # fixme: core isn't passing a timeout
-            # listen for the interval
-            #to = SystemTime.onTimeout(settings[:timeout]) do
-            to = SystemTime.onTimeout(0.001) do
+            t_sym = (2 ** settings[:sf]) / settings[:bw].to_f
+            
+            to = SystemTime.onTimeout( settings[:timeout] * t_sym ) do
                
                broker.unsubscribe tx_begin
                

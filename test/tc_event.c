@@ -13,10 +13,10 @@
 
 /* helpers */
 
-static void eventHandler(void *receiver, uint64_t time)
+static void eventHandler(void *receiver, uint64_t error)
 {    
     check_expected_ptr(receiver);
-    check_expected(time);
+    check_expected(error);
 }
 
 /* setups */
@@ -61,7 +61,7 @@ static int setup_event_and_register_and_answer_onInput(void **user)
         
         Event_onInput(self, EVENT_TX_COMPLETE, self, eventHandler);
         
-        Event_receive(self, EVENT_TX_COMPLETE, System_getTime());
+        Event_receive(self, EVENT_TX_COMPLETE, System_time());
     }
     
     return retval;
@@ -77,7 +77,7 @@ static int setup_event_and_recieve_input(void **user)
         
         struct lora_event *self = (struct lora_event *)(*user);    
         
-        Event_receive(self, EVENT_TX_COMPLETE, System_getTime());
+        Event_receive(self, EVENT_TX_COMPLETE, System_time());
     }
     
     return retval;
@@ -118,7 +118,7 @@ static void tick_shall_service_handler_at_timeout(void **user)
     system_time = 42U;
     
     expect_value(eventHandler, receiver, self);
-    expect_value(eventHandler, time, 42U);
+    expect_value(eventHandler, error, 0U);
     
     Event_tick(self);    
 }
@@ -130,7 +130,7 @@ static void tick_shall_service_handler_after_timeout(void **user)
     system_time = 43U;
     
     expect_value(eventHandler, receiver, self);
-    expect_value(eventHandler, time, 42U);
+    expect_value(eventHandler, error, 1U);
     
     Event_tick(self);    
 }

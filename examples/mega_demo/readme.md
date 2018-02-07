@@ -1,7 +1,8 @@
 MegaDemo
 ========
 
-MegaDemo is a project integrates LoraDeviceLib for purpose of demonstration.
+MegaDemo integrates LDL onto an ATMega328p. At the moment this doesn't do
+anything other than give an indication of memory useage.
 
 ~~~
 avr-size --format=avr --mcu=atmega328p mega_demo.elf
@@ -19,6 +20,9 @@ EEPROM:      159 bytes (15.5% Full)
 (.eeprom)
 ~~~
 
+## License
+
+MIT (part of the LoraDeviceLib project)
 
 
 

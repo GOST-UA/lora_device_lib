@@ -66,7 +66,7 @@ void Radio_setEventHandler(struct lora_radio *self, void *receiver, radioEventCB
 uint32_t Radio_resetHardware(struct lora_radio *self)
 {
     self->board.reset(self->board.receiver, true);
-    System_usleep(100U);
+    System_sleep(100U);
     self->board.reset(self->board.receiver, false);
     
     return 10000U;  // should only take 5ms following reset but we want this to work on power up as well

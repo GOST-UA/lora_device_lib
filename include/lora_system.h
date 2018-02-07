@@ -31,19 +31,21 @@ extern "C" {
 #include <stddef.h>
 
 
-/** Retrieve system time in microseconds
+/** Called by MAC to get system time (in ticks)
  * 
- * @return system time in microseconds
+ * @return system time (in ticks)
  * 
  * */
-uint64_t System_getTime(void);
+uint64_t System_time(void);
 
 /** Halt the program counter for interval microseconds
  * 
- * @param[in] interval microseconds
+ * @note this can be a busy wait or sleep
+ * 
+ * @param[in] interval interval to wait (in ticks)
  * 
  * */
-void System_usleep(uint32_t interval);
+void System_sleep(uint32_t interval);
 
 /** Set the value of receiver to value in an atomic operation
  * 
@@ -53,40 +55,86 @@ void System_usleep(uint32_t interval);
  * */
 void System_atomic_setPtr(void **receiver, void *value);
 
-/** Retrieve the Application EUI
+/** Called by MAC to get the 8 byte Application EUI
  * 
- * @param[in] receiver the receiver of this EUI
- * @param[out] eui 8 byte buffer
+ * @param[in] receiver storage object receiving this request
+ * @param[out] value buffer of at least 8 bytes
  * 
  * */
-void System_getAppEUI(void *receiver, void *eui);
+void System_getAppEUI(void *receiver, void *value);
 
-/** Retrieve the Device EUI
+/** Called by MAC to get the 8 byte Device EUI
  *
- * @param[in] receiver the receiver of this EUI
- * @param[out] eui 8 byte buffer
+ * @param[in] receiver storage object receiving this request
+ * @param[out] value buffer of at least 8 bytes
  * 
  * */
-void System_getDevEUI(void *receiver, void *eui);
+void System_getDevEUI(void *receiver, void *value);
 
-/** Retrieve the Application Key
+/** Called by MAC to get the 16 byte Application Key
  *
- * @param[in] receiver the receiver of this AppKey
- * @param[out] key 16 byte buffer
+ * @param[in] receiver storage object receiving this request
+ * @param[out] value buffer of at least 16 bytes
  * 
  * */
-void System_getAppKey(void *receiver, void *key);
+void System_getAppKey(void *receiver, void *value);
 
-void System_getNwkSKey(void *receiver, void *key);
-void System_getAppSKey(void *receiver, void *key);
+/** Called by MAC to get the 16 byte Network Session Key
+ *
+ * @param[in] receiver storage object receiving this request
+ * @param[out] value buffer of at least 16 bytes
+ * 
+ * */
+void System_getNwkSKey(void *receiver, void *value);
 
+/** Called by MAC to get the 16 byte Application Session Key
+ *
+ * @param[in] receiver storage object receiving this request
+ * @param[out] value buffer of at least 16 bytes
+ * 
+ * */
+void System_getAppSKey(void *receiver, void *value);
+
+/** Called by MAC to get the Device Address
+ *
+ * @param[in] receiver storage object receiving this request
+ * @return Device Address
+ * 
+ * */
 uint32_t System_getDevAddr(void *receiver);
 
-void System_setNwkSKey(void *receiver, const void *key);
-void System_setAppSKey(void *receiver, const void *key);
+/** Called by MAC to store the 16 byte Network Session Key
+ * 
+ * @param[in] receiver storage object receiving this request
+ * @param[in] value 16 byte field
+ * 
+ * */
+void System_setNwkSKey(void *receiver, const void *value);
+
+/** Called by MAC to store the 16 byte Application Session Key
+ * 
+ * @param[in] receiver storage object receiving this request
+ * @param[in] value 16 byte field
+ * 
+ * */
+void System_setAppSKey(void *receiver, const void *value);
+
+/** Called by MAC to store the Device Address
+ * 
+ * @param[in] receiver storage object receiving this request
+ * @param[in] value Device Address
+ * 
+ * */
 void System_setDevAddr(void *receiver, uint32_t devAddr);
 
+/** Called by MAC to store the MAC status
+ * 
+ * @param[in] receiver storage object receiving this request
+ * @param[in] value status
+ * 
+ * */
 void System_setStatus(void *receiver, uint8_t value);
+
 uint8_t System_getStatus(void *receiver);
     
 /** Get the current value of the up counter

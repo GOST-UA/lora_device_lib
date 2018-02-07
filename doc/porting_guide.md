@@ -1,64 +1,28 @@
 LoraDeviceLib Porting Guide
 ===========================
 
-This should tell you everything you need to know to port LDL to your
-application. 
-
 To port LDL, you must to review each item on the Mandatory list. 
 
 To optimise LDL, you should consider items in the optional list.
 
-
 ## Mandatory
 
-#### Implement System_getDevEUI()
+### Implement All [lora_system.h](/include/lora_system.h) Interfaces
 
-This function must return the DevEUI.
+A comment block for each interface describes its purpose. Please raise
+an issue if the comment block does not contain enough information to
+implement the function.
 
-See [lora_system.h](/include/lora_system.h).
-
-#### Implement System_getAppEUI()
-
-This function must return the AppEUI
-
-See [lora_system.h](/include/lora_system.h).
-
-#### Implement System_getAppKey()
-
-This function must return the AppKey.
-
-See [lora_system.h](/include/lora_system.h).
-
-#### Implement System_getTime()
-
-This function must return system time (e.g. time since power up) in microseconds.
-
-See [lora_system.h](/include/lora_system.h).
-
-#### Implement System_usleep()
-
-This function must cause the program counter to block for an interval of microseconds.
-
-- LDL may use this for fine timing adjustments where setting a timer event callback
-  would take too long
-
-See [lora_system.h](/include/lora_system.h).
-
-#### Implement System_atomic_setPtr()
-
-This function must atomically write value to the receiver memory location.
-
-See [lora_system.h](/include/lora_system.h).
+Most of these interfaces exist to give the integrator a choice in how
+data is stored on their target (i.e. in volatile or non-volatile memory).
 
 ## Optional
 
 ### Specify Region(s) To Support
 
-LDL will by default support all regions. If you are only using
-your application in one region this will mean you have some dead code.
-
-Define one or more of the following macros to enable support only
-for the regions you want to support:
+LDL will by default support all regions. If your device is only meant
+to work in one region, you can use this macro to remove code that
+isn't required for your region.
 
 - `LORA_REGION_EU_863_870`,
 - `LORA_REGION_US_902_928`,
@@ -69,62 +33,71 @@ for the regions you want to support:
 - `LORA_REGION_AS_923`,
 - `LORA_REGION_KR_920_923`
 
-Note that if none of these macros are defined, 
-LDL will define `LORA_REGION_ALL` in [lora_region.h](/include/lora_region.h).
+Note that you can define one or more of these macros. If you don't define
+any of these macros, LDL will define `LORA_REGION_ALL`.
 
-#### Define LORA_DEVICE
+See [lora_region.h](/include/lora_region.h) for more information.
 
-Define this macro to remove code that isn't needed by (most) device implementations.
+### Define LORA_DEVICE
 
-- Often you only need one half of a codec for a device
-- Whole codecs are nice for code reuse and testing
+LDL implements complete frame and message codecs. This means that LDL has code 
+to encode or decode messages that a Device would not normally need to encode or decode.
 
-#### Define LORA_DEBUG_INCLUDE
+Define `LORA_DEVICE` to ensure only the codec functions needed for a Device are included
+in your build.
 
-Define this macro to be a filename you want to `#include` at the top of 
+### Define LORA_DEBUG_INCLUDE
+
+Define `LORA_DEBUG_INCLUDE` to be a filename that you want to include at the top of
 [lora_debug.h](/include/lora_debug.h).
+
+This file can contain anything you like. Normally it will contain any definitions
+required for your customised debug macros 
+(i.e. `LORA_ERROR`, `LORA_DEBUG`, `LORA_INFO`, `LORA_ASSERT`, and `LORA_PEDANTIC`).
 
 #### Define LORA_ERROR(...)
 
 Define this macro to be a printf-like function that captures error level messages at run-time.
+If not defined, all LORA_ERROR messages will be left out of the build.
 
 See [lora_debug.h](/include/lora_debug.h).
 
-#### Define LORA_DEBUG(...)
+### Define LORA_DEBUG(...)
 
 Define this macro to be a printf-like function that captures debug level messages at run-time.
+If not defined, all LORA_DEBUG messages will be left out of the build.
 
 See [lora_debug.h](/include/lora_debug.h).
 
-#### Define LORA_INFO(...)
+### Define LORA_INFO(...)
 
 Define this macro to be a printf-like function that captures info level messages at run-time.
+If not defined, all LORA_INFO messages will be left out of the build.
 
 See [lora_debug.h](/include/lora_debug.h).
 
-#### Define LORA_ASSERT(X)
+### Define LORA_ASSERT(X)
 
 Define this macro to be an assert-like function that performs run-time asserts on 'X'.
+If not defined, all LORA_ASSERT assertions will be left out of the build.
 
 See [lora_debug.h](/include/lora_debug.h).
 
-- non-pedantic asserts are useful for development and recommended for production
-
-#### Define LORA_PEDANTIC(X)
+### Define LORA_PEDANTIC(X)
 
 Define this macro to be an assert-like function that performs run-time asserts on 'X'.
-
-- pendantic asserts are useful for development but not essential for production
+These asserts are considered pedantic and not essential for production.
+If not defined, all LORA_PEDANTIC assertions will be left out of the build.
 
 See [lora_debug.h](/include/lora_debug.h).
 
-#### Define LORA_AVR
+### Define LORA_AVR
 
 Define this macro to enable AVR specific avr-gcc optimisations.
 
 - Uses PROGMEM where appropriate
 
-#### Substitute an Alternative AES Implementation
+### Substitute an Alternative AES Implementation
 
 1. Define `LORA_USE_PLATFORM_AES`
 2. Define `struct lora_aes_ctx` to suit the platform implementation
@@ -132,7 +105,7 @@ Define this macro to enable AVR specific avr-gcc optimisations.
 
 See [lora_aes.h](/include/lora_aes.h).
 
-#### Substitute an Alternative CMAC Implementation
+### Substitute an Alternative CMAC Implementation
 
 1. Define `LORA_USE_PLATFORM_CMAC`
 2. Define `struct lora_cmac_ctx` to suit the platform implementation
@@ -140,7 +113,7 @@ See [lora_aes.h](/include/lora_aes.h).
 
 See [lora_cmac.h](/include/lora_cmac.h).
 
-#### Customise lora_radio_sx1272
+### Customise lora_radio_sx1272
 
 - define LORA_RADIO_SX1272_USE_BOOST
     - Define this symbol if your hardware makes use of the BOOST pin

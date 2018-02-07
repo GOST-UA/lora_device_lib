@@ -60,7 +60,7 @@ void Event_tick(struct lora_event *self)
     
     do{
     
-        time = System_getTime();
+        time = System_time();
         
         /* timeouts */
         while((ptr != NULL) && (time >= ptr->time)){
@@ -80,7 +80,7 @@ void Event_tick(struct lora_event *self)
             self->free = ptr;         
             ptr = to.next;
             
-            to.handler(to.receiver, to.time);        
+            to.handler(to.receiver, System_time() - to.time);        
         }
         
         /* io events */
@@ -93,7 +93,7 @@ void Event_tick(struct lora_event *self)
                 event_handler_t handler = self->onInput[i].handler;
                 self->onInput[i].handler = NULL;
                 
-                handler(self->onInput[i].receiver, self->onInput[i].time);       
+                handler(self->onInput[i].receiver, System_time() - self->onInput[i].time);       
             }
         }    
     } 
@@ -111,7 +111,7 @@ void *Event_onTimeout(struct lora_event *self, uint64_t timeout, void *receiver,
         struct on_timeout *prev = NULL;
         self->free = self->free->next;
         
-        to->time = timeout;
+        to->time = System_time() + timeout;
         to->handler = handler;
         to->receiver = receiver;
         to->next = NULL;
@@ -238,7 +238,7 @@ uint64_t Event_intervalUntilNext(struct lora_event *self)
     
         if(self->head != NULL){
             
-            time = System_getTime();
+            time = System_time();
             
             if(self->head->time > time){
              
