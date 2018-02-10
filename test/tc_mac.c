@@ -29,12 +29,12 @@ static void responseHandler(void *receiver, enum lora_mac_response_type type, co
 
 static bool future_event_is_pending(struct lora_mac *self)
 {
-    return (MAC_intervalUntilNext(self) > 0U) && (MAC_intervalUntilNext(self) != UINT64_MAX);
+    return (MAC_ticksUntilNextEvent(self) > 0U) && (MAC_ticksUntilNextEvent(self) != UINT64_MAX);
 }
 
 static bool immediate_event_is_pending(struct lora_mac *self)
 {
-    return (MAC_intervalUntilNext(self) == 0U);
+    return (MAC_ticksUntilNextEvent(self) == 0U);
 }
 
 /* setup */
@@ -49,7 +49,7 @@ static int setup_mac(void **user)
         
     mock_lora_system_init(&params);
     
-    MAC_init(&self, &params, EU_863_870, &radio);
+    MAC_init(&self, &params, EU_863_870, &radio, NULL, responseHandler);
     
     MAC_restoreDefaults(&self);
     
@@ -58,11 +58,43 @@ static int setup_mac(void **user)
     return 0;
 }
 
-static int setup_mac_and_abp(void **user)
+static int setup_mac_and_join(void **user)
 {
     int retval = setup_mac(user);
     
-
+    if(retval == 0){
+        
+        struct lora_mac *self = (struct lora_mac *)(*user);
+        size_t messageSize;
+        uint8_t message[50U];
+        struct lora_frame_join_accept ja;
+        
+        // prepare join accept    
+        (void)memset(&ja, 0, sizeof(ja));
+        messageSize = Frame_putJoinAccept(key, &ja, message, sizeof(message));    
+        
+        assert_true(MAC_join(self));
+        assert_true(immediate_event_is_pending(self));
+        will_return(Radio_transmit, true);    
+        MAC_tick(self);   
+        MAC_radioEvent(self, LORA_RADIO_TX_COMPLETE, System_time());
+        assert_true(immediate_event_is_pending(self));
+        MAC_tick(self);
+        assert_true(future_event_is_pending(self));
+        system_time += MAC_ticksUntilNextEvent(self);
+        will_return(Radio_receive, true);    
+        MAC_tick(self);        
+        will_return(Radio_collect, (uint8_t)messageSize);
+        will_return(Radio_collect, message);
+        MAC_radioEvent(self, LORA_RADIO_RX_READY, System_time());
+        assert_true(immediate_event_is_pending(self));
+        expect_value(responseHandler, type, LORA_MAC_READY);
+        MAC_tick(self);
+        
+        // advance to a time channel is available again  
+        system_time += MAC_ticksUntilNextChannel(self);  
+    }
+    
     return retval;
 }
 
@@ -76,8 +108,6 @@ static void init_shall_initialise(void **user)
 static void join_shall_timeout(void **user)
 {
     struct lora_mac *self = (struct lora_mac *)(*user);
-    
-    MAC_setResponseHandler(self, NULL, responseHandler);
     
     // initiate join
     assert_true(MAC_join(self));
@@ -94,7 +124,7 @@ static void join_shall_timeout(void **user)
     assert_true(future_event_is_pending(self));
     
     // advance time to T_RX1
-    system_time += MAC_intervalUntilNext(self);
+    system_time += MAC_ticksUntilNextEvent(self);
     
     // next tick will put radio into RX mode
     will_return(Radio_receive, true);    
@@ -107,7 +137,7 @@ static void join_shall_timeout(void **user)
     assert_true(future_event_is_pending(self));
     
     // advance time to T_RX2
-    system_time += MAC_intervalUntilNext(self);
+    system_time += MAC_ticksUntilNextEvent(self);
     
     // next tick will put radio into RX mode
     will_return(Radio_receive, true);    
@@ -118,8 +148,7 @@ static void join_shall_timeout(void **user)
     assert_true(immediate_event_is_pending(self));    
     
     // next tick shall yield a callback to responseHandler
-    expect_value(responseHandler, type, LORA_MAC_JOIN_TIMEOUT);
-    expect_value(responseHandler, type, LORA_MAC_READY);
+    expect_value(responseHandler, type, LORA_MAC_TIMEOUT);
     MAC_tick(self);    
 }
 
@@ -133,8 +162,6 @@ static void join_shall_succeed_at_rx1(void **user)
     // prepare join accept    
     (void)memset(&ja, 0, sizeof(ja));
     messageSize = Frame_putJoinAccept(key, &ja, message, sizeof(message));    
-        
-    MAC_setResponseHandler(self, NULL, responseHandler);
     
     // initiate join
     assert_true(MAC_join(self));
@@ -151,7 +178,7 @@ static void join_shall_succeed_at_rx1(void **user)
     assert_true(future_event_is_pending(self));
     
     // advance time to T(rx1)
-    system_time += MAC_intervalUntilNext(self);
+    system_time += MAC_ticksUntilNextEvent(self);
     
     // next tick will put radio into RX mode
     will_return(Radio_receive, true);    
@@ -162,7 +189,6 @@ static void join_shall_succeed_at_rx1(void **user)
     will_return(Radio_collect, message);
     MAC_radioEvent(self, LORA_RADIO_RX_READY, System_time());
     assert_true(immediate_event_is_pending(self));
-    expect_value(responseHandler, type, LORA_MAC_JOIN_SUCCESS);
     expect_value(responseHandler, type, LORA_MAC_READY);
     MAC_tick(self);    
 }
@@ -177,8 +203,6 @@ static void join_shall_succeed_at_rx2(void **user)
     // prepare join accept    
     (void)memset(&ja, 0, sizeof(ja));
     messageSize = Frame_putJoinAccept(key, &ja, message, sizeof(message));    
-        
-    MAC_setResponseHandler(self, NULL, responseHandler);
     
     // initiate join
     assert_true(MAC_join(self));
@@ -194,7 +218,7 @@ static void join_shall_succeed_at_rx2(void **user)
     MAC_tick(self);
     
     // advance time to T(rx1)
-    system_time += MAC_intervalUntilNext(self);
+    system_time += MAC_ticksUntilNextEvent(self);
     
     // next tick will put radio into RX mode
     will_return(Radio_receive, true);    
@@ -206,7 +230,7 @@ static void join_shall_succeed_at_rx2(void **user)
     MAC_tick(self);
     
     // advance time to T(rx2)
-    system_time += MAC_intervalUntilNext(self);
+    system_time += MAC_ticksUntilNextEvent(self);
     
     // next tick will put radio into RX mode
     will_return(Radio_receive, true);    
@@ -219,7 +243,6 @@ static void join_shall_succeed_at_rx2(void **user)
     assert_true(immediate_event_is_pending(self));    
     
     // next tick shall yield a callback to responseHandler
-    expect_value(responseHandler, type, LORA_MAC_JOIN_SUCCESS);
     expect_value(responseHandler, type, LORA_MAC_READY);
     MAC_tick(self);    
 }
@@ -228,8 +251,6 @@ static void unconfirmed_send_shall_callback_when_cycle_complete(void **user)
 {
     struct lora_mac *self = (struct lora_mac *)(*user);
     static const char msg[] = "hello world";
-    
-    MAC_setResponseHandler(self, NULL, responseHandler);
     
     // initiate unconfirmed data
     assert_true(MAC_send(self, false, 1U, msg, strlen(msg)));
@@ -245,7 +266,7 @@ static void unconfirmed_send_shall_callback_when_cycle_complete(void **user)
     MAC_tick(self);
     
     // advance time to T(rx1)
-    system_time += MAC_intervalUntilNext(self);
+    system_time += MAC_ticksUntilNextEvent(self);
     
     // next tick will put radio into RX mode
     will_return(Radio_receive, true);    
@@ -257,7 +278,7 @@ static void unconfirmed_send_shall_callback_when_cycle_complete(void **user)
     MAC_tick(self);
     
     // advance time to T(rx2)
-    system_time += MAC_intervalUntilNext(self);
+    system_time += MAC_ticksUntilNextEvent(self);
     
     // next tick will put radio into RX mode
     will_return(Radio_receive, true);    
@@ -299,7 +320,7 @@ int main(void)
         
         cmocka_unit_test_setup(
             unconfirmed_send_shall_callback_when_cycle_complete, 
-            setup_mac_and_abp
+            setup_mac_and_join
         ),
         
     };

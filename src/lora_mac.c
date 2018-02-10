@@ -57,22 +57,25 @@ static bool isAvailable(struct lora_mac *self, uint8_t chIndex, uint64_t timeNow
 
 static uint64_t timeBase(uint8_t value);
 
-//static uint64_t timeNextAvailable(struct lora_mac *self, uint64_t timeNow, uint8_t rate);
+static uint64_t timeNextAvailable(struct lora_mac *self, uint64_t timeNow, uint8_t rate);
 
 //static void restoreDefaults(struct lora_mac *self);
 
 /* functions **********************************************************/
 
-void MAC_init(struct lora_mac *self, void *system, enum lora_region_id region, struct lora_radio *radio)
+void MAC_init(struct lora_mac *self, void *system, enum lora_region_id region, struct lora_radio *radio, void *receiver, lora_mac_response_fn cb)
 {
     LORA_PEDANTIC(self != NULL)
     LORA_PEDANTIC(radio != NULL)
+    LORA_PEDANTIC(cb != NULL)
 
     (void)memset(self, 0, sizeof(*self));
     
     self->system = system;
     self->radio = radio;    
     self->region = Region_getRegion(region);
+    self->responseHandler = cb;
+    self->responseReceiver = receiver;
     
     Event_init(&self->events);
     
@@ -215,12 +218,6 @@ bool MAC_join(struct lora_mac *self)
     return retval;
 }
 
-void MAC_setResponseHandler(struct lora_mac *self, void *receiver, lora_mac_response_fn cb)
-{
-    self->responseHandler = cb;
-    self->responseReceiver = receiver;
-}
-
 void MAC_radioEvent(void *receiver, enum lora_radio_event event, uint64_t time)
 {
     LORA_PEDANTIC(receiver != NULL)
@@ -301,7 +298,7 @@ void MAC_tick(struct lora_mac *self)
     Event_tick(&self->events);
 }
 
-uint64_t MAC_intervalUntilNext(struct lora_mac *self)
+uint64_t MAC_ticksUntilNextEvent(struct lora_mac *self)
 {
     return Event_intervalUntilNext(&self->events);
 }
@@ -330,6 +327,21 @@ bool MAC_setPower(struct lora_mac *self, uint8_t power)
     }
     
     return retval;    
+}
+
+uint64_t MAC_ticksUntilNextChannel(struct lora_mac *self)
+{
+    uint64_t timeNow = System_time();
+    uint64_t retval;
+    
+    retval = timeNextAvailable(self, timeNow, System_getTXRate(self->system));
+    
+    if(retval != UINT64_MAX){
+        
+        retval = retval - timeNow;
+    }
+    
+    return retval;
 }
 
 /* static functions ***************************************************/
@@ -488,22 +500,18 @@ static void rxStart(void *receiver, uint64_t error)
                 self->state = WAIT_RX2;                                
             }    
             else{
-            
-                if(self->responseHandler != NULL){
                 
-                    if(self->status.joining){
-                        
-                        self->responseHandler(self->responseReceiver, LORA_MAC_JOIN_TIMEOUT, NULL);
-                    }
-                }
-                
-                self->status.joining = false;            
                 self->state = IDLE;
                 
-                if(self->responseHandler != NULL){    
+                if(self->status.joining){
+                
+                    self->status.joining = false;            
+                    self->responseHandler(self->responseReceiver, LORA_MAC_TIMEOUT, NULL);
+                }
+                else{
                     
                     self->responseHandler(self->responseReceiver, LORA_MAC_READY, NULL);            
-                }             
+                }                
             }        
         }
     }
@@ -527,27 +535,20 @@ static void rxReady(void *receiver, uint64_t error)
     
         self->state = IDLE;                 
             
-        if(self->responseHandler != NULL){
-            
-            self->responseHandler(self->responseReceiver, LORA_MAC_READY, NULL);            
-        }                
+        self->responseHandler(self->responseReceiver, LORA_MAC_READY, NULL);                    
     }
     else{
         
         if(self->state == RX2){
                 
-            if(self->responseHandler != NULL){
-                
-                if(self->status.joining){
-                    
-                    self->responseHandler(self->responseReceiver, LORA_MAC_JOIN_TIMEOUT, NULL);
-                }
-            }
-            
-            self->status.joining = false;            
             self->state = IDLE;
             
-            if(self->responseHandler != NULL){    
+            if(self->status.joining){
+            
+                self->status.joining = false;            
+                self->responseHandler(self->responseReceiver, LORA_MAC_TIMEOUT, NULL);
+            }
+            else{
                 
                 self->responseHandler(self->responseReceiver, LORA_MAC_READY, NULL);            
             }            
@@ -580,21 +581,17 @@ static void rxTimeout(void *receiver, uint64_t error)
         
     case RX2:        
         
-        if(self->responseHandler != NULL){
-            
-            if(self->status.joining){
-                
-                self->responseHandler(self->responseReceiver, LORA_MAC_JOIN_TIMEOUT, NULL);
-            }
-        }
-        
-        self->status.joining = false;            
         self->state = IDLE;
-        
-        if(self->responseHandler != NULL){    
+            
+        if(self->status.joining){
+            
+            self->status.joining = false;            
+            self->responseHandler(self->responseReceiver, LORA_MAC_TIMEOUT, NULL);
+        }        
+        else{
             
             self->responseHandler(self->responseReceiver, LORA_MAC_READY, NULL);            
-        }
+        }        
         break;    
     }            
 }
@@ -704,10 +701,7 @@ static bool collect(struct lora_mac *self)
                     System_setAppSKey(self->system, nwkSKey);                
                     System_setAppSKey(self->system, appSKey);
                     
-                    if(self->responseHandler != NULL){
-                
-                        self->responseHandler(self->responseReceiver, LORA_MAC_JOIN_SUCCESS, NULL);
-                    }
+                    //self->responseHandler(self->responseReceiver, LORA_MAC_READY, NULL);
                 }
                 else{
                     
@@ -729,20 +723,14 @@ static bool collect(struct lora_mac *self)
                             if(result.fields.data.data != NULL){
                     
                                 if(result.fields.data.port > 0U){
+                                        
+                                    union lora_mac_response_arg arg;
                                     
-                                    if(self->responseHandler != NULL){
+                                    arg.rx.data = result.fields.data.data;
+                                    arg.rx.len = result.fields.data.dataLen;
+                                    arg.rx.port = result.fields.data.port;
                                         
-                                        union lora_mac_response_arg arg;
-                                        
-                                        arg.rx.data = result.fields.data.data;
-                                        arg.rx.len = result.fields.data.dataLen;
-                                        arg.rx.port = result.fields.data.port;
-                                        
-                                        if(self->responseHandler != NULL){
-                                            
-                                            self->responseHandler(self->responseReceiver, LORA_MAC_RX, &arg);
-                                        }
-                                    }
+                                    self->responseHandler(self->responseReceiver, LORA_MAC_RX, &arg);                                        
                                 }
                                 else{
                                                                     
@@ -927,7 +915,6 @@ static bool isAvailable(struct lora_mac *self, uint8_t chIndex, uint64_t timeNow
     return retval;
 }
 
-#if 0
 static uint64_t timeNextAvailable(struct lora_mac *self, uint64_t timeNow, uint8_t rate)
 {
     uint8_t i;
@@ -969,7 +956,6 @@ static uint64_t timeNextAvailable(struct lora_mac *self, uint64_t timeNow, uint8
     
     return (nextBand == UINT8_MAX) ? UINT64_MAX : self->bands[band];
 }
-#endif
 
 static bool getChannel(struct lora_mac *self, uint8_t chIndex, uint32_t *freq, uint8_t *minRate, uint8_t *maxRate)
 {

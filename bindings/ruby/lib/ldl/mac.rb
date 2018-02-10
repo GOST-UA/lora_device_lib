@@ -27,8 +27,8 @@ module LDL
             
             @ticker = Proc.new do
                 this.tick
-                if this.intervalUntilNext
-                    SystemTime.onTimeout this.intervalUntilNext, &ticker
+                if this.ticksUntilNextEvent
+                    SystemTime.onTimeout this.ticksUntilNextEvent, &ticker
                 end
             end
             
@@ -63,7 +63,7 @@ module LDL
                 end                            
             end
             ticker.call
-            raise JoinTimeout.new "timeout waiting for join confirmation" unless rq.pop == :join_success
+            raise JoinTimeout.new "timeout waiting for join confirmation" unless rq.pop == :ready
             self
         end
     
@@ -84,7 +84,7 @@ module LDL
                 end
             end
             ticker.call
-            raise SendTimeout unless rq.pop == :tx_complete
+            raise SendTimeout unless rq.pop == :ready
             self            
         end
         
@@ -99,7 +99,7 @@ module LDL
         #
         def on_receive(&block)
             with_mutex do
-                @rx_handler = block
+                @rx_handle = block
             end        
             self
         end

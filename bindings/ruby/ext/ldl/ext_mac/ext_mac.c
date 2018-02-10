@@ -45,19 +45,19 @@ static VALUE setPower(VALUE self, VALUE power);
 static VALUE join(int argc, VALUE *argv, VALUE self);
 static VALUE send(int argc, VALUE *argv, VALUE self);
 static VALUE io_event(VALUE self, VALUE event, VALUE time);
+static VALUE ticksUntilNextChannel(VALUE self);
+static VALUE ticksUntilNextEvent(VALUE self);
+static VALUE calculateOnAirTime(VALUE self, VALUE bw, VALUE sf, VALUE payloadLen);
 
-static void _response(void *receiver, enum lora_mac_response_type type, const union lora_mac_response_arg *arg);
+static void response(void *receiver, enum lora_mac_response_type type, const union lora_mac_response_arg *arg);
 
 static VALUE bw_to_number(enum lora_signal_bandwidth bw);
 static VALUE sf_to_number(enum lora_spreading_factor sf);
 static VALUE cr_to_number(enum lora_coding_rate cr);
-
 static enum lora_spreading_factor number_to_sf(VALUE sf);
 static enum lora_signal_bandwidth number_to_bw(VALUE bw);
 
-static VALUE intervalUntilNext(VALUE self);
 
-static VALUE calculateOnAirTime(VALUE self, VALUE bw, VALUE sf, VALUE payloadLen);
 
 /* functions **********************************************************/
 
@@ -373,7 +373,8 @@ void Init_ext_mac(void)
     rb_define_method(cExtMAC, "join", join, -1);
     rb_define_method(cExtMAC, "send", send, -1);
     rb_define_method(cExtMAC, "io_event", io_event, 2);    
-    rb_define_method(cExtMAC, "intervalUntilNext", intervalUntilNext, 0);    
+    rb_define_method(cExtMAC, "ticksUntilNextEvent", ticksUntilNextEvent, 0);    
+    rb_define_method(cExtMAC, "ticksUntilNextChannel", ticksUntilNextChannel, 0);    
     
     rb_define_singleton_method(cExtMAC, "onAirTime", calculateOnAirTime, 3);
     
@@ -601,16 +602,13 @@ static VALUE initialize(int argc, VALUE *argv, VALUE self)
     rb_iv_set(self, "@nwkSKey", nwkSKey);
     rb_iv_set(self, "@devAddr", UINT2NUM(0U));
     
-    rb_iv_set(self, "@tx_handler", Qnil);
-    rb_iv_set(self, "@rx_handler", Qnil);
-    rb_iv_set(self, "@join_handler", Qnil);
+    rb_iv_set(self, "@tx_handle", Qnil);
+    rb_iv_set(self, "@rx_handle", Qnil);
     
     initChannels(self, region_id);
     
-    MAC_init(this, (void *)self, region_id, (struct lora_radio *)radio);
+    MAC_init(this, (void *)self, region_id, (struct lora_radio *)radio, (void *)self, response);
 
-    MAC_setResponseHandler(this, (void *)self, _response);
-    
     MAC_restoreDefaults(this);
     
     return self;
@@ -679,7 +677,7 @@ static VALUE join(int argc, VALUE *argv, VALUE self)
         rb_raise(cError, "MAC_join() failed");
     }
     
-    rb_iv_set(self, "@join_handler", handler);
+    rb_iv_set(self, "@tx_handle", handler);
     
     return self;
 }
@@ -716,7 +714,7 @@ static VALUE send(int argc, VALUE *argv, VALUE self)
         }            
     }   
     
-    rb_iv_set(self, "@tx_handler", handler);
+    rb_iv_set(self, "@tx_handle", handler);
     
     return self;
 }
@@ -731,7 +729,7 @@ static VALUE tick(VALUE self)
     return self;
 }
 
-static void _response(void *receiver, enum lora_mac_response_type type, const union lora_mac_response_arg *arg)
+static void response(void *receiver, enum lora_mac_response_type type, const union lora_mac_response_arg *arg)
 {
     VALUE self = (VALUE)receiver;
     
@@ -739,38 +737,31 @@ static void _response(void *receiver, enum lora_mac_response_type type, const un
     
     VALUE type_to_sym[] = {
         ID2SYM(rb_intern("ready")),
-        ID2SYM(rb_intern("data_timeout")),
-        ID2SYM(rb_intern("rx")),
-        ID2SYM(rb_intern("join_success")),
-        ID2SYM(rb_intern("join_timeout"))
+        ID2SYM(rb_intern("timeout")),
+        ID2SYM(rb_intern("rx"))        
     };
+
+    VALUE tx_handle = rb_iv_get(self, "@tx_handle");        
+    VALUE rx_handle = rb_iv_get(self, "@rx_handle");        
 
     switch(type){
     default:
     case LORA_MAC_READY:
+    case LORA_MAC_TIMEOUT:
     
-        break;
-    case LORA_MAC_DATA_TIMEOUT:
-        handler = rb_iv_get(self, "@tx_handler");        
-        if(handler != Qnil){                        
-            rb_funcall(handler, rb_intern("call"), 1, type_to_sym[type]);
+        if(tx_handle != Qnil){                        
+            
+            rb_funcall(tx_handle, rb_intern("call"), 1, type_to_sym[type]);
+            rb_iv_set(self, "@tx_handle", Qnil);            
         }
         break;
+        
     case LORA_MAC_RX:
     
-        handler = rb_iv_get(self, "@rx_handler");    
-        
-        if(handler != Qnil){
-        
-            rb_funcall(handler, rb_intern("call"), 2, UINT2NUM(arg->rx.port), rb_str_new((const char *)arg->rx.data, arg->rx.len));
+        if(rx_handle != Qnil){
+    
+            rb_funcall(rx_handle, rb_intern("call"), 2, UINT2NUM(arg->rx.port), rb_str_new((const char *)arg->rx.data, arg->rx.len));
         }
-        break;
-    case LORA_MAC_JOIN_SUCCESS:
-    case LORA_MAC_JOIN_TIMEOUT:
-        handler = rb_iv_get(self, "@join_handler"); 
-        if(handler != Qnil){                           
-            rb_funcall(handler, rb_intern("call"), 1, type_to_sym[type]);
-        }           
         break;
     }   
 }
@@ -888,13 +879,13 @@ static VALUE io_event(VALUE self, VALUE event, VALUE time)
     return self;
 }
 
-static VALUE intervalUntilNext(VALUE self)
+static VALUE ticksUntilNextEvent(VALUE self)
 {
     struct lora_mac *this;    
     uint64_t next;
     Data_Get_Struct(self, struct lora_mac, this);
     
-    next = MAC_intervalUntilNext(this);
+    next = MAC_ticksUntilNextEvent(this);
     
     return (next == UINT64_MAX) ? Qnil : ULL2NUM(next);
 }
@@ -902,4 +893,15 @@ static VALUE intervalUntilNext(VALUE self)
 static VALUE calculateOnAirTime(VALUE self, VALUE bandwidth, VALUE spreading_factor, VALUE size)
 {
     return UINT2NUM(MAC_calculateOnAirTime(number_to_bw(bandwidth), number_to_sf(spreading_factor), (uint8_t)NUM2UINT(size)));
+}
+
+static VALUE ticksUntilNextChannel(VALUE self)
+{
+    struct lora_mac *this;    
+    uint64_t next;
+    Data_Get_Struct(self, struct lora_mac, this);
+    
+    next = MAC_ticksUntilNextChannel(this);
+    
+    return (next == UINT64_MAX) ? Qnil : ULL2NUM(next);
 }

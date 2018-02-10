@@ -37,11 +37,15 @@ struct lora_mac;
 
 enum lora_mac_response_type {
     
-    LORA_MAC_READY,         
-    LORA_MAC_DATA_TIMEOUT,  /**< cycle is complete but ack was not received */ 
-    LORA_MAC_RX,            /**< received a data frame */
-    LORA_MAC_JOIN_SUCCESS,  /**< sent join request, received join response in either RX1 or RX2 */
-    LORA_MAC_JOIN_TIMEOUT   /**< sent join request, did not receive join response in either RX1 or RX2 */    
+    LORA_MAC_READY,         /**< previous request succeeded; MAC is ready for next request */
+    LORA_MAC_TIMEOUT,       /**< previous confirmed data or send request timed out */
+    LORA_MAC_RX,            /**< data received */    
+};
+
+enum lora_mac_operation {
+    LORA_MAC_UNCONFIRMED_DATA,
+    LORA_MAC_CONFIRMED_DATA,
+    LORA_MAC_JOIN,
 };
 
 union lora_mac_response_arg {
@@ -76,6 +80,7 @@ enum lora_mac_state {
 struct lora_mac {
 
     enum lora_mac_state state;
+    enum lora_mac_operation op;
     
     struct {
         
@@ -123,7 +128,7 @@ struct lora_mac {
     void *system;       /**< passed as receiver in every System_* call */
 };
 
-void MAC_init(struct lora_mac *self, void *system, enum lora_region_id region, struct lora_radio *radio);
+void MAC_init(struct lora_mac *self, void *system, enum lora_region_id region, struct lora_radio *radio, void *receiver, lora_mac_response_fn cb);
 
 /** Send a message upstream
  * 
@@ -155,20 +160,48 @@ bool MAC_join(struct lora_mac *self);
 bool MAC_setRate(struct lora_mac *self, uint8_t rate);
 bool MAC_setPower(struct lora_mac *self, uint8_t power);
 
-void MAC_setResponseHandler(struct lora_mac *self, void *receiver, lora_mac_response_fn cb);
-
 void MAC_radioEvent(void *receiver, enum lora_radio_event event, uint64_t time);
 
 uint32_t MAC_calculateOnAirTime(enum lora_signal_bandwidth bw, enum lora_spreading_factor sf, uint8_t payloadLen);
 
+/** Drive the MAC
+ * 
+ * @param[in] self
+ * 
+ * */
 void MAC_tick(struct lora_mac *self);
 
-uint64_t MAC_intervalUntilNext(struct lora_mac *self);
+/** Get number of ticks until the next event
+ * 
+ * @param[in] self
+ * @return ticks until next event
+ * 
+ * @retval UINT64_MAX there are no future events at this time
+ * 
+ * */
+uint64_t MAC_ticksUntilNextEvent(struct lora_mac *self);
 
+/** Is MAC joined?
+ * 
+ * @param[in] self
+ * @return true if MAC is joined to a network
+ * 
+ * */
 bool MAC_isJoined(struct lora_mac *self);
-bool MAC_isPersonalised(struct lora_mac *self);
 
+/** Restore all network configurable parameters to region defaults
+ * 
+ * @param[in] self
+ * 
+ * */
 void MAC_restoreDefaults(struct lora_mac *self);
+
+/** Get number of ticks until next channel is ready
+ * 
+ * @param[in] self
+ * 
+ * */
+uint64_t MAC_ticksUntilNextChannel(struct lora_mac *self);
 
 #ifdef __cplusplus
 }
