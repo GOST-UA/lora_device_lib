@@ -40,9 +40,10 @@ static void txComplete(void *receiver, uint64_t error);
 static void rxStart(void *receiver, uint64_t error);
 static void rxReady(void *receiver, uint64_t error);
 static void rxTimeout(void *receiver, uint64_t error);
+static void rxFinish(struct lora_mac *self, uint64_t error);
 
 //static void resetRadio(void *receiver, uint64_t time);
-static bool collect(struct lora_mac *self);
+static bool collect(struct lora_mac *self, struct lora_frame *frame);
 
 static void abandonSequence(struct lora_mac *self);
 
@@ -95,7 +96,7 @@ bool MAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *d
     uint8_t key[16U];
     uint64_t timeNow = System_time();
     
-    if(self->status.personalized || self->status.joined){
+    if(self->status.joined){
     
         if(self->state == IDLE){
         
@@ -132,8 +133,7 @@ bool MAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *d
                         
                         self->state = WAIT_TX;
                         
-                        self->status.confirmPending = true;
-                        self->status.confirmed = confirmed;
+                        self->op = confirmed ? LORA_OP_DATA_CONFIRMED : LORA_OP_DATA_UNCONFIRMED;
                         
                         retval = true;                    
                     }
@@ -159,7 +159,7 @@ bool MAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *d
     }
     else{
         
-        LORA_ERROR("stack must be personalized or joined before sending data")
+        LORA_ERROR("stack must be joined before sending data")
     }
     
     return retval;
@@ -171,49 +171,43 @@ bool MAC_join(struct lora_mac *self)
     
     uint64_t timeNow = System_time();
     
-    if(!self->status.personalized){
-    
-        if(self->state == IDLE){
+    if(self->state == IDLE){
+        
+        if(selectChannel(self, timeNow, System_getTXRate(self->system), &self->tx.chIndex, &self->tx.freq)){
+            
+            struct lora_frame_join_request f;      
+            uint8_t appKey[16U];      
+            
+            System_getAppKey(self->system, appKey);
+            
+            System_getAppEUI(self->system, f.appEUI);
+            System_getDevEUI(self->system, f.devEUI);            
+            
+            self->devNonce = System_rand();
+            self->devNonce <<= 8;
+            self->devNonce |= System_rand();
+            
+            f.devNonce = self->devNonce;
 
-            if(selectChannel(self, timeNow, System_getTXRate(self->system), &self->tx.chIndex, &self->tx.freq)){
-
-                struct lora_frame_join_request f;      
-                uint8_t appKey[16U];      
-                
-                System_getAppKey(self->system, appKey);
-                
-                System_getAppEUI(self->system, f.appEUI);
-                System_getDevEUI(self->system, f.devEUI);            
-                
-                self->devNonce = System_rand();
-                self->devNonce <<= 8;
-                self->devNonce |= System_rand();
-                
-                f.devNonce = self->devNonce;
-
-                self->bufferLen = Frame_putJoinRequest(appKey, &f, self->buffer, sizeof(self->buffer));
-                
-                (void)Event_onTimeout(&self->events, 0, self, tx);
-                
-                self->state = WAIT_TX;
-                self->status.joining = true;
-                
-                retval = true;        
-            }
-            else{
-                
-                LORA_ERROR("no channel available")
-            }
+            self->bufferLen = Frame_putJoinRequest(appKey, &f, self->buffer, sizeof(self->buffer));
+            
+            (void)Event_onTimeout(&self->events, 0, self, tx);
+            
+            self->state = WAIT_TX;
+            self->op = LORA_OP_JOINING;
+            
+            retval = true;        
         }
         else{
             
-            LORA_ERROR("ldl must be in IDLE state to perform join")
+            LORA_ERROR("no channel available")
         }
     }
     else{
         
-        LORA_ERROR("stack has been personalized - join is not possible")
-    }   
+        LORA_ERROR("ldl must be in IDLE state to perform join")
+    }
+    
     
     return retval;
 }
@@ -239,7 +233,7 @@ void MAC_radioEvent(void *receiver, enum lora_radio_event event, uint64_t time)
     }
 }
 
-uint32_t MAC_calculateOnAirTime(enum lora_signal_bandwidth bw, enum lora_spreading_factor sf, uint8_t payloadLen)
+uint32_t MAC_transmitTime(enum lora_signal_bandwidth bw, enum lora_spreading_factor sf, uint8_t size)
 {
     /* from 4.1.1.7 of sx1272 datasheet
      *
@@ -264,7 +258,7 @@ uint32_t MAC_calculateOnAirTime(enum lora_signal_bandwidth bw, enum lora_spreadi
      *
      * Implementation details:
      *
-     * - period will be in microseconds so we can use integer operations rather than float
+     * - calculated in microseconds then converted to ticks (usually either tens of us, or us)
      * 
      * */
 
@@ -277,10 +271,10 @@ uint32_t MAC_calculateOnAirTime(enum lora_signal_bandwidth bw, enum lora_spreadi
         bool crc = true;    // true for uplink, false for downlink
         bool header = true; 
 
-        uint32_t Ts = ((1U << sf) * 1000000U) / bw;     //symbol rate (us)
+        uint32_t Ts = ((1U << sf) * LORA_TIMEBASE) / bw;     //symbol rate (us)
         uint32_t Tpreamble = (Ts * 12U) +  (Ts / 4U);   //preamble (us)
 
-        uint32_t numerator = (8U * (uint32_t)payloadLen) - (4U * (uint32_t)sf) + 28U + ( crc ? 16U : 0U ) - ( (header) ? 20U : 0U );
+        uint32_t numerator = (8U * (uint32_t)size) - (4U * (uint32_t)sf) + 28U + ( crc ? 16U : 0U ) - ( (header) ? 20U : 0U );
         uint32_t denom = 4U * ((uint32_t)sf - ( lowDataRateOptimize ? 2U : 0U ));
 
         uint32_t Npayload = 8U + ((numerator / denom) + (((numerator % denom) != 0) ? 1U : 0U)) * ((uint32_t)CR_5 + 4U);
@@ -290,7 +284,7 @@ uint32_t MAC_calculateOnAirTime(enum lora_signal_bandwidth bw, enum lora_spreadi
         Tpacket = Tpreamble + Tpayload;
     }
 
-    return Tpacket / 10U;
+    return Tpacket;
 }
 
 void MAC_tick(struct lora_mac *self)
@@ -367,9 +361,11 @@ void MAC_restoreDefaults(struct lora_mac *self)
 
 static void tx(void *receiver, uint64_t error)
 {
-    LORA_PEDANTIC(receiver != NULL)
+    struct lora_mac *self = (struct lora_mac *)receiver;            
     
-    struct lora_mac *self = (struct lora_mac *)receiver;        
+    LORA_PEDANTIC(receiver != NULL)
+    LORA_PEDANTIC(self->op != LORA_OP_NONE)
+    
     struct lora_data_rate rate_setting;
     
     if(Region_getRate(self->region, System_getTXRate(self->system), &rate_setting)){
@@ -387,7 +383,7 @@ static void tx(void *receiver, uint64_t error)
     
         if(Radio_transmit(self->radio, &radio_setting, self->buffer, self->bufferLen)){
 
-            registerTime(self, self->tx.freq, System_time(), MAC_calculateOnAirTime(radio_setting.bw, radio_setting.sf, self->bufferLen));
+            registerTime(self, self->tx.freq, System_time(), MAC_transmitTime(radio_setting.bw, radio_setting.sf, self->bufferLen));
             
             self->state = TX;
                 
@@ -408,36 +404,37 @@ static void tx(void *receiver, uint64_t error)
 
 static void txComplete(void *receiver, uint64_t error)
 {
-    LORA_PEDANTIC(receiver != NULL)
-    
     struct lora_mac *self = (struct lora_mac *)receiver;            
+    
+    LORA_PEDANTIC(receiver != NULL)
+    LORA_PEDANTIC(self->state == TX)
+    LORA_PEDANTIC(self->op != LORA_OP_NONE)
+    
     uint32_t rx1Time;
         
-    LORA_PEDANTIC(self->state == TX)
-    
     Radio_sleep(self->radio);
     
     self->state = WAIT_RX1;                
-    rx1Time = ((self->status.joining) ? timeBase(System_getRX1Delay(self->system)) : timeBase(Region_getJA1Delay(self->region))) - error;
+    rx1Time = timeBase((self->op == LORA_OP_JOINING) ? System_getRX1Delay(self->system) : Region_getJA1Delay(self->region)) - error;
 
-    /* set both events up front, if RX1 is successful, RX2 event may fire while RX1 is in progress */
     (void)Event_onTimeout(&self->events, rx1Time, self, rxStart);    
-    self->rx2Ready = Event_onTimeout(&self->events, rx1Time + 1U, self, rxStart);
+    self->rx2Ready = Event_onTimeout(&self->events, rx1Time + timeBase(1U), self, rxStart);
 }
 
 static void rxStart(void *receiver, uint64_t error)
 {
-    LORA_PEDANTIC(receiver != NULL)
-    
     struct lora_mac *self = (struct lora_mac *)receiver;    
+    
+    LORA_PEDANTIC(receiver != NULL)
+    LORA_PEDANTIC((self->state == WAIT_RX1) || (self->state == WAIT_RX2) || (self->state == RX2))
+    LORA_PEDANTIC(self->op != LORA_OP_NONE)
+    
     struct lora_radio_rx_setting radio_setting;
     
     uint8_t rate;
     uint32_t freq;
     struct lora_data_rate rate_setting;
     
-    LORA_PEDANTIC((self->state == WAIT_RX1) || (self->state == WAIT_RX2) || self->state == RX2)
-        
     /* ignore RX2 if it fires while RX1 is active */
     if(self->state != RX1){
         
@@ -494,107 +491,92 @@ static void rxStart(void *receiver, uint64_t error)
             
             LORA_INFO("missed RX deadline")
             
-            /* still time to catch RX2 */
-            if((self->state == WAIT_RX1) && (error < timeBase(1U))){
-                
-                self->state = WAIT_RX2;                                
-            }    
-            else{
-                
-                self->state = IDLE;
-                
-                if(self->status.joining){
-                
-                    self->status.joining = false;            
-                    self->responseHandler(self->responseReceiver, LORA_MAC_TIMEOUT, NULL);
-                }
-                else{
-                    
-                    self->responseHandler(self->responseReceiver, LORA_MAC_READY, NULL);            
-                }                
-            }        
+            rxFinish(self, error);            
         }
     }
 }
 
 static void rxReady(void *receiver, uint64_t error)
 {
-    LORA_PEDANTIC(receiver != NULL)
-        
     struct lora_mac *self = (struct lora_mac *)receiver;    
+    struct lora_frame frame;
     
+    LORA_PEDANTIC(receiver != NULL)
+    LORA_PEDANTIC(self->op != LORA_OP_NONE)
+    LORA_PEDANTIC((self->state == RX1) || (self->state == RX2))
+        
     Event_cancel(&self->events, &self->rxTimeout);    
-    
-    LORA_ASSERT((self->state == RX1) || (self->state == RX2))
     
     Radio_sleep(self->radio);
     
-    if(collect(self)){
+    if(collect(self, &frame)){
         
         Event_cancel(&self->events, &self->rx2Ready);
-    
-        self->state = IDLE;                 
-            
-        self->responseHandler(self->responseReceiver, LORA_MAC_READY, NULL);                    
+        
+        switch(self->op){
+        default:
+        case LORA_OP_NONE:
+        case LORA_OP_DATA_UNCONFIRMED:
+            self->responseHandler(self->responseReceiver, LORA_MAC_READY, NULL);            
+            break;
+        case LORA_OP_JOINING:
+            self->responseHandler(self->responseReceiver, (frame.type == FRAME_TYPE_JOIN_ACCEPT) ? LORA_MAC_READY : LORA_MAC_TIMEOUT, NULL);
+            break;    
+        case LORA_OP_DATA_CONFIRMED:
+            self->responseHandler(self->responseReceiver, (frame.fields.data.ack) ? LORA_MAC_READY : LORA_MAC_TIMEOUT, NULL);
+            break;
+        }
+        
+        self->state = IDLE;           
+        self->op = LORA_OP_NONE;
     }
     else{
         
-        if(self->state == RX2){
-                
-            self->state = IDLE;
-            
-            if(self->status.joining){
-            
-                self->status.joining = false;            
-                self->responseHandler(self->responseReceiver, LORA_MAC_TIMEOUT, NULL);
-            }
-            else{
-                
-                self->responseHandler(self->responseReceiver, LORA_MAC_READY, NULL);            
-            }            
-        }
-        else{
-            
-            self->state = WAIT_RX2;
-        }                
+        rxFinish(self, error);                    
     }    
 }
 
 static void rxTimeout(void *receiver, uint64_t error)
 {
-    LORA_PEDANTIC(receiver != NULL)
-    
     struct lora_mac *self = (struct lora_mac *)receiver;    
-    Event_cancel(&self->events, &self->rxComplete);    
+
+    LORA_PEDANTIC(receiver != NULL)
+    LORA_PEDANTIC((self->state == RX1) || (self->state == RX2))
+    LORA_PEDANTIC(self->op != LORA_OP_NONE)
     
-    LORA_ASSERT((self->state == RX1) || (self->state == RX2))
+    Event_cancel(&self->events, &self->rxComplete);    
     
     Radio_sleep(self->radio);
         
-    switch(self->state){
-    default:
-    case RX1:        
+    rxFinish(self, error);        
+}
 
-        self->state = WAIT_RX2;    
-        (void)Event_onTimeout(&self->events, timeBase(1U) - error, self, rxStart);
-        break;
+static void rxFinish(struct lora_mac *self, uint64_t error)
+{
+    if(self->state == RX2){
         
-    case RX2:        
+        switch(self->op){
+        default:
+        case LORA_OP_NONE:
+            break;
+        case LORA_OP_DATA_UNCONFIRMED:
+            self->responseHandler(self->responseReceiver, LORA_MAC_READY, NULL);            
+            break;
+        case LORA_OP_JOINING:
+        case LORA_OP_DATA_CONFIRMED:
+            self->responseHandler(self->responseReceiver, LORA_MAC_TIMEOUT, NULL);
+            break;
+        }
         
         self->state = IDLE;
-            
-        if(self->status.joining){
-            
-            self->status.joining = false;            
-            self->responseHandler(self->responseReceiver, LORA_MAC_TIMEOUT, NULL);
-        }        
-        else{
-            
-            self->responseHandler(self->responseReceiver, LORA_MAC_READY, NULL);            
-        }        
-        break;    
-    }            
+        self->op = LORA_OP_NONE;       
+    }
+    else{
+        
+        self->state = WAIT_RX2;
+    }                
 }
+
 
 #if 0
 static void resetRadio(void *receiver, uint32_t error)
@@ -620,12 +602,10 @@ static void resetRadio(void *receiver, uint32_t error)
     abandonSequence(self);
 }
 #endif
-    
-static bool collect(struct lora_mac *self)
+        
+static bool collect(struct lora_mac *self, struct lora_frame *frame)
 {
-    bool retval = false;
-    
-    struct lora_frame result;
+    bool retval = false;    
     
     uint8_t appKey[16U];
     uint8_t appSKey[16U];
@@ -637,18 +617,17 @@ static bool collect(struct lora_mac *self)
     
     self->bufferLen = Radio_collect(self->radio, self->buffer, sizeof(self->buffer));        
     
-    if(Frame_decode(appKey, nwkSKey, appSKey, self->buffer, self->bufferLen, &result)){
+    if(Frame_decode(appKey, nwkSKey, appSKey, self->buffer, self->bufferLen, frame)){
         
-        if(result.valid){
+        if(frame->valid){
             
-            retval = true;
-        
-            switch(result.type){
+            switch(frame->type){
             case FRAME_TYPE_JOIN_ACCEPT:
-            
-                if(self->status.joining){
+                
+                retval = true;
+                
+                if(self->op == LORA_OP_JOINING){
                     
-                    self->status.joining = false;
                     self->status.joined = true;                
 
                     System_resetUp(self->system);
@@ -656,22 +635,22 @@ static bool collect(struct lora_mac *self)
                     
                     MAC_restoreDefaults(self);
                     
-                    System_setRX1DROffset(self->system, result.fields.joinAccept.rx1DataRateOffset);
-                    System_setRX2DataRate(self->system, result.fields.joinAccept.rx2DataRate);
+                    System_setRX1DROffset(self->system, frame->fields.joinAccept.rx1DataRateOffset);
+                    System_setRX2DataRate(self->system, frame->fields.joinAccept.rx2DataRate);
 
-                    if(result.fields.joinAccept.cfListPresent){
+                    if(frame->fields.joinAccept.cfListPresent){
                         
                         if(Region_isDynamic(self->region)){
        
                             size_t i;
                         
-                            for(i=0U; i < sizeof(result.fields.joinAccept.cfList)/sizeof(*result.fields.joinAccept.cfList); i++){
+                            for(i=0U; i < sizeof(frame->fields.joinAccept.cfList)/sizeof(*frame->fields.joinAccept.cfList); i++){
                                 
                                 uint8_t chIndex = 4U + i;
                                 
-                                //Region_validateFreq(self, chIndex, result.fields.joinAccept.cflist[i]);
+                                //Region_validateFreq(self, chIndex, frame->fields.joinAccept.cflist[i]);
                                 
-                                (void)System_setChannel(self->system, chIndex, result.fields.joinAccept.cfList[i], 0U, 5U);
+                                (void)System_setChannel(self->system, chIndex, frame->fields.joinAccept.cfList[i], 0U, 5U);
                             }                           
                         }                    
                     }   
@@ -682,12 +661,12 @@ static bool collect(struct lora_mac *self)
                     (void)memset(nwkSKey, 0U, sizeof(nwkSKey));
                     
                     nwkSKey[0] = 1U;                
-                    nwkSKey[1] = result.fields.joinAccept.appNonce;
-                    nwkSKey[2] = result.fields.joinAccept.appNonce >> 8;
-                    nwkSKey[3] = result.fields.joinAccept.appNonce >> 16;
-                    nwkSKey[4] = result.fields.joinAccept.netID;
-                    nwkSKey[5] = result.fields.joinAccept.netID >> 8;
-                    nwkSKey[6] = result.fields.joinAccept.netID >> 16;
+                    nwkSKey[1] = frame->fields.joinAccept.appNonce;
+                    nwkSKey[2] = frame->fields.joinAccept.appNonce >> 8;
+                    nwkSKey[3] = frame->fields.joinAccept.appNonce >> 16;
+                    nwkSKey[4] = frame->fields.joinAccept.netID;
+                    nwkSKey[5] = frame->fields.joinAccept.netID >> 8;
+                    nwkSKey[6] = frame->fields.joinAccept.netID >> 16;
                     nwkSKey[7] = self->devNonce;
                     nwkSKey[8] = self->devNonce >> 8;
                     
@@ -700,53 +679,65 @@ static bool collect(struct lora_mac *self)
                                     
                     System_setAppSKey(self->system, nwkSKey);                
                     System_setAppSKey(self->system, appSKey);
-                    
-                    //self->responseHandler(self->responseReceiver, LORA_MAC_READY, NULL);
                 }
                 else{
                     
-                    LORA_INFO("ignoring a JOIN Accept we didn't ask for")
+                    LORA_INFO("ignoring unexpected JOIN Accept")
                 }
                 break;
             
             case FRAME_TYPE_DATA_UNCONFIRMED_DOWN:
             case FRAME_TYPE_DATA_CONFIRMED_DOWN:
                 
-                if(self->status.personalized || self->status.joined){
+                if(self->status.joined){
                 
-                    if(System_getDevAddr(self->system) == result.fields.data.devAddr){
+                    if(System_getDevAddr(self->system) == frame->fields.data.devAddr){
                     
-                        if(System_receiveDown(self->system, result.fields.data.counter, Region_getMaxFCNTGap(self->region))){
+                        if(System_receiveDown(self->system, frame->fields.data.counter, Region_getMaxFCNTGap(self->region))){
                         
-                            processCommands(self, result.fields.data.opts, result.fields.data.optsLen);
+                            processCommands(self, frame->fields.data.opts, frame->fields.data.optsLen);
                             
-                            if(result.fields.data.data != NULL){
+                            if(frame->fields.data.data != NULL){
                     
-                                if(result.fields.data.port > 0U){
+                                if(frame->fields.data.port > 0U){
                                         
                                     union lora_mac_response_arg arg;
                                     
-                                    arg.rx.data = result.fields.data.data;
-                                    arg.rx.len = result.fields.data.dataLen;
-                                    arg.rx.port = result.fields.data.port;
+                                    arg.rx.data = frame->fields.data.data;
+                                    arg.rx.len = frame->fields.data.dataLen;
+                                    arg.rx.port = frame->fields.data.port;
                                         
                                     self->responseHandler(self->responseReceiver, LORA_MAC_RX, &arg);                                        
                                 }
                                 else{
                                                                     
-                                    processCommands(self, result.fields.data.data, result.fields.data.dataLen);
+                                    processCommands(self, frame->fields.data.data, frame->fields.data.dataLen);
                                 }
                             }
+                            
+                            retval = true;
                         }
                         else{
                             
                             LORA_INFO("discarding frame for counter sync")
                         }
                     }
+                    else{
+                        
+                        LORA_INFO("ignoring data frame with different devAddr")
+                    }
+                }
+                else{
+                    
+                    LORA_INFO("ignoring data frame while in unjoined state")
                 }
                 break;
             
-            default:
+            case FRAME_TYPE_JOIN_REQ:
+            case FRAME_TYPE_DATA_UNCONFIRMED_UP:
+            case FRAME_TYPE_DATA_CONFIRMED_UP:            
+            default:                
+                LORA_INFO("received an upstream packet")            
                 break;
             }
         }
@@ -973,8 +964,7 @@ static bool getChannel(struct lora_mac *self, uint8_t chIndex, uint32_t *freq, u
     return retval;
 }
 
-
 static uint64_t timeBase(uint8_t value)
 {
-    return ((uint64_t)value) * 100000U;
+    return ((uint64_t)value) * LORA_TIMEBASE;
 }

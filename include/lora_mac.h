@@ -26,6 +26,10 @@
 extern "C" {
 #endif
 
+#ifndef LORA_TIMEBASE
+    #define LORA_TIMEBASE 100000U
+#endif
+
 #include "lora_region.h"
 #include "lora_radio.h"
 #include "lora_event.h"
@@ -40,12 +44,6 @@ enum lora_mac_response_type {
     LORA_MAC_READY,         /**< previous request succeeded; MAC is ready for next request */
     LORA_MAC_TIMEOUT,       /**< previous confirmed data or send request timed out */
     LORA_MAC_RX,            /**< data received */    
-};
-
-enum lora_mac_operation {
-    LORA_MAC_UNCONFIRMED_DATA,
-    LORA_MAC_CONFIRMED_DATA,
-    LORA_MAC_JOIN,
 };
 
 union lora_mac_response_arg {
@@ -77,6 +75,14 @@ enum lora_mac_state {
     ERROR
 };
 
+enum lora_mac_operation {
+  
+    LORA_OP_NONE,                   /// no active operation
+    LORA_OP_JOINING,                /// MAC is performing a join
+    LORA_OP_DATA_UNCONFIRMED,       /// MAC is sending unconfirmed data
+    LORA_OP_DATA_CONFIRMED,         /// MAC is sending confirmed data    
+};
+
 struct lora_mac {
 
     enum lora_mac_state state;
@@ -84,11 +90,7 @@ struct lora_mac {
     
     struct {
         
-        bool joined : 1U;           /**< MAC is in a joined state */
-        bool joining : 1U;          /**< MAC is waiting to join */
-        bool personalized : 1U;     /**< MAC has been activated by personalization */
-        bool confirmPending : 1U;
-        bool confirmed : 1U;
+        bool joined : 1U;           /**< MAC has been joined */        
     
     } status;
     
@@ -162,9 +164,21 @@ bool MAC_setPower(struct lora_mac *self, uint8_t power);
 
 void MAC_radioEvent(void *receiver, enum lora_radio_event event, uint64_t time);
 
-uint32_t MAC_calculateOnAirTime(enum lora_signal_bandwidth bw, enum lora_spreading_factor sf, uint8_t payloadLen);
+/** Get transmit time in ticks
+ * 
+ * @note 1 tick == (1/LORA_TIMEBASE) seconds
+ * 
+ * @param[in] self
+ * @param[in] bw    bandwidth
+ * @param[in] sf    spreading factor
+ * @param[in] size  total message size
+ * 
+ * @return transmit time in ticks
+ * 
+ * */
+uint32_t MAC_transmitTime(enum lora_signal_bandwidth bw, enum lora_spreading_factor sf, uint8_t size);
 
-/** Drive the MAC
+/** Drive the MAC to process next events
  * 
  * @param[in] self
  * 

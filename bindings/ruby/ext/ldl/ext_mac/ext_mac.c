@@ -47,7 +47,7 @@ static VALUE send(int argc, VALUE *argv, VALUE self);
 static VALUE io_event(VALUE self, VALUE event, VALUE time);
 static VALUE ticksUntilNextChannel(VALUE self);
 static VALUE ticksUntilNextEvent(VALUE self);
-static VALUE calculateOnAirTime(VALUE self, VALUE bw, VALUE sf, VALUE payloadLen);
+static VALUE transmitTime(VALUE self, VALUE bw, VALUE sf, VALUE size);
 
 static void response(void *receiver, enum lora_mac_response_type type, const union lora_mac_response_arg *arg);
 
@@ -376,12 +376,12 @@ void Init_ext_mac(void)
     rb_define_method(cExtMAC, "ticksUntilNextEvent", ticksUntilNextEvent, 0);    
     rb_define_method(cExtMAC, "ticksUntilNextChannel", ticksUntilNextChannel, 0);    
     
-    rb_define_singleton_method(cExtMAC, "onAirTime", calculateOnAirTime, 3);
+    rb_define_singleton_method(cExtMAC, "transmitTime", transmitTime, 3);
     
     cEUI64 = rb_const_get(cLDL, rb_intern("EUI64"));
     cKey = rb_const_get(cLDL, rb_intern("Key"));
     cError = rb_const_get(cLDL, rb_intern("Error"));
-    cRadio = rb_const_get(cLDL, rb_intern("Radio"));
+    cRadio = rb_const_get(cLDL, rb_intern("Radio"));    
 }
 
 uint32_t Radio_resetHardware(struct lora_radio *self)
@@ -890,9 +890,9 @@ static VALUE ticksUntilNextEvent(VALUE self)
     return (next == UINT64_MAX) ? Qnil : ULL2NUM(next);
 }
 
-static VALUE calculateOnAirTime(VALUE self, VALUE bandwidth, VALUE spreading_factor, VALUE size)
+static VALUE transmitTime(VALUE self, VALUE bandwidth, VALUE spreading_factor, VALUE size)
 {
-    return UINT2NUM(MAC_calculateOnAirTime(number_to_bw(bandwidth), number_to_sf(spreading_factor), (uint8_t)NUM2UINT(size)));
+    return UINT2NUM(MAC_transmitTime(number_to_bw(bandwidth), number_to_sf(spreading_factor), (uint8_t)NUM2UINT(size)));
 }
 
 static VALUE ticksUntilNextChannel(VALUE self)
