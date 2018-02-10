@@ -143,6 +143,11 @@ void *Event_onTimeout(struct lora_event *self, uint64_t timeout, void *receiver,
 
                     prev = ptr;
                     ptr = ptr->next;
+                    
+                    if(ptr == NULL){
+                        
+                        prev->next = to;
+                    }
                 }
             }
         }
