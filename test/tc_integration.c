@@ -10,6 +10,10 @@
 static const uint8_t eui[] = "\x00\x00\x00\x00\x00\x00\x00\x00";
 static const uint8_t key[] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
 
+static void responseHandler(void *receiver, enum lora_mac_response_type type, const union lora_mac_response_arg *arg)
+{
+}
+
 static void test_init(void **user)
 {
     struct lora_mac self;
@@ -18,7 +22,7 @@ static void test_init(void **user)
 
     Radio_init(&radio, &board);
 
-    MAC_init(&self, NULL, EU_863_870, &radio);
+    MAC_init(&self, NULL, EU_863_870, &radio, NULL, responseHandler);
 }
 
 int main(void)
