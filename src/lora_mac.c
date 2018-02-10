@@ -34,13 +34,13 @@
 
 /* static function prototypes *****************************************/
 
-static void tx(void *receiver, uint64_t error);
-static void txComplete(void *receiver, uint64_t error);
+static void tx(void *receiver, uint64_t time, uint64_t error);
+static void txComplete(void *receiver, uint64_t time, uint64_t error);
 
-static void rxStart(void *receiver, uint64_t error);
-static void rxReady(void *receiver, uint64_t error);
-static void rxTimeout(void *receiver, uint64_t error);
-static void rxFinish(struct lora_mac *self, uint64_t error);
+static void rxStart(void *receiver, uint64_t time, uint64_t error);
+static void rxReady(void *receiver, uint64_t time, uint64_t error);
+static void rxTimeout(void *receiver, uint64_t time, uint64_t error);
+static void rxFinish(struct lora_mac *self);
 
 //static void resetRadio(void *receiver, uint64_t time);
 static bool collect(struct lora_mac *self, struct lora_frame *frame);
@@ -129,7 +129,7 @@ bool MAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *d
                         
                         self->bufferLen = Frame_putData(FRAME_TYPE_DATA_UNCONFIRMED_UP, key, &f, self->buffer, sizeof(self->buffer));
                         
-                        (void)Event_onTimeout(&self->events, 0, self, tx);
+                        (void)Event_onTimeout(&self->events, 0U, self, tx);
                         
                         self->state = WAIT_TX;
                         
@@ -191,7 +191,7 @@ bool MAC_join(struct lora_mac *self)
 
             self->bufferLen = Frame_putJoinRequest(appKey, &f, self->buffer, sizeof(self->buffer));
             
-            (void)Event_onTimeout(&self->events, 0, self, tx);
+            (void)Event_onTimeout(&self->events, 0U, self, tx);
             
             self->state = WAIT_TX;
             self->op = LORA_OP_JOINING;
@@ -359,7 +359,7 @@ void MAC_restoreDefaults(struct lora_mac *self)
     System_setMaxDutyCycle(self->system, 1U);        
 }
 
-static void tx(void *receiver, uint64_t error)
+static void tx(void *receiver, uint64_t time, uint64_t error)
 {
     struct lora_mac *self = (struct lora_mac *)receiver;            
     
@@ -402,7 +402,7 @@ static void tx(void *receiver, uint64_t error)
     }
 }
 
-static void txComplete(void *receiver, uint64_t error)
+static void txComplete(void *receiver, uint64_t time, uint64_t error)
 {
     struct lora_mac *self = (struct lora_mac *)receiver;            
     
@@ -415,13 +415,13 @@ static void txComplete(void *receiver, uint64_t error)
     Radio_sleep(self->radio);
     
     self->state = WAIT_RX1;                
-    rx1Time = timeBase((self->op == LORA_OP_JOINING) ? System_getRX1Delay(self->system) : Region_getJA1Delay(self->region)) - error;
+    rx1Time = time + timeBase((self->op == LORA_OP_JOINING) ? System_getRX1Delay(self->system) : Region_getJA1Delay(self->region)) - error;
 
     (void)Event_onTimeout(&self->events, rx1Time, self, rxStart);    
     self->rx2Ready = Event_onTimeout(&self->events, rx1Time + timeBase(1U), self, rxStart);
 }
 
-static void rxStart(void *receiver, uint64_t error)
+static void rxStart(void *receiver, uint64_t time, uint64_t error)
 {
     struct lora_mac *self = (struct lora_mac *)receiver;    
     
@@ -489,14 +489,14 @@ static void rxStart(void *receiver, uint64_t error)
         }
         else{
             
-            LORA_INFO("missed RX deadline")
+            LORA_INFO("missed RX deadline")            
             
-            rxFinish(self, error);            
+            rxFinish(self);            
         }
     }
 }
 
-static void rxReady(void *receiver, uint64_t error)
+static void rxReady(void *receiver, uint64_t time, uint64_t error)
 {
     struct lora_mac *self = (struct lora_mac *)receiver;    
     struct lora_frame frame;
@@ -532,11 +532,11 @@ static void rxReady(void *receiver, uint64_t error)
     }
     else{
         
-        rxFinish(self, error);                    
+        rxFinish(self);                    
     }    
 }
 
-static void rxTimeout(void *receiver, uint64_t error)
+static void rxTimeout(void *receiver, uint64_t time, uint64_t error)
 {
     struct lora_mac *self = (struct lora_mac *)receiver;    
 
@@ -548,10 +548,10 @@ static void rxTimeout(void *receiver, uint64_t error)
     
     Radio_sleep(self->radio);
         
-    rxFinish(self, error);        
+    rxFinish(self);        
 }
 
-static void rxFinish(struct lora_mac *self, uint64_t error)
+static void rxFinish(struct lora_mac *self)
 {
     if(self->state == RX2){
         

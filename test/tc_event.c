@@ -13,9 +13,10 @@
 
 /* helpers */
 
-static void eventHandler(void *receiver, uint64_t error)
+static void eventHandler(void *receiver, uint64_t time, uint64_t error)
 {    
     check_expected_ptr(receiver);
+    check_expected_ptr(time);
     check_expected(error);
 }
 
@@ -118,6 +119,7 @@ static void tick_shall_service_handler_at_timeout(void **user)
     system_time = 42U;
     
     expect_value(eventHandler, receiver, self);
+    expect_value(eventHandler, time, system_time);
     expect_value(eventHandler, error, 0U);
     
     Event_tick(self);    
@@ -130,6 +132,7 @@ static void tick_shall_service_handler_after_timeout(void **user)
     system_time = 43U;
     
     expect_value(eventHandler, receiver, self);
+    expect_value(eventHandler, time, system_time);
     expect_value(eventHandler, error, 1U);
     
     Event_tick(self);    

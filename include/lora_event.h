@@ -32,10 +32,11 @@ extern "C" {
 /** An event callback
  * 
  * @param[in] receiver
- * @param[in] time system time of event (us)
+ * @param[in] time system time (ticks) event serviced
+ * @param[in] error ticks passed since scheduled event time (i.e. event time == time - error)
  * 
  * */
-typedef void (*event_handler_t)(void *receiver, uint64_t time);
+typedef void (*event_handler_t)(void *receiver, uint64_t time, uint64_t error);
 
 /** radio IO event source */
 enum on_input_types {
@@ -120,7 +121,7 @@ void *Event_onInput(struct lora_event *self, enum on_input_types event, void *re
 /** Schedule a timer event from mainloop
  * 
  * @param[in] self
- * @param[in] timeout system time (us) that timeout will occur
+ * @param[in] timeout absolute system time (ticks) event will occur
  * @param[in] receiver callback receiver
  * @param[in] handler callback handler
  * 
@@ -143,7 +144,7 @@ void Event_cancel(struct lora_event *self, void **event);
  * 
  * @param[in] self
  * 
- * @return microseconds
+ * @return ticks
  * @retval UINT64_MAX unknown/io event
  * 
  * */
