@@ -125,7 +125,7 @@ void System_setAppSKey(void *receiver, const void *value);
  * @param[in] value Device Address
  * 
  * */
-void System_setDevAddr(void *receiver, uint32_t devAddr);
+void System_setDevAddr(void *receiver, uint32_t value);
 
 /** Called by MAC to store the MAC status
  * 
