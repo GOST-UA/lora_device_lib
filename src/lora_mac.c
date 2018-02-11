@@ -486,12 +486,6 @@ static void rxStart(void *receiver, uint64_t time, uint64_t error)
        
         if(error < RX_MARGIN){
         
-            // if we are too early we can block (todo: or something else)
-            if((RX_MARGIN - error) > 0U){
-                
-                System_sleep(RX_MARGIN - error);
-            }
-            
             switch(self->state){
             default:
             case WAIT_RX1:        
@@ -688,7 +682,7 @@ static bool collect(struct lora_mac *self, struct lora_frame *frame)
                         
                             for(i=0U; i < sizeof(frame->fields.joinAccept.cfList)/sizeof(*frame->fields.joinAccept.cfList); i++){
                                 
-                                uint8_t chIndex = 4U + i;
+                                uint8_t chIndex = 3U + i;
                                 
                                 //Region_validateFreq(self, chIndex, frame->fields.joinAccept.cflist[i]);
                                 
@@ -719,8 +713,9 @@ static bool collect(struct lora_mac *self, struct lora_frame *frame)
                     LoraAES_encrypt(&ctx, nwkSKey);
                     LoraAES_encrypt(&ctx, appSKey);
                                     
-                    System_setAppSKey(self->system, nwkSKey);                
+                    System_setNwkSKey(self->system, nwkSKey);                
                     System_setAppSKey(self->system, appSKey);
+                    System_setDevAddr(self->system, frame->fields.joinAccept.devAddr);
                 }
                 else{
                     

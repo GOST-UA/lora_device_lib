@@ -6,6 +6,7 @@ module LDL
     class MAC < ExtMAC        
 
         attr_reader :ticker
+        attr_reader :channels
         
         # @param broker [Broker] for sending/recieving events
         # @param opts [Hash]

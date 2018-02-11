@@ -2,20 +2,21 @@ module LDL
 
     class Radio
     
-        attr_accessor :buffer, :mode, :broker, :mac, :active
+        attr_accessor :broker, :mac, :active
+        attr_reader :buffer
     
         def initialize(mac, broker)
 
             raise "SystemTime must be defined" unless defined? SystemTime
             
-            @buffer = ""     
             @broker = broker 
             @mac = mac
+            @buffer = Queue.new
             
             @active = []
             
             broker.subscribe "tx_begin" do |m1|            
-                active << m1        
+                active << m1 unless m1[:eui] == mac.devEUI
             end
             
             broker.subscribe "tx_end" do |m2|            
@@ -95,8 +96,8 @@ module LDL
                             if m2[:eui] == m1[:eui]
                             
                                 broker.unsubscribe tx_end
-                                buffer = m1[:data].dup
-                                mac.io_event :rx_ready, SystemTime.time                            
+                                buffer.push(m1[:data].dup)                                
+                                mac.io_event :rx_ready, SystemTime.time      
                                 
                             end
                         
@@ -116,8 +117,8 @@ module LDL
                     
         end
         
-        def collect        
-            buffer
+        def collect  
+            buffer.pop              
         end
         
         def sleep
