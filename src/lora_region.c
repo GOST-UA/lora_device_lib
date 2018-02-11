@@ -359,7 +359,7 @@ static const struct lora_region_default defaults_EU_863_870 PROGMEM = {
     .adr_ack_timeout = 2U,
     .adr_ack_dither = 1U,
     
-    .tx_rate = 6U,
+    .tx_rate = 5U,
     .tx_power = 0U,
 };
 

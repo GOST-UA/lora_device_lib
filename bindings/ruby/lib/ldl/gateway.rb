@@ -44,6 +44,35 @@ module LDL
         # @return [Integer] seconds
         attr_reader :status_interval
         
+        attr_reader :broker
+        
+        def increment_token
+            @token += 1
+            self
+        end
+        
+        def increment_txnb
+            @txnb += 1
+            self
+        end
+        
+        def increment_dwnb
+            @dwnb += 1
+            self
+        end
+        
+        def increment_rxok
+            @rxok += 1
+        end
+        
+        def increment_rxnb
+            @rxnb += 1
+        end
+        
+        def increment_rxfw
+            @rxfw += 1
+        end
+        
         # @param broker [Broker]
         # @param eui [EUI64] gateway identifier
         # @param opts [Hash]
@@ -146,7 +175,10 @@ module LDL
 
                 tx_begin = broker.subscribe "tx_begin" do |m1|
                 
-                    buffer.push m1
+                    # don't listen to our own stuff
+                    if m1[:eui] != eui                    
+                        buffer.push m1
+                    end
                     
                 end
 
@@ -154,9 +186,9 @@ module LDL
 
                     if m1 = buffer.detect{ |v| v[:eui] == m2[:eui] }
 
-                        @rxnb += 1
-                        @rxok += 1
-                        @rxfw += 1
+                        increment_rxnb
+                        increment_rxok
+                        increment_rxfw
 
                         # todo rethink signal quality numbers
                         
@@ -164,11 +196,13 @@ module LDL
                             :task => :upstream,
                             :rxpk => Semtech::RXPacket.new(
                                 tmst: tmst,
-                                freq: m1[:freq],
+                                freq: m1[:freq].to_f / 1000000.0,
                                 data: m1[:data],
                                 datr: "SF#{m1[:sf]}BW#{m1[:bw]/1000}",                                                        
                                 rssi: -80,
-                                lsnr: 9
+                                lsnr: 9,
+                                chan: m1[:channel],
+                                rfch: 1
                                 
                             )
                         }
@@ -214,15 +248,13 @@ module LDL
                     # perform a keep alive
                     when :keepalive
 
-                        
-
                         m = Semtech::PullData.new(token: @token, eui: eui)
                         
                         add_token @token
+        
+                        increment_token
+                        increment_txnb
                         
-                        @token += 1 # advance our token
-                        @txnb += 1  # number of packets emitted
-
                         # schedule keep alive: note this will probably fire once after we stop this thread
                         SystemTime.onTimeout (keepalive_interval * TimeSource::INTERVAL) do
 
@@ -257,8 +289,8 @@ module LDL
                         
                         add_token @token
                         
-                        @token += 1 # advance our token
-                        @txnb += 1  # number of packets emitted
+                        increment_token
+                        increment_txnb
                         
                         # recur on this interval
                         SystemTime.onTimeout (status_interval * TimeSource::INTERVAL) do
@@ -276,53 +308,27 @@ module LDL
                     # send upstream
                     when :upstream
 
-                        @rxnb += 1  # number radio packets received
-                        @rxok += 1  # number radio packets received (with ok CRC)
-                        @rxfw += 1  # number radio packets forwarded
+                        increment_rxnb
+                        increment_rxok
+                        increment_rxfw
                         
                         m = Semtech::PushData.new(token: @token, eui: eui, rxpk: [job[:rxpk]])
                         
                         add_token @token
                         
-                        @token += 1 # advance our token
-                        @txnb += 1  # number of packets emitted
+                        increment_token
+                        increment_txnb
 
                         puts "sending upstream:"
                         puts m.inspect
+                        puts ""
+                        
+                        puts "upstream rxpk:"
                         puts job[:rxpk].to_json
                         puts ""
-                        puts m.rxpk.first
-                  
+                        
                         s.write m.encode
-
-                    # actually send on the radio
-                    when :tx
-                        
-                        @token += 1 # advance our token
-                        
-                        m1 = {
-                            :eui => eui,
-                            :time => SystemTime.time,
-                            :data => job[:txpk].data,                            
-                            :sf => job[:txpk].sf,
-                            :bw => job[:txpk].bw,
-                            :cr => job[:txpk].codr,
-                            :freq => job[:txpk].freq,
-                            :power => 0                            
-                        }
-                        
-                        m2 = {
-                            :eui => m1[:eui]                        
-                        }
-                        
-                        broker.publish m1, "tx_begin"
-                        
-                        SystemTime.onTimeout MAC.transmitTimeDown(job[:txpk].bw, job[:txpk].sf, job[:txpk].data.size) do 
-                            
-                            broker.publish m2, "tx_end"
-                            
-                        end
-                            
+         
                     # message received from network
                     when :downstream
 
@@ -339,45 +345,111 @@ module LDL
                                 ack_token(msg.token)                              
                             when Semtech::PullResp
                             
-                                @dwnb += 1  # number of downlink datagrams received
+                                increment_dwnb
 
-                                # send now
-                                if msg.txpk.imme
-                                
-                                    s.write(
-                                        Semtech::TXAck.new(
-                                            token: msg.token,
-                                            eui: eui,
-                                            txpk_ack: Semtech::TXPacketAck.new(error: 'NONE')
-                                        ).encode
-                                    )
-            
-                                    @txnb += 1  # number of packets emitted
+                                SystemTime.onTimeout 0 do
+
+                                    # send now
+                                    if msg.txpk.imme
                                     
-                                    @q << {:task => :tx, :txpk => msg.txpk}                
+                                        s.write(
+                                            Semtech::TXAck.new(
+                                                token: msg.token,
+                                                eui: eui,
+                                                txpk_ack: Semtech::TXPacketAck.new(error: 'NONE')
+                                            ).encode
+                                        )
+                
+                                        increment_token
+                                        increment_txnb
+                                        
+                                        transmit(msg.txpk)
                                                                 
-                                # send according to last timestamp
-                                elsif not msg.txpk.tmst.nil?
+                                    # send according to time stamp
+                                    elsif msg.txpk.tmst
                                 
+                                        timeNow = tmst
                                     
-                                # don't support the use of time field 
-                                elsif msg.tkpk.time
-                                
-                                    s.write(
-                                        Semtech::TXAck.new(
-                                            token: msg.token,
-                                            eui: eui,
-                                            txpk_ack: Semtech::TXPacketAck.new(error: 'GPS_UNLOCKED')
-                                        ).encode
-                                    )
-            
-                                    @txnb += 1  # number of packets emitted
+                                        puts "tmst: #{timeNow}"
+                                        puts "msg_tmst: #{msg.txpk.tmst}"
+                                        
+                                        if msg.txpk.tmst > timeNow
+                                            delta = msg.txpk.tmst - timeNow
+                                        else
+                                            delta = timeNow - msg.txpk.tmst
+                                        end
+                                    
+                                        puts "delta: #{delta}"
+                                        
+                                        # I expect the advance time to never be more than tens of seconds
+                                        if delta <= 10000000
+                                        
+                                            puts "need to send in #{delta/10} ticks (SystemTime.time will be #{SystemTime.time + (delta/10)})"
+                                            puts ""
+                                    
+                                            s.write(
+                                                Semtech::TXAck.new(
+                                                    token: msg.token,
+                                                    eui: eui,
+                                                    txpk_ack: Semtech::TXPacketAck.new(error: 'NONE')
+                                                ).encode
+                                            )
+                
+                                            increment_token
+                                            increment_txnb
+                                            
+                                            SystemTime.onTimeout((delta/10) + 1) do
+                                            
+                                                transmit(msg.txpk)
+                                            
+                                            end
+                                        
+                                        else
+                                    
+                                            puts "too late to send"
+                                            puts ""
+                                        
+                                            s.write(
+                                                Semtech::TXAck.new(
+                                                    token: msg.token,
+                                                    eui: eui,
+                                                    txpk_ack: Semtech::TXPacketAck.new(error: 'TOO_LATE')
+                                                ).encode
+                                            )
+                    
+                                            increment_token
+                                            increment_txnb
+                                            
+                                        end
+                                    
+                                    # don't support the use of time field 
+                                    elsif msg.tkpk.time
+                                    
+                                        s.write(
+                                            Semtech::TXAck.new(
+                                                token: msg.token,
+                                                eui: eui,
+                                                txpk_ack: Semtech::TXPacketAck.new(error: 'GPS_UNLOCKED')
+                                            ).encode
+                                        )
+                                        
+                                        increment_token
+                                        increment_txnb
+                                    
+                                    end
                                 
                                 end
                             
                             end
 
-                        rescue
+                        rescue => e
+                        
+                            puts job[:data]
+                        
+                            puts e
+                            puts e.backtrace.join("\n")
+                        
+                        
                         end
 
                     end
@@ -395,6 +467,37 @@ module LDL
 
         def running?
             @running
+        end
+
+        def transmit(txpk)
+                  
+            puts "gateway is transmitting at #{SystemTime.time}"
+            puts ""
+                        
+            m1 = {
+                :eui => eui,    # eui of the sender
+                :time => SystemTime.time,
+                :data => txpk.data,                            
+                :sf => txpk.sf,
+                :bw => txpk.bw,
+                :cr => txpk.codr,
+                :freq => (txpk.freq * 1000000).to_i,
+                :power => 0                            
+            }
+            
+            m2 = {
+                :eui => m1[:eui]                        
+            }
+            
+            broker.publish m1, "tx_begin"
+            
+            SystemTime.onTimeout MAC.transmitTimeDown(txpk.bw, txpk.sf, txpk.data.size) do 
+                
+                broker.publish m2, "tx_end"
+                
+            end
+                
+            
         end
 
         # start worker
@@ -444,10 +547,10 @@ module LDL
         end
         
         def tmst
-            ( (SystemTime.time * 20) & 0xffffffff )
+            ( (SystemTime.time * 10) & 0xffffffff )
         end
         
-        private :with_mutex, :add_token, :ack_token, :tmst
+        private :with_mutex, :add_token, :ack_token, :tmst, :transmit
     
     end
 

@@ -51,6 +51,9 @@ struct lora_radio_tx_setting {
     enum lora_coding_rate cr;
     uint16_t preamble;
     int power;    
+    
+    // fixme
+    uint8_t channel;
 };
 
 struct lora_radio_rx_setting {
@@ -61,6 +64,9 @@ struct lora_radio_rx_setting {
     enum lora_coding_rate cr;
     uint16_t preamble;
     uint16_t timeout;
+    
+    // fixme
+    uint8_t channel;
 };
 
 /** Initialise self to default state

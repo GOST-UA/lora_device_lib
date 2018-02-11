@@ -410,6 +410,8 @@ bool Radio_transmit(struct lora_radio *self, const struct lora_radio_tx_setting 
     rb_hash_aset(params, ID2SYM(rb_intern("bw")), bw_to_number(settings->bw)); 
     rb_hash_aset(params, ID2SYM(rb_intern("sf")), sf_to_number(settings->sf)); 
     rb_hash_aset(params, ID2SYM(rb_intern("cr")), cr_to_number(settings->cr)); 
+    
+    rb_hash_aset(params, ID2SYM(rb_intern("channel")), UINT2NUM(settings->channel)); 
      
     return rb_funcall((VALUE)self, rb_intern("transmit"), 2, rb_str_new(data, len), params) == Qtrue;
 }

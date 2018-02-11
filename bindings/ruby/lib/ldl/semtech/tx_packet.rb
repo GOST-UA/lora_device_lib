@@ -102,13 +102,17 @@ module LDL::Semtech
                 end                
             end            
             
-            init.call(:imme, nil, true) do |value|
+            init.call(:imme, nil, false) do |value|
                 ( value ? true : false )
             end 
             
             init.call(:tmst, Integer, nil) 
-            init.call(:time, Integer, nil) 
-            init.call(:freq, Numeric, nil) 
+            
+            init.call(:time, nil, nil) do |value|
+                Time.parse(time)
+            end
+            
+            init.call(:freq, Numeric, 868.1) 
             init.call(:rfch, Integer, nil) 
             init.call(:powe, Integer, nil) 
             
@@ -144,7 +148,9 @@ module LDL::Semtech
             end
             
             init.call(:fdev, Integer, nil) 
-            init.call(:ipol, Integer, nil) 
+            init.call(:ipol, nil, true) do |value|
+                raise TypeError unless [true, false].include? value.class
+            end
             init.call(:prea, Integer, nil) 
             init.call(:data, String, "") 
             

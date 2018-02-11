@@ -53,6 +53,7 @@ module LDL::Semtech
             super(**params)
             
             if params.has_key? :txpk
+                raise TypeError unless params[:txpk].kind_of? TXPacket
                 @txpk = params[:txpk]
             else
                 @txpk = TXPacket.new

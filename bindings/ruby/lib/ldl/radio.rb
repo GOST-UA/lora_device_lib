@@ -33,6 +33,7 @@ module LDL
                 :cr => settings[:cr],
                 :freq => freq,
                 :power => settings[:power],                    
+                :channel => settings[:channel]
             }
             
             broker.publish msg, "tx_begin"
@@ -67,19 +68,23 @@ module LDL
                
             end
             
-            # begin listening
-            tx_begin = broker.subscribe "tx_begin" do |m1|
+            puts "radio listening at #{SystemTime.time} ticks"
+            puts
+            
+            rx_begin = broker.subscribe "tx_begin" do |m1|
             
                 if m1[:sf] == sf and m1[:bw] == bw and m1[:freq] == freq
             
-                    broker.cancel to
-                    broker.unsubscribe tx_begin
+                    puts "got something"
+            
+                    broker.unsubscribe to
+                    broker.unsubscribe rx_begin
                     
-                    tx_end = broker.subscribe "tx_end" do |m2|            
+                    rx_end = broker.subscribe "tx_end" do |m2|            
                     
                         if m1[:eui] == m2[:eui]
                         
-                            broker.unsubscribe tx_end
+                            broker.unsubscribe rx_end
                             
                             mac.io_event :rx_ready, SystemTime.time
                             

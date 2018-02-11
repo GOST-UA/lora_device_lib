@@ -417,7 +417,8 @@ static void tx(void *receiver, uint64_t time, uint64_t error)
             .sf = rate_setting.sf,
             .cr = CR_5,
             .power = System_getTXPower(self->system),
-            .preamble = 8U         
+            .preamble = 8U,
+            .channel = self->tx.chIndex
         };
     
         LORA_PEDANTIC(self->state == WAIT_TX)

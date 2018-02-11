@@ -106,7 +106,10 @@ module LDL::Semtech
                 end                
             end
             
-            init.call(:time, Time, Time.now) 
+            init.call(:time, Time, Time.now) do |value|
+                Time.parse(value)
+            end
+            
             init.call(:tmst, Integer, 0) 
             init.call(:freq, Numeric, 868.10)
             init.call(:chan, Integer, nil)
