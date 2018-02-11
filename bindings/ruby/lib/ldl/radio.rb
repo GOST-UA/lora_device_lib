@@ -2,7 +2,7 @@ module LDL
 
     class Radio
     
-        attr_accessor :buffer, :mode, :broker, :mac
+        attr_accessor :buffer, :mode, :broker, :mac, :active
     
         def initialize(mac, broker)
 
@@ -12,10 +12,21 @@ module LDL
             @broker = broker 
             @mac = mac
             
+            @active = []
+            
+            broker.subscribe "tx_begin" do |m1|            
+                active << m1        
+            end
+            
+            broker.subscribe "tx_end" do |m2|            
+                active.delete_if{|m1|m1[:eui] == m2[:eui]}      
+            end
+            
         end
     
         def resetHardware
-            SystemTime.wait(1)        
+            # this is no good since we are inside the event loop
+            #SystemTime.wait(1)        
         end
     
         def transmit(data, **settings)            
@@ -60,42 +71,45 @@ module LDL
             
             t_sym = (2 ** settings[:sf]) / settings[:bw].to_f
             
-            to = SystemTime.onTimeout( settings[:timeout] * t_sym ) do
+            window = Range.new(SystemTime.time, SystemTime.time + ((settings[:timeout] * t_sym) * 100000).ceil.to_i)
+            
+            puts window
+            
+            # work out if there were any overlapping transmissions at window timeout
+            SystemTime.onTimeout( settings[:timeout] * t_sym ) do
                
-               broker.unsubscribe tx_begin
+                active.detect do |m1|
                
-               mac.io_event :rx_timeout, SystemTime.time 
-               
-            end
-            
-            puts "radio listening at #{SystemTime.time} ticks"
-            puts
-            
-            rx_begin = broker.subscribe "tx_begin" do |m1|
-            
-                if m1[:sf] == sf and m1[:bw] == bw and m1[:freq] == freq
-            
-                    puts "got something"
-            
-                    broker.unsubscribe to
-                    broker.unsubscribe rx_begin
+                    m1[:sf] == sf and m1[:bw] == bw and m1[:freq] == freq and window.include? m1[:time] 
                     
-                    rx_end = broker.subscribe "tx_end" do |m2|            
+                    # todo calculate if sufficient symbols fell within window
                     
-                        if m1[:eui] == m2[:eui]
+                end.tap do |m1|
+                
+                    if m1
+                
+                        puts "found packet at end of window"
+                
+                        tx_end = broker.subscribe "tx_end" do |m2|
                         
-                            broker.unsubscribe rx_end
+                            if m2[:eui] == m1[:eui]
                             
-                            mac.io_event :rx_ready, SystemTime.time
-                            
-                            @buffer = m1[:data].dup
+                                broker.unsubscribe tx_end
+                                buffer = m1[:data].dup
+                                mac.io_event :rx_ready, SystemTime.time                            
+                                
+                            end
                         
-                        end
-                        
+                        end 
+                    
+                    else
+                                  
+                        mac.io_event :rx_timeout, SystemTime.time 
+                    
                     end
                     
                 end
-            
+               
             end
             
             true
