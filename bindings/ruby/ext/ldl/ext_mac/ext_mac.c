@@ -43,7 +43,7 @@ static VALUE tick(VALUE self);
 static VALUE setRate(VALUE self, VALUE rate);
 static VALUE setPower(VALUE self, VALUE power);
 static VALUE join(int argc, VALUE *argv, VALUE self);
-static VALUE send(int argc, VALUE *argv, VALUE self);
+static VALUE data(int argc, VALUE *argv, VALUE self);
 static VALUE io_event(VALUE self, VALUE event, VALUE time);
 static VALUE ticksUntilNextChannel(VALUE self);
 static VALUE ticksUntilNextEvent(VALUE self);
@@ -373,7 +373,7 @@ void Init_ext_mac(void)
     rb_define_method(cExtMAC, "rate=", setRate, 1);
     rb_define_method(cExtMAC, "power=", setPower, 1);
     rb_define_method(cExtMAC, "join", join, -1);
-    rb_define_method(cExtMAC, "send", send, -1);
+    rb_define_method(cExtMAC, "data", data, -1);
     rb_define_method(cExtMAC, "io_event", io_event, 2);    
     rb_define_method(cExtMAC, "ticksUntilNextEvent", ticksUntilNextEvent, 0);    
     rb_define_method(cExtMAC, "ticksUntilNextChannel", ticksUntilNextChannel, 0);    
@@ -687,7 +687,7 @@ static VALUE join(int argc, VALUE *argv, VALUE self)
     return self;
 }
 
-static VALUE send(int argc, VALUE *argv, VALUE self)
+static VALUE data(int argc, VALUE *argv, VALUE self)
 {
     struct lora_mac *this;    
     Data_Get_Struct(self, struct lora_mac, this);
