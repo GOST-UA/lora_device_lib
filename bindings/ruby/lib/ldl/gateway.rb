@@ -384,9 +384,6 @@ module LDL
                                         # I expect the advance time to never be more than tens of seconds
                                         if delta <= 10000000
                                         
-                                            puts "need to send in #{delta/10} ticks (SystemTime.time will be #{SystemTime.time + (delta/10)})"
-                                            puts ""
-                                    
                                             s.write(
                                                 Semtech::TXAck.new(
                                                     token: msg.token,
@@ -398,7 +395,7 @@ module LDL
                                             increment_token
                                             increment_txnb
                                             
-                                            SystemTime.onTimeout((delta/10) + 1) do
+                                            SystemTime.onTimeout((delta/10)) do
                                             
                                                 transmit(msg.txpk)
                                             
@@ -471,11 +468,8 @@ module LDL
 
         def transmit(txpk)
                   
-            puts "gateway is transmitting at #{SystemTime.time}"
-            puts ""
-                        
             m1 = {
-                :eui => eui,    # eui of the sender
+                :eui => eui,
                 :time => SystemTime.time,
                 :data => txpk.data,                            
                 :sf => txpk.sf,
@@ -488,6 +482,8 @@ module LDL
             m2 = {
                 :eui => m1[:eui]                        
             }
+            
+            puts "gateway transmit at #{SystemTime.time}"
             
             broker.publish m1, "tx_begin"
             
