@@ -58,8 +58,6 @@ static VALUE cr_to_number(enum lora_coding_rate cr);
 static enum lora_spreading_factor number_to_sf(VALUE sf);
 static enum lora_signal_bandwidth number_to_bw(VALUE bw);
 
-
-
 /* functions **********************************************************/
 
 uint64_t System_time(void)
@@ -85,6 +83,8 @@ void System_atomic_setPtr(void **receiver, void *value)
 
 void System_getAppEUI(void *receiver, void *value)
 {
+    
+    
     VALUE self = (VALUE)receiver;
     
     VALUE appEUI = rb_iv_get(self, "@appEUI");
@@ -97,7 +97,7 @@ void System_getDevEUI(void *receiver, void *value)
     VALUE self = (VALUE)receiver;    
     VALUE devEUI = rb_iv_get(self, "@devEUI");
     
-    (void)memcpy(value, RSTRING_PTR(rb_funcall(devEUI, rb_intern("bytes"), 0)), sizeof(default_eui));
+    (void)memcpy(value, RSTRING_PTR(rb_funcall(devEUI, rb_intern("bytes"), 0)), sizeof(default_eui)-1U);
 }
 
 void System_getAppKey(void *receiver, void *value)
@@ -105,7 +105,7 @@ void System_getAppKey(void *receiver, void *value)
     VALUE self = (VALUE)receiver;    
     VALUE key = rb_iv_get(self, "@appKey");
     
-    (void)memcpy(value, RSTRING_PTR(rb_funcall(key, rb_intern("value"), 0)), sizeof(default_key));
+    (void)memcpy(value, RSTRING_PTR(rb_funcall(key, rb_intern("value"), 0)), sizeof(default_key)-1U);
 }
 
 void System_getNwkSKey(void *receiver, void *value)
@@ -113,7 +113,7 @@ void System_getNwkSKey(void *receiver, void *value)
     VALUE self = (VALUE)receiver;    
     VALUE key = rb_iv_get(self, "@nwkSKey");
     
-    (void)memcpy(value, RSTRING_PTR(rb_funcall(key, rb_intern("value"), 0)), sizeof(default_key));    
+    (void)memcpy(value, RSTRING_PTR(rb_funcall(key, rb_intern("value"), 0)), sizeof(default_key)-1U);    
 }
 
 void System_getAppSKey(void *receiver, void *value)
@@ -121,18 +121,18 @@ void System_getAppSKey(void *receiver, void *value)
     VALUE self = (VALUE)receiver;    
     VALUE key = rb_iv_get(self, "@appSKey");
     
-    (void)memcpy(value, RSTRING_PTR(rb_funcall(key, rb_intern("value"), 0)), sizeof(default_key));    
+    (void)memcpy(value, RSTRING_PTR(rb_funcall(key, rb_intern("value"), 0)), sizeof(default_key)-1U);    
 }
 
 void System_setNwkSKey(void *receiver, const void *value)
 {
-    VALUE key = rb_funcall(cKey, rb_intern("new"), 1, rb_str_new((const char *)value, sizeof(default_key)));
+    VALUE key = rb_funcall(cKey, rb_intern("new"), 1, rb_str_new((const char *)value, sizeof(default_key)-1U));
     rb_iv_set((VALUE)receiver, "@nwkSKey", key);
 }
 
 void System_setAppSKey(void *receiver, const void *value)
 {
-    VALUE key = rb_funcall(cKey, rb_intern("new"), 1, rb_str_new((const char *)value, sizeof(default_key)));
+    VALUE key = rb_funcall(cKey, rb_intern("new"), 1, rb_str_new((const char *)value, sizeof(default_key)-1U));
     rb_iv_set((VALUE)receiver, "@appSKey", key);
 }
 
@@ -151,7 +151,7 @@ bool System_getChannel(void *receiver, uint8_t chIndex, uint32_t *freq, uint8_t 
     bool retval = false;
     
     VALUE channels = rb_iv_get((VALUE)receiver, "@channels");    
-    VALUE channel = rb_ary_entry(channels, UINT2NUM(chIndex));
+    VALUE channel = rb_ary_entry(channels, (long)chIndex);
     
     if(channel != Qnil){
         
@@ -170,7 +170,7 @@ bool System_setChannel(void *receiver, uint8_t chIndex, uint32_t freq, uint8_t m
     bool retval = false;
     
     VALUE channels = rb_iv_get((VALUE)receiver, "@channels");    
-    VALUE channel = rb_ary_entry(channels, UINT2NUM(chIndex));
+    VALUE channel = rb_ary_entry(channels, (long)chIndex);
     
     if(channel != Qnil){
         
@@ -178,7 +178,7 @@ bool System_setChannel(void *receiver, uint8_t chIndex, uint32_t freq, uint8_t m
         rb_hash_aset(channel, ID2SYM(rb_intern("minRate")), UINT2NUM(minRate));
         rb_hash_aset(channel, ID2SYM(rb_intern("maxRate")), UINT2NUM(maxRate));
         
-        rb_ary_store(channels, UINT2NUM(chIndex), channel);
+        rb_ary_store(channels, (long)chIndex, channel);
         
         retval = true;
     }
@@ -191,7 +191,7 @@ bool System_maskChannel(void *receiver, uint8_t chIndex)
     bool retval = false;
     
     VALUE channels = rb_iv_get((VALUE)receiver, "@channels");    
-    VALUE channel = rb_ary_entry(channels, UINT2NUM(chIndex));
+    VALUE channel = rb_ary_entry(channels, (long)chIndex);
     
     if(channel != Qnil){
     
@@ -208,7 +208,7 @@ bool System_unmaskChannel(void *receiver, uint8_t chIndex)
     bool retval = false;
     
     VALUE channels = rb_iv_get((VALUE)receiver, "@channels");    
-    VALUE channel = rb_ary_entry(channels, UINT2NUM(chIndex));
+    VALUE channel = rb_ary_entry(channels, (long)chIndex);
     
     if(channel != Qnil){
     
@@ -225,7 +225,7 @@ bool System_channelIsMasked(void *receiver, uint8_t chIndex)
     bool retval = false;
     
     VALUE channels = rb_iv_get((VALUE)receiver, "@channels");    
-    VALUE channel = rb_ary_entry(channels, UINT2NUM(chIndex));
+    VALUE channel = rb_ary_entry(channels, (long)chIndex);
     
     if(channel != Qnil){
     
@@ -331,7 +331,7 @@ uint16_t System_incrementUp(void *receiver)
 
 void System_resetUp(void *receiver)
 {
-    rb_iv_set((VALUE)receiver, "@upCount", 0U);
+    rb_iv_set((VALUE)receiver, "@upCount", UINT2NUM(0U));
 }
 
 uint16_t System_getDown(void *receiver)
@@ -360,7 +360,7 @@ bool System_receiveDown(void *receiver, uint16_t counter, uint16_t maxGap)
 
 void System_resetDown(void *receiver)
 {
-    rb_iv_set((VALUE)receiver, "@downCount", 0U);
+    rb_iv_set((VALUE)receiver, "@downCount", UINT2NUM(0U));
 }
 
 void Init_ext_mac(void)
@@ -600,11 +600,11 @@ static VALUE initialize(int argc, VALUE *argv, VALUE self)
     }
     else{
     
-        appKey = rb_funcall(cKey, rb_intern("new"), 1, rb_str_new((char *)default_key, sizeof(default_key)-1));
+        appKey = rb_funcall(cKey, rb_intern("new"), 1, rb_str_new((char *)default_key, sizeof(default_key)-1U));
     }
     
-    VALUE appSKey = rb_funcall(cKey, rb_intern("new"), 1, rb_str_new((char *)default_key, sizeof(default_key)-1));
-    VALUE nwkSKey = rb_funcall(cKey, rb_intern("new"), 1, rb_str_new((char *)default_key, sizeof(default_key)-1));
+    VALUE appSKey = rb_funcall(cKey, rb_intern("new"), 1, rb_str_new((char *)default_key, sizeof(default_key)-1U));
+    VALUE nwkSKey = rb_funcall(cKey, rb_intern("new"), 1, rb_str_new((char *)default_key, sizeof(default_key)-1U));
         
     rb_iv_set(self, "@appEUI", appEUI);
     rb_iv_set(self, "@devEUI", devEUI);
@@ -703,7 +703,7 @@ static VALUE data(int argc, VALUE *argv, VALUE self)
     VALUE handler;
     VALUE opts;
     
-    (void)rb_scan_args(argc, argv, "20:&", &port, &data, &handler, &opts);
+    (void)rb_scan_args(argc, argv, "20:&", &port, &data, &opts, &handler);
     
     if(opts != Qnil){
         
