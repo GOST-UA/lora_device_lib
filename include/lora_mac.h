@@ -130,6 +130,16 @@ struct lora_mac {
     void *system;       /**< passed as receiver in every System_* call */
 };
 
+/** Initialise MAC
+ * 
+ * @param[in] self
+ * @param[in] system pointer passed as receiver for all applicable System_* functions
+ * @param[in] region lorawan region id
+ * @param[in] radio 
+ * @param[in] receiver pointer passed as receiver when `cb` is called
+ * @param[in] cb event callback
+ * 
+ * */
 void MAC_init(struct lora_mac *self, void *system, enum lora_region_id region, struct lora_radio *radio, void *receiver, lora_mac_response_fn cb);
 
 /** Send a message upstream
@@ -176,7 +186,8 @@ void MAC_radioEvent(void *receiver, enum lora_radio_event event, uint64_t time);
  * @return transmit time in ticks
  * 
  * */
-uint32_t MAC_transmitTime(enum lora_signal_bandwidth bw, enum lora_spreading_factor sf, uint8_t size);
+uint32_t MAC_transmitTimeUp(enum lora_signal_bandwidth bw, enum lora_spreading_factor sf, uint8_t size);
+uint32_t MAC_transmitTimeDown(enum lora_signal_bandwidth bw, enum lora_spreading_factor sf, uint8_t size);
 
 /** Drive the MAC to process next events
  * 

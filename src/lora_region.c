@@ -685,7 +685,7 @@ bool Region_getRX1DataRate(const struct lora_region *self, uint8_t tx_rate, uint
             index = tx_rate * self->rx1_row_size;
             index += rx1_offset;
             
-            (void)memcpy_P(&rx1_rate, &self->rx1_rate[index], sizeof(rx1_rate));
+            (void)memcpy_P(rx1_rate, &self->rx1_rate[index], sizeof(*rx1_rate));
             
             retval = true;
         }    

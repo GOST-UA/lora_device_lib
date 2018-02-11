@@ -294,7 +294,7 @@ module LDL
                         
                         broker.publish m1, "tx_begin"
                         
-                        SystemTime.onTimeout MAC.transmitTime(job[:txpk].bw, job[:txpk].sf, job[:txpk].data.size) do 
+                        SystemTime.onTimeout MAC.transmitTimeDown(job[:txpk].bw, job[:txpk].sf, job[:txpk].data.size) do 
                             
                             broker.publish m2, "tx_end"
                             

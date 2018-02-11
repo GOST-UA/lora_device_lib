@@ -321,7 +321,7 @@ int main(void)
         cmocka_unit_test_setup(
             unconfirmed_send_shall_callback_when_cycle_complete, 
             setup_mac_and_join
-        ),
+        )
         
     };
 

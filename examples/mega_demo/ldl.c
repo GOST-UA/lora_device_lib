@@ -107,9 +107,7 @@ void ldl_init(void)
         .read = radio_read
     };
     
-    (void)MAC_init(&mac, NULL, EU_863_870, Radio_init(&radio, &board));
- 
-    MAC_setResponseHandler(&mac, NULL, response_handler);
+    (void)MAC_init(&mac, NULL, EU_863_870, Radio_init(&radio, &board), NULL, response_handler);
 }
 void ldl_tick(void **state, void (*on_ready)(void **))
 {
@@ -449,15 +447,7 @@ uint8_t System_getBatteryLevel(void *receiver)
 
 static void response_handler(void *receiver, enum lora_mac_response_type type, const union lora_mac_response_arg *arg)
 {
-    switch(type){
-    case LORA_MAC_READY:
-    case LORA_MAC_DATA_TIMEOUT:
-    case LORA_MAC_RX:
-    case LORA_MAC_JOIN_SUCCESS:
-    case LORA_MAC_JOIN_TIMEOUT:
-    default:
-        break;
-    }        
+    
 }
 
 static void radio_select(void *receiver, bool state)

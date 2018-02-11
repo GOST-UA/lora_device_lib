@@ -20,27 +20,33 @@ module LDL
             
             super(Radio.new(self, broker), **opts)
             
-            @txRate = 4
-            @txPower = 0
-            
             this = self
             
             @ticker = Proc.new do
                 this.tick
-                if this.ticksUntilNextEvent
+                
+                if this.ticksUntilNextEvent                
                     SystemTime.onTimeout this.ticksUntilNextEvent, &ticker
                 end
+                
             end
             
         end
         
         attr_reader :devEUI, :appEUI
         
-        def tick
+        def tick            
             with_mutex do
-                super
+                super                
             end
             self
+        end
+        
+        # @return [Integer]
+        def ticksUntilNextChannel
+            with_mutex do
+                super
+            end            
         end
         
         def io_event(event, time)
@@ -56,13 +62,20 @@ module LDL
         # @note blocking call
         #
         def join            
+        
             rq = Queue.new
             with_mutex do
                 super do |result|            
                     rq << result
-                end                            
+                end                                            
             end
-            ticker.call
+            
+            this = self
+            
+            SystemTime.onTimeout 0 do 
+                this.ticker.call
+            end
+            
             raise JoinTimeout.new "timeout waiting for join confirmation" unless rq.pop == :ready
             self
         end

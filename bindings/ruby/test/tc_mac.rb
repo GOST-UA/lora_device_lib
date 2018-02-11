@@ -28,10 +28,9 @@ class TestMAC < Minitest::Test
     
     def test_join_timeout
     
-        # hmm
-        #assert_raises JoinTimeout do    
-            #state.join        
-        #end
+        assert_raises JoinTimeout do    
+            state.join        
+        end
     
     end
     
@@ -43,9 +42,6 @@ class TestMAC < Minitest::Test
         
     end
     
-    def test_send_with_abp
-    
-    end
     
     def teardown    
     

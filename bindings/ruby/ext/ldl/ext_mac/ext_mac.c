@@ -47,7 +47,8 @@ static VALUE send(int argc, VALUE *argv, VALUE self);
 static VALUE io_event(VALUE self, VALUE event, VALUE time);
 static VALUE ticksUntilNextChannel(VALUE self);
 static VALUE ticksUntilNextEvent(VALUE self);
-static VALUE transmitTime(VALUE self, VALUE bw, VALUE sf, VALUE size);
+static VALUE transmitTimeUp(VALUE self, VALUE bw, VALUE sf, VALUE size);
+static VALUE transmitTimeDown(VALUE self, VALUE bw, VALUE sf, VALUE size);
 
 static void response(void *receiver, enum lora_mac_response_type type, const union lora_mac_response_arg *arg);
 
@@ -68,7 +69,8 @@ uint64_t System_time(void)
 
 void System_sleep(uint32_t interval)
 {
-    (void)rb_funcall(rb_const_get(cLDL, rb_intern("SystemTime")), rb_intern("wait"), 1, UINT2NUM(interval));
+    //don't block the thread because we are inside a mutex
+    //(void)rb_funcall(rb_const_get(cLDL, rb_intern("SystemTime")), rb_intern("wait"), 1, UINT2NUM(interval));
 }
 
 uint8_t System_rand(void)
@@ -376,12 +378,15 @@ void Init_ext_mac(void)
     rb_define_method(cExtMAC, "ticksUntilNextEvent", ticksUntilNextEvent, 0);    
     rb_define_method(cExtMAC, "ticksUntilNextChannel", ticksUntilNextChannel, 0);    
     
-    rb_define_singleton_method(cExtMAC, "transmitTime", transmitTime, 3);
+    rb_define_singleton_method(cExtMAC, "transmitTimeUp", transmitTimeUp, 3);
+    rb_define_singleton_method(cExtMAC, "transmitTimeDown", transmitTimeDown, 3);
     
     cEUI64 = rb_const_get(cLDL, rb_intern("EUI64"));
     cKey = rb_const_get(cLDL, rb_intern("Key"));
     cError = rb_const_get(cLDL, rb_intern("Error"));
     cRadio = rb_const_get(cLDL, rb_intern("Radio"));    
+    
+    rb_const_set(cExtMAC, rb_intern("TIMEBASE"), UINT2NUM(LORA_TIMEBASE));
 }
 
 uint32_t Radio_resetHardware(struct lora_radio *self)
@@ -890,9 +895,14 @@ static VALUE ticksUntilNextEvent(VALUE self)
     return (next == UINT64_MAX) ? Qnil : ULL2NUM(next);
 }
 
-static VALUE transmitTime(VALUE self, VALUE bandwidth, VALUE spreading_factor, VALUE size)
+static VALUE transmitTimeUp(VALUE self, VALUE bandwidth, VALUE spreading_factor, VALUE size)
 {
-    return UINT2NUM(MAC_transmitTime(number_to_bw(bandwidth), number_to_sf(spreading_factor), (uint8_t)NUM2UINT(size)));
+    return UINT2NUM(MAC_transmitTimeUp(number_to_bw(bandwidth), number_to_sf(spreading_factor), (uint8_t)NUM2UINT(size)));
+}
+
+static VALUE transmitTimeDown(VALUE self, VALUE bandwidth, VALUE spreading_factor, VALUE size)
+{
+    return UINT2NUM(MAC_transmitTimeDown(number_to_bw(bandwidth), number_to_sf(spreading_factor), (uint8_t)NUM2UINT(size)));
 }
 
 static VALUE ticksUntilNextChannel(VALUE self)

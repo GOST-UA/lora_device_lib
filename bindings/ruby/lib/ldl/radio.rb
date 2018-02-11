@@ -37,7 +37,7 @@ module LDL
             
             broker.publish msg, "tx_begin"
             
-            SystemTime.onTimeout(mac.class.transmitTime(bw, sf, data.size)) do
+            SystemTime.onTimeout(mac.class.transmitTimeUp(bw, sf, data.size)) do
             
                 mac.io_event :tx_complete, SystemTime.time
                                 

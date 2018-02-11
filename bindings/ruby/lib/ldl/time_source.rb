@@ -9,6 +9,8 @@ module LDL
     # 
     class TimeSource
     
+        INTERVAL = MAC::TIMEBASE.to_f
+    
         # @return [Integer] system time
         attr_reader :time
         
@@ -21,7 +23,6 @@ module LDL
             @running = false
             @mutex = Mutex.new            
             @time = 0      
-            base = 0
             prevTime = Time.now              
             @update = TimeoutQueue.new
 
@@ -102,9 +103,8 @@ module LDL
         # @return [Hash] scheduled event record
         def onTimeout(interval, &block)
         
-            
-        
             raise ArgumentError unless interval.kind_of? Numeric
+            
         
             ref = {:interval => interval, :block => block}
             with_mutex do                
@@ -186,7 +186,7 @@ module LDL
             end
         end
 
-        INTERVAL = 100000.0
+        
 
         # convert 20us tick interval to seconds
         def to_sec(interval)

@@ -44,7 +44,7 @@ enum lora_signal_bandwidth {
 };
 
 enum lora_coding_rate {
-    CR_5 = 5,   /**< 4/5 */
+    CR_5 = 1,   /**< 4/5 */
     CR_6,       /**< 4/6 */
     CR_7,       /**< 4/7 */
     CR_8,       /**< 4/8 */

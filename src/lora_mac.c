@@ -60,6 +60,8 @@ static uint64_t timeBase(uint8_t value);
 
 static uint64_t timeNextAvailable(struct lora_mac *self, uint64_t timeNow, uint8_t rate);
 
+static uint32_t transmitTime(enum lora_signal_bandwidth bw, enum lora_spreading_factor sf, uint8_t size, bool crc);
+
 //static void restoreDefaults(struct lora_mac *self);
 
 /* functions **********************************************************/
@@ -233,58 +235,14 @@ void MAC_radioEvent(void *receiver, enum lora_radio_event event, uint64_t time)
     }
 }
 
-uint32_t MAC_transmitTime(enum lora_signal_bandwidth bw, enum lora_spreading_factor sf, uint8_t size)
+uint32_t MAC_transmitTimeUp(enum lora_signal_bandwidth bw, enum lora_spreading_factor sf, uint8_t size)
 {
-    /* from 4.1.1.7 of sx1272 datasheet
-     *
-     * Ts (symbol period)
-     * Rs (symbol rate)
-     * PL (payload length)
-     * SF (spreading factor
-     * CRC (presence of trailing CRC)
-     * IH (presence of implicit header)
-     * DE (presence of data rate optimize)
-     * CR (coding rate 1..4)
-     * 
-     *
-     * Ts = 1 / Rs
-     * Tpreamble = ( Npreamble x 4.25 ) x Tsym
-     *
-     * Npayload = 8 + max( ceil[( 8PL - 4SF + 28 + 16CRC + 20IH ) / ( 4(SF - 2DE) )] x (CR + 4), 0 )
-     *
-     * Tpayload = Npayload x Ts
-     *
-     * Tpacket = Tpreamble + Tpayload
-     *
-     * Implementation details:
-     *
-     * - calculated in microseconds then converted to ticks (usually either tens of us, or us)
-     * 
-     * */
+    return transmitTime(bw, sf, size, true);
+}
 
-    uint32_t Tpacket = 0U;
-
-    if((bw != BW_FSK) && (sf != SF_FSK)){
-
-        // for now hardcode this according to this recommendation
-        bool lowDataRateOptimize = ((bw == BW_125) && ((sf == SF_11) || (sf == SF_12))) ? true : false;
-        bool crc = true;    // true for uplink, false for downlink
-        bool header = true; 
-
-        uint32_t Ts = ((1U << sf) * LORA_TIMEBASE) / bw;     //symbol rate (us)
-        uint32_t Tpreamble = (Ts * 12U) +  (Ts / 4U);   //preamble (us)
-
-        uint32_t numerator = (8U * (uint32_t)size) - (4U * (uint32_t)sf) + 28U + ( crc ? 16U : 0U ) - ( (header) ? 20U : 0U );
-        uint32_t denom = 4U * ((uint32_t)sf - ( lowDataRateOptimize ? 2U : 0U ));
-
-        uint32_t Npayload = 8U + ((numerator / denom) + (((numerator % denom) != 0) ? 1U : 0U)) * ((uint32_t)CR_5 + 4U);
-
-        uint32_t Tpayload = Npayload * Ts;
-
-        Tpacket = Tpreamble + Tpayload;
-    }
-
-    return Tpacket;
+uint32_t MAC_transmitTimeDown(enum lora_signal_bandwidth bw, enum lora_spreading_factor sf, uint8_t size)
+{
+    return transmitTime(bw, sf, size, false);
 }
 
 void MAC_tick(struct lora_mac *self)
@@ -338,8 +296,6 @@ uint64_t MAC_ticksUntilNextChannel(struct lora_mac *self)
     return retval;
 }
 
-/* static functions ***************************************************/
-
 void MAC_restoreDefaults(struct lora_mac *self)
 {
     LORA_PEDANTIC(self != NULL)
@@ -357,6 +313,90 @@ void MAC_restoreDefaults(struct lora_mac *self)
     System_setRX2Freq(self->system, defaults.rx2_freq);
     
     System_setMaxDutyCycle(self->system, 1U);        
+    
+    System_setTXPower(self->system, defaults.tx_power);
+    System_setTXRate(self->system, defaults.tx_rate);
+}
+
+/* static functions ***************************************************/
+
+#if 0
+static uint32_t bwToNumber(enum lora_signal_bandwidth bw)
+{
+    uint32_t retval;
+    
+    switch(bw){
+    case BW_125:
+        retval = 125000U;
+        break;        
+    case BW_250:
+        retval = 125000U;
+        break;            
+    case BW_500:
+        retval = 125000U;
+        break;            
+    default:
+    case BW_FSK:
+        retval = 0U;
+        break;
+    }
+    
+    return retval;
+}
+#endif
+
+static uint32_t transmitTime(enum lora_signal_bandwidth bw, enum lora_spreading_factor sf, uint8_t size, bool crc)
+{
+    /* from 4.1.1.7 of sx1272 datasheet
+     *
+     * Ts (symbol period)
+     * Rs (symbol rate)
+     * PL (payload length)
+     * SF (spreading factor
+     * CRC (presence of trailing CRC)
+     * IH (presence of implicit header)
+     * DE (presence of data rate optimize)
+     * CR (coding rate 1..4)
+     * 
+     *
+     * Ts = 1 / Rs
+     * Tpreamble = ( Npreamble x 4.25 ) x Tsym
+     *
+     * Npayload = 8 + max( ceil[( 8PL - 4SF + 28 + 16CRC + 20IH ) / ( 4(SF - 2DE) )] x (CR + 4), 0 )
+     *
+     * Tpayload = Npayload x Ts
+     *
+     * Tpacket = Tpreamble + Tpayload
+     *
+     * Implementation details:
+     *
+     * - calculated in microseconds then converted to ticks (usually either tens of us, or us)
+     * 
+     * */
+
+    uint32_t Tpacket = 0U;
+
+    if((bw != BW_FSK) && (sf != SF_FSK)){
+
+        // for now hardcode this according to this recommendation
+        bool lowDataRateOptimize = ((bw == BW_125) && ((sf == SF_11) || (sf == SF_12))) ? true : false;
+        //bool crc = true;    // true for uplink, false for downlink
+        bool header = true; 
+
+        uint32_t Ts = ((1U << sf) * 1000000U) / (uint32_t)bw;     //symbol rate (us)
+        uint32_t Tpreamble = (Ts * 12U) +  (Ts / 4U);   //preamble (us)
+
+        uint32_t numerator = (8U * (uint32_t)size) - (4U * (uint32_t)sf) + 28U + ( crc ? 16U : 0U ) - ( header ? 20U : 0U );
+        uint32_t denom = 4U * ((uint32_t)sf - ( lowDataRateOptimize ? 2U : 0U ));
+
+        uint32_t Npayload = 8U + ((((numerator / denom) + (((numerator % denom) != 0U) ? 1U : 0U)) * ((uint32_t)CR_5 + 4U)));
+
+        uint32_t Tpayload = Npayload * Ts;
+
+        Tpacket = Tpreamble + Tpayload;
+    }
+
+    return Tpacket / (1000000U/LORA_TIMEBASE);
 }
 
 static void tx(void *receiver, uint64_t time, uint64_t error)
@@ -376,14 +416,15 @@ static void tx(void *receiver, uint64_t time, uint64_t error)
             .bw = rate_setting.bw,
             .sf = rate_setting.sf,
             .cr = CR_5,
-            .power = System_getTXPower(self->system)         
+            .power = System_getTXPower(self->system),
+            .preamble = 8U         
         };
     
         LORA_PEDANTIC(self->state == WAIT_TX)
     
         if(Radio_transmit(self->radio, &radio_setting, self->buffer, self->bufferLen)){
 
-            registerTime(self, self->tx.freq, System_time(), MAC_transmitTime(radio_setting.bw, radio_setting.sf, self->bufferLen));
+            registerTime(self, self->tx.freq, System_time(), transmitTime(radio_setting.bw, radio_setting.sf, self->bufferLen, true));
             
             self->state = TX;
                 
@@ -415,7 +456,7 @@ static void txComplete(void *receiver, uint64_t time, uint64_t error)
     Radio_sleep(self->radio);
     
     self->state = WAIT_RX1;                
-    rx1Time = time + timeBase((self->op == LORA_OP_JOINING) ? System_getRX1Delay(self->system) : Region_getJA1Delay(self->region)) - error;
+    rx1Time = time + timeBase((self->op == LORA_OP_JOINING) ? Region_getJA1Delay(self->region) : System_getRX1Delay(self->system)) - error;
 
     (void)Event_onTimeout(&self->events, rx1Time, self, rxStart);    
     self->rx2Ready = Event_onTimeout(&self->events, rx1Time + timeBase(1U), self, rxStart);
@@ -426,7 +467,7 @@ static void rxStart(void *receiver, uint64_t time, uint64_t error)
     struct lora_mac *self = (struct lora_mac *)receiver;    
     
     LORA_PEDANTIC(receiver != NULL)
-    LORA_PEDANTIC((self->state == WAIT_RX1) || (self->state == WAIT_RX2) || (self->state == RX2))
+    LORA_PEDANTIC((self->state == WAIT_RX1) || (self->state == WAIT_RX2) || (self->state == RX2)||(self->state == RX1))
     LORA_PEDANTIC(self->op != LORA_OP_NONE)
     
     struct lora_radio_rx_setting radio_setting;
@@ -911,7 +952,7 @@ static uint64_t timeNextAvailable(struct lora_mac *self, uint64_t timeNow, uint8
     uint8_t i;
     uint32_t freq;
     uint8_t minRate;
-    uint8_t band;
+    uint8_t band = 0U;
     uint8_t maxRate;
     uint8_t nextBand = UINT8_MAX;
     
