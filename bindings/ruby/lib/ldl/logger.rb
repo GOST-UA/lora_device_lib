@@ -3,22 +3,30 @@ require 'logger'
 module LDL
 
     class Logger
-    
-        @logger = ::Logger.new(STDOUT)
+
+        @loggers = []
         
+        def self.<<(logger)
+            @loggers << logger
+        end
+    
         def self.error(msg)
-            @logger.error(msg)
+            @loggers.each do |logger|
+                logger.error(msg)
+            end
         end
         
         def self.info(msg)
-            @logger.info(msg)
+            @loggers.each do |logger|
+                logger.info(msg)
+            end
         end
         
         def self.debug(msg)
-            @logger.debug(msg)
+            @loggers.each do |logger|
+                logger.debug(msg)
+            end
         end
-        
-        
     
     end
 

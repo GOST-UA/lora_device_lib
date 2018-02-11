@@ -8,13 +8,16 @@ module LDL
         
             @running = false
             @broker = broker
-            @mac = Mac.new(**opts)
+            @mac = MAC.new(broker, **opts)
             
             @worker = Thread.new do
             
                 broker.publish({:eui => devEUI}, "up")
             
-                yield
+                begin
+                    yield(self)
+                rescue Interrupt
+                end
                 
                 broker.publish({:eui => devEUI}, "down")
             
@@ -33,16 +36,19 @@ module LDL
             @running
         end
         
-        def start
+        def start            
             if not running?
-                
+                @worker.run
+                @running = true
             end
             self
         end
         
         def stop            
             if running?
-                
+                @worker.raise Interrupt
+                @worker.join
+                @running = false
             end
             self
         end

@@ -89,7 +89,7 @@ module LDL
         # @param opts [Hash]
         #
         # @option opts [true,false] :confirmed 
-        def send(port, data, **opts)        
+        def data(port, data, **opts)        
             rq = Queue.new
             with_mutex do
                 super(port, data, **opts) do |result|
