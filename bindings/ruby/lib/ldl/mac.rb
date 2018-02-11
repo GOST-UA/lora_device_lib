@@ -23,12 +23,12 @@ module LDL
             this = self
             
             @ticker = Proc.new do
-                this.tick
+                
+                this.tick                
                 
                 if this.ticksUntilNextEvent                
                     SystemTime.onTimeout this.ticksUntilNextEvent, &ticker
-                end
-                
+                end                
             end
             
         end
@@ -75,6 +75,8 @@ module LDL
             SystemTime.onTimeout 0 do 
                 this.ticker.call
             end
+            
+            
             
             raise JoinTimeout.new "timeout waiting for join confirmation" unless rq.pop == :ready
             self

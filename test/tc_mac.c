@@ -150,6 +150,8 @@ static void join_shall_timeout(void **user)
     // next tick shall yield a callback to responseHandler
     expect_value(responseHandler, type, LORA_MAC_TIMEOUT);
     MAC_tick(self);    
+        
+    assert_true(MAC_ticksUntilNextEvent(self) == UINT64_MAX);        
 }
 
 static void join_shall_succeed_at_rx1(void **user)
@@ -191,6 +193,8 @@ static void join_shall_succeed_at_rx1(void **user)
     assert_true(immediate_event_is_pending(self));
     expect_value(responseHandler, type, LORA_MAC_READY);
     MAC_tick(self);    
+    
+    assert_true(MAC_ticksUntilNextEvent(self) == UINT64_MAX);
 }
 
 static void join_shall_succeed_at_rx2(void **user)
@@ -245,6 +249,8 @@ static void join_shall_succeed_at_rx2(void **user)
     // next tick shall yield a callback to responseHandler
     expect_value(responseHandler, type, LORA_MAC_READY);
     MAC_tick(self);    
+    
+    assert_true(MAC_ticksUntilNextEvent(self) == UINT64_MAX);
 }
 
 static void unconfirmed_send_shall_callback_when_cycle_complete(void **user)
@@ -291,6 +297,8 @@ static void unconfirmed_send_shall_callback_when_cycle_complete(void **user)
     // next tick shall yield a callback to responseHandler
     expect_value(responseHandler, type, LORA_MAC_READY);
     MAC_tick(self);        
+    
+    assert_true(MAC_ticksUntilNextEvent(self) == UINT64_MAX);
 }
 
 /* runner */

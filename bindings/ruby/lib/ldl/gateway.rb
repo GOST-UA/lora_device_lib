@@ -63,6 +63,9 @@ module LDL
 
             raise "SystemTime must be defined" unless defined? SystemTime
 
+            raise TypeError unless broker.kind_of? Broker
+            raise TypeError unless eui.kind_of? EUI64
+
             @eui = eui
             @broker = broker
             
@@ -113,13 +116,13 @@ module LDL
             if opts.has_key? :keepalive_interval
                 @keepalive_interval = opts[:keepalive_interval].to_i
             else
-                @keepalive_interval = 10
+                @keepalive_interval = 20
             end
             
             if opts.has_key? :status_interval
                 @status_interval = opts[:status_interval].to_i
             else
-                @status_interval = 10
+                @status_interval = 20
             end
 
             @q = Queue.new
@@ -136,7 +139,8 @@ module LDL
                 @q << {:task => :keepalive}
                 
                 # start the status push
-                @q << {:task => :status}
+                # ttn not responding to this, makes our qos look bad
+                #@q << {:task => :status}
 
                 buffer = []
 
@@ -162,7 +166,10 @@ module LDL
                                 tmst: tmst,
                                 freq: m1[:freq],
                                 data: m1[:data],
-                                datr: "SF#{m1[:sf]}BW#{m1[:bw]}",                                                        
+                                datr: "SF#{m1[:sf]}BW#{m1[:bw]/1000}",                                                        
+                                rssi: -80,
+                                lsnr: 9
+                                
                             )
                         }
                         
@@ -180,7 +187,7 @@ module LDL
                     begin
 
                         loop do
-
+                        
                             reply = s.recvfrom(1024, 0)
                             @q << {:task => :downstream, :data => reply.first}
 
@@ -207,6 +214,8 @@ module LDL
                     # perform a keep alive
                     when :keepalive
 
+                        
+
                         m = Semtech::PullData.new(token: @token, eui: eui)
                         
                         add_token @token
@@ -221,11 +230,15 @@ module LDL
 
                         end
 
+                        puts "send keep alive:"
+                        puts m.inspect
+                        puts ""
+
                         s.write m.encode
 
                     # send status upstream
                     when :status
-                    
+                                                            
                         m = Semtech::PushData.new(
                             token: @token, 
                             eui: eui, 
@@ -236,7 +249,7 @@ module LDL
                                 rxnb: rxnb,
                                 rxok: rxok,
                                 rxfw: rxfw,
-                                ackr: ackr,
+                                ackr: ackr.round(1),
                                 dwnb: dwnb,
                                 txnb: txnb
                             )
@@ -254,6 +267,10 @@ module LDL
 
                         end
                         
+                        puts "send status:"
+                        puts m.inspect
+                        puts ""
+                        
                         s.write m.encode
                         
                     # send upstream
@@ -269,7 +286,13 @@ module LDL
                         
                         @token += 1 # advance our token
                         @txnb += 1  # number of packets emitted
-                        
+
+                        puts "sending upstream:"
+                        puts m.inspect
+                        puts job[:rxpk].to_json
+                        puts ""
+                        puts m.rxpk.first
+                  
                         s.write m.encode
 
                     # actually send on the radio
@@ -307,9 +330,13 @@ module LDL
 
                             msg = Semtech::Message.decode(job[:data])    
 
+                            puts "message received:"
+                            puts msg.inspect
+                            puts ""
+
                             case msg.class
-                            when Semtech::PushAck, Semtech::PullAck                                
-                                ack_token msg.token                                
+                            when Semtech::PushAck, Semtech::PullAck    
+                                ack_token(msg.token)                              
                             when Semtech::PullResp
                             
                                 @dwnb += 1  # number of downlink datagrams received
@@ -395,19 +422,19 @@ module LDL
             end
         end
 
-        def add_token(token)            
+        def add_token(token)                    
             if @tokens.size == MAX_TOKENS
                 @tokens.pop                
             end            
-            @tokens.unshift([token,false])
+            @tokens.unshift([token,false])            
             self
         end
         
-        def ack_token(token)
-            @tokens.each do |t|
-                if t.first == token
-                    t.last = true
-                end
+        def ack_token(token)            
+            @tokens.each do |t|            
+                if t[0] == token                
+                    t[1] = true                    
+                end                
             end
             self
         end
@@ -417,7 +444,7 @@ module LDL
         end
         
         def tmst
-            (SystemTime.time * 20) & 0xffffffff
+            ( (SystemTime.time * 20) & 0xffffffff )
         end
         
         private :with_mutex, :add_token, :ack_token, :tmst

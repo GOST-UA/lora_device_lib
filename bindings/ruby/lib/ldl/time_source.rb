@@ -72,13 +72,14 @@ module LDL
                             if event
                         
                                 delta -= event[:interval]
-                                @time += event[:interval]
+                                @time += event[:interval].to_i
                                 event[:block].call
+                                
                                 serviced += 1
                                 
                             else
                             
-                                @time += delta
+                                @time += delta.to_i
                                 break
                                 
                             end
@@ -105,8 +106,8 @@ module LDL
         
             raise ArgumentError unless interval.kind_of? Numeric
             
-        
-            ref = {:interval => interval, :block => block}
+            ref = {:interval => interval.to_i, :block => block}
+            
             with_mutex do                
                 if @queue.empty?
                     @queue << ref
@@ -185,8 +186,6 @@ module LDL
                 yield
             end
         end
-
-        
 
         # convert 20us tick interval to seconds
         def to_sec(interval)

@@ -485,7 +485,7 @@ static void initChannels(VALUE self, enum lora_region_id region)
  * @option options [EUI64] :region 
  * @option options [EUI64] :appEUI application identifier (defaults to 00-00-00-00-00-00-00-00)
  * @option options [EUI64] :devEUI device identifier (defaults to 00-00-00-00-00-00-00-00)
- * @option options [EUI64] :appKey application key (defaults to null key)
+ * @option options [Key] :appKey application key (defaults to null key)
  * 
  * */
 static VALUE initialize(int argc, VALUE *argv, VALUE self)

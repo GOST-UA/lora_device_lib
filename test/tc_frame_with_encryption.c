@@ -123,6 +123,30 @@ static void encode_croft_example(void **user)
     assert_memory_equal(expected, buffer, retval);    
 }
 
+static void encode_random_internet_join_request_example(void **user)
+{
+    uint8_t retval;
+    uint8_t buffer[UINT8_MAX];
+    const uint8_t key[] = {0xB6, 0xB5, 0x3F, 0x4A, 0x16, 0x8A, 0x7A, 0x88, 0xBD, 0xF7, 0xEA, 0x13, 0x5C, 0xE9, 0xCF, 0xCA};
+    uint8_t expected[] = {0x00, 0xDC, 0x00, 0x00, 0xD0, 0x7E, 0xD5, 0xB3, 0x70, 0x1E, 0x6F, 0xED, 0xF5, 0x7C, 0xEE, 0xAF, 0x00, 0x85, 0xCC, 0x58, 0x7F, 0xE9, 0x13};
+    
+    uint8_t appEUI[] = {0x70, 0xB3, 0xD5, 0x7E, 0xD0, 0x00, 0x00, 0xDC};
+    uint8_t devEUI[] = {0x00, 0xAF, 0xEE, 0x7C, 0xF5, 0xED, 0x6F, 0x1E};
+    
+    struct lora_frame_join_request f;
+    
+    (void)memset(&f, 0, sizeof(f));
+    
+    (void)memcpy(f.appEUI, appEUI, sizeof(appEUI));
+    (void)memcpy(f.devEUI, devEUI, sizeof(devEUI));
+    f.devNonce = 0xCC85;
+    
+    retval = Frame_putJoinRequest(key, &f, buffer, sizeof(buffer));
+    
+    assert_int_equal(sizeof(expected), retval);    
+    assert_memory_equal(expected, buffer, retval);        
+}
+
 static void decode_unconfirmed_up(void **user)
 {
     const uint8_t data[] = "hello world";
@@ -221,6 +245,22 @@ static void decode_croft_example(void **user)
     assert_true(f.valid);
 }
 
+static void decode_random_internet_join_request_example(void **user)
+{
+    const uint8_t key[] = {0xB6, 0xB5, 0x3F, 0x4A, 0x16, 0x8A, 0x7A, 0x88, 0xBD, 0xF7, 0xEA, 0x13, 0x5C, 0xE9, 0xCF, 0xCA};
+    uint8_t input[] = {0x00, 0xDC, 0x00, 0x00, 0xD0, 0x7E, 0xD5, 0xB3, 0x70, 0x1E, 0x6F, 0xED, 0xF5, 0x7C, 0xEE, 0xAF, 0x00, 0x85, 0xCC, 0x58, 0x7F, 0xE9, 0x13};
+    
+    struct lora_frame f;
+    
+    bool result = Frame_decode(key, key, key, input, sizeof(input), &f);
+    
+    assert_true(result);    
+    
+    assert_int_equal(FRAME_TYPE_JOIN_REQ, f.type);    
+    
+    assert_true(f.valid);
+}
+
 int main(void)
 {
     const struct CMUnitTest tests[] = {
@@ -230,12 +270,16 @@ int main(void)
         cmocka_unit_test(encode_join_accept_with_cf_list),        
         cmocka_unit_test(encode_croft_example),        
         
+        cmocka_unit_test(encode_random_internet_join_request_example),        
+        
         cmocka_unit_test(decode_unconfirmed_up),        
         cmocka_unit_test(try_decode_unconfirmed_up_port_zero_with_opts),        
         cmocka_unit_test(decode_join_request),        
         cmocka_unit_test(decode_join_accept),        
         cmocka_unit_test(decode_join_accept_with_cf_list),                
         cmocka_unit_test(decode_croft_example),                
+        
+        cmocka_unit_test(decode_random_internet_join_request_example),                
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);
