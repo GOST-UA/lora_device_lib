@@ -83,58 +83,62 @@ void System_atomic_setPtr(void **receiver, void *value)
     *receiver = value;  //fixme
 }
 
-void System_getAppEUI(void *receiver, void *eui)
+void System_getAppEUI(void *receiver, void *value)
 {
     VALUE self = (VALUE)receiver;
     
     VALUE appEUI = rb_iv_get(self, "@appEUI");
     
-    (void)memcpy(eui, RSTRING_PTR(rb_funcall(appEUI, rb_intern("bytes"), 0)), sizeof(default_eui));
+    (void)memcpy(value, RSTRING_PTR(rb_funcall(appEUI, rb_intern("bytes"), 0)), sizeof(default_eui));
 }
 
-void System_getDevEUI(void *receiver, void *eui)
+void System_getDevEUI(void *receiver, void *value)
 {
     VALUE self = (VALUE)receiver;    
     VALUE devEUI = rb_iv_get(self, "@devEUI");
     
-    (void)memcpy(eui, RSTRING_PTR(rb_funcall(devEUI, rb_intern("bytes"), 0)), sizeof(default_eui));
+    (void)memcpy(value, RSTRING_PTR(rb_funcall(devEUI, rb_intern("bytes"), 0)), sizeof(default_eui));
 }
 
-void System_getAppKey(void *receiver, void *key)
+void System_getAppKey(void *receiver, void *value)
 {
     VALUE self = (VALUE)receiver;    
-    VALUE appKey = rb_iv_get(self, "@appKey");
+    VALUE key = rb_iv_get(self, "@appKey");
     
-    (void)memcpy(key, RSTRING_PTR(rb_funcall(appKey, rb_intern("value"), 0)), sizeof(default_key));
+    (void)memcpy(value, RSTRING_PTR(rb_funcall(key, rb_intern("value"), 0)), sizeof(default_key));
 }
 
-void System_getNwkSKey(void *receiver, void *key)
+void System_getNwkSKey(void *receiver, void *value)
 {
-    VALUE k = rb_iv_get((VALUE)receiver, "@nwkSKey");
- 
-    (void)memcpy(key, RSTRING_PTR(k), RSTRING_LEN(k));    
+    VALUE self = (VALUE)receiver;    
+    VALUE key = rb_iv_get(self, "@nwkSKey");
+    
+    (void)memcpy(value, RSTRING_PTR(rb_funcall(key, rb_intern("value"), 0)), sizeof(default_key));    
 }
 
-void System_getAppSKey(void *receiver, void *key)
+void System_getAppSKey(void *receiver, void *value)
 {
-    VALUE k = rb_iv_get((VALUE)receiver, "@appSKey");
- 
-    (void)memcpy(key, RSTRING_PTR(k), RSTRING_LEN(k));
+    VALUE self = (VALUE)receiver;    
+    VALUE key = rb_iv_get(self, "@appSKey");
+    
+    (void)memcpy(value, RSTRING_PTR(rb_funcall(key, rb_intern("value"), 0)), sizeof(default_key));    
 }
 
-void System_setNwkSKey(void *receiver, const void *key)
+void System_setNwkSKey(void *receiver, const void *value)
 {
-    rb_iv_set((VALUE)receiver, "@nwkSKey", rb_str_new((const char *)key, 16U));
+    VALUE key = rb_funcall(cKey, rb_intern("new"), 1, rb_str_new((const char *)value, sizeof(default_key)));
+    rb_iv_set((VALUE)receiver, "@nwkSKey", key);
 }
 
-void System_setAppSKey(void *receiver, const void *key)
+void System_setAppSKey(void *receiver, const void *value)
 {
-    rb_iv_set((VALUE)receiver, "@appSKey", rb_str_new((const char *)key, 16U));
+    VALUE key = rb_funcall(cKey, rb_intern("new"), 1, rb_str_new((const char *)value, sizeof(default_key)));
+    rb_iv_set((VALUE)receiver, "@appSKey", key);
 }
 
-void System_setDevAddr(void *receiver, uint32_t devAddr)
+void System_setDevAddr(void *receiver, uint32_t value)
 {
-    rb_iv_set((VALUE)receiver, "@devAddr", UINT2NUM(devAddr));
+    rb_iv_set((VALUE)receiver, "@devAddr", UINT2NUM(value));
 }
 
 uint32_t System_getDevAddr(void *receiver)
