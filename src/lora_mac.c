@@ -290,7 +290,14 @@ uint64_t MAC_ticksUntilNextChannel(struct lora_mac *self)
     
     if(retval != UINT64_MAX){
         
-        retval = retval - timeNow;
+        if(retval > timeNow){
+            
+            retval = retval - timeNow;
+        }
+        else{
+            
+            0U;
+        }        
     }
     
     return retval;
@@ -927,7 +934,7 @@ static bool isAvailable(struct lora_mac *self, uint8_t chIndex, uint64_t timeNow
     
         if(getChannel(self, chIndex, &freq, &minRate, &maxRate)){
             
-            if(rate >= minRate && rate <= maxRate){
+            if((rate >= minRate) && (rate <= maxRate)){
             
                 if(Region_getBand(self->region, freq, &band)){
                 
@@ -948,7 +955,7 @@ static uint64_t timeNextAvailable(struct lora_mac *self, uint64_t timeNow, uint8
     uint8_t i;
     uint32_t freq;
     uint8_t minRate;
-    uint8_t band = 0U;
+    uint8_t band;
     uint8_t maxRate;
     uint8_t nextBand = UINT8_MAX;
     
@@ -958,7 +965,7 @@ static uint64_t timeNextAvailable(struct lora_mac *self, uint64_t timeNow, uint8
         
             if(getChannel(self, i, &freq, &minRate, &maxRate)){
                 
-                if(rate >= minRate && rate <= maxRate){
+                if((rate >= minRate) && (rate <= maxRate)){
                 
                     if(Region_getBand(self->region, freq, &band)){
                 
@@ -982,7 +989,7 @@ static uint64_t timeNextAvailable(struct lora_mac *self, uint64_t timeNow, uint8
         }
     }
     
-    return (nextBand == UINT8_MAX) ? UINT64_MAX : self->bands[band];
+    return (nextBand == UINT8_MAX) ? UINT64_MAX : self->bands[nextBand];
 }
 
 static bool getChannel(struct lora_mac *self, uint8_t chIndex, uint32_t *freq, uint8_t *minRate, uint8_t *maxRate)
