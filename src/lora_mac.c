@@ -296,7 +296,7 @@ uint64_t MAC_ticksUntilNextChannel(struct lora_mac *self)
         }
         else{
             
-            0U;
+            retval = 0U;
         }        
     }
     
@@ -722,7 +722,7 @@ static bool collect(struct lora_mac *self, struct lora_frame *frame)
                                     
                     System_setNwkSKey(self->system, nwkSKey);                
                     System_setAppSKey(self->system, appSKey);
-                    System_setDevAddr(self->system, frame->fields.joinAccept.devAddr);
+                    System_setDevAddr(self->system, frame->fields.joinAccept.devAddr);                                        
                 }
                 else{
                     

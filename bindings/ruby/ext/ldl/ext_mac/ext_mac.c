@@ -324,7 +324,7 @@ uint16_t System_incrementUp(void *receiver)
 {
     uint16_t retval = NUM2UINT(rb_iv_get((VALUE)receiver, "@upCount"));
     
-    rb_iv_set((VALUE)receiver, "@upCount", retval + 1U);
+    rb_iv_set((VALUE)receiver, "@upCount", UINT2NUM(retval + 1U));
     
     return retval;    
 }

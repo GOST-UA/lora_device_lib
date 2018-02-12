@@ -7,6 +7,9 @@ module LDL
 
         attr_reader :ticker
         attr_reader :channels
+        attr_reader :nwkSKey, :appSKey, :appKey
+        attr_reader :devEUI, :appEUI
+        attr_reader :devAddr
         
         # @param broker [Broker] for sending/recieving events
         # @param opts [Hash]
@@ -34,7 +37,7 @@ module LDL
             
         end
         
-        attr_reader :devEUI, :appEUI
+        
         
         def tick            
             with_mutex do

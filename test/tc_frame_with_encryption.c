@@ -147,6 +147,34 @@ static void encode_random_internet_join_request_example(void **user)
     assert_memory_equal(expected, buffer, retval);        
 }
 
+static void encode_random_internet_data_example(void **user)
+{
+    uint8_t retval;
+    uint8_t buffer[UINT8_MAX];
+    const uint8_t key[] = {0xCF, 0x9C, 0xBD, 0x0B, 0xEF, 0xF7, 0xDA, 0xAC, 0xD6, 0xB6, 0x9B, 0x0C, 0xFA, 0x78, 0xE4, 0x28};
+    uint8_t expected[] = {0x40, 0x6C, 0x24, 0x01, 0x26, 0x00, 0x00, 0x00, 0x01, 0x1F, 0x8B, 0xDA, 0xF4, 0xEC, 0xFF, 0x44, 0xF3, 0x06, 0x25, 0xAA, 0xC1, 0x56, 0x0A, 0x5C, 0xD8, 0x68, 0xD0, 0xCA, 0x31, 0xFB, 0xA0, 0x20, 0x78, 0xE4, 0x90, 0xB9, 0x01, 0x1D};
+    const char payload[] = "2018-02-12 00:40:51 +0000";
+        
+    struct lora_frame_data f;
+    enum lora_frame_type type;
+    
+    type = FRAME_TYPE_DATA_UNCONFIRMED_UP;
+    
+    (void)memset(&f, 0, sizeof(f));
+    
+    f.devAddr = 0x2601246C;
+    f.data = (const uint8_t *)payload;
+    f.dataLen = strlen(payload);
+    f.port = 1U;
+    
+    retval = Frame_putData(type, key, &f, buffer, sizeof(buffer));
+    
+    assert_int_equal(sizeof(expected), retval);
+    
+    assert_memory_equal(expected, buffer, retval);    
+}
+
+
 static void decode_unconfirmed_up(void **user)
 {
     const uint8_t data[] = "hello world";
@@ -260,6 +288,18 @@ static void decode_random_internet_join_request_example(void **user)
     
     assert_true(f.valid);
 }
+static void decode_random_internet_data_example(void **user)
+{
+    const uint8_t key[] = {0xCF, 0x9C, 0xBD, 0x0B, 0xEF, 0xF7, 0xDA, 0xAC, 0xD6, 0xB6, 0x9B, 0x0C, 0xFA, 0x78, 0xE4, 0x28};
+    uint8_t input[] = {0x40, 0x6C, 0x24, 0x01, 0x26, 0x00, 0x00, 0x00, 0x01, 0x1F, 0x8B, 0xDA, 0xF4, 0xEC, 0xFF, 0x44, 0xF3, 0x06, 0x25, 0xAA, 0xC1, 0x56, 0x0A, 0x5C, 0xD8, 0x68, 0xD0, 0xCA, 0x31, 0xFB, 0xA0, 0x20, 0x78, 0xE4, 0x90, 0xB9, 0x01, 0x1D};
+        
+    struct lora_frame f;
+    
+    bool result = Frame_decode(key, key, key, input, sizeof(input), &f);
+    
+    assert_true(result);    
+    assert_true(f.valid);
+}
 
 int main(void)
 {
@@ -271,6 +311,7 @@ int main(void)
         cmocka_unit_test(encode_croft_example),        
         
         cmocka_unit_test(encode_random_internet_join_request_example),        
+        cmocka_unit_test(encode_random_internet_data_example),        
         
         cmocka_unit_test(decode_unconfirmed_up),        
         cmocka_unit_test(try_decode_unconfirmed_up_port_zero_with_opts),        
@@ -280,6 +321,7 @@ int main(void)
         cmocka_unit_test(decode_croft_example),                
         
         cmocka_unit_test(decode_random_internet_join_request_example),                
+        cmocka_unit_test(decode_random_internet_data_example),                
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);
