@@ -61,8 +61,6 @@ size_t Frame_putData(enum lora_frame_type type, const void *nwkSKey, const void 
     
     if(f->optsLen <= 0xfU){
         
-        printf("foptslen = %u\n", f->optsLen);
-
         if((6U + (size_t)f->optsLen + 3U + (size_t)f->dataLen + 4U) <= max){
 
             pos += putU8(&ptr[pos], max - pos, ((uint8_t)type) << 5);            

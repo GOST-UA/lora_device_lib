@@ -60,7 +60,7 @@ extern "C" {
     
 #endif
     
-enum lora_region_id {
+enum lora_region {
     EU_863_870,
     US_902_928,
     CN_779_787,
@@ -68,64 +68,24 @@ enum lora_region_id {
     AU_915_928,
     CN_470_510,
     AS_923,
-    KR_920_923
+    KR_920_923,
+    IN_865_867
 };
 
-struct lora_region_default {
+bool Region_supported(enum lora_region region);
 
-    uint16_t max_fcnt_gap;  /**< maximum frame counter gap */
-    
-    uint8_t rx1_delay;      /**< rx1 delay (seconds) */    
-    uint8_t ja1_delay;      /**< join accept 1 delay (seconds) */
-    
-    uint8_t rx1_offset;    
-    
-    uint32_t rx2_freq;      /**< rx2 slot frequency */
-    uint8_t rx2_rate;       /**< rx2 slot rate */        
-    
-    uint8_t adr_ack_limit;  
-    uint8_t adr_ack_delay;  
-    uint8_t adr_ack_timeout;    
-    uint8_t adr_ack_dither;     
-    
-    uint8_t tx_rate;        /**< an acceptable initial tx data rate */
-    uint8_t tx_power;       /**< an acceptable initial power setting */
-};
+bool Region_getRate(enum lora_region region, uint8_t rate, enum lora_spreading_factor *sf, enum lora_signal_bandwidth *bw);
+bool Region_getPayload(enum lora_region region, uint8_t rate, uint8_t *payload);
 
-struct lora_data_rate {
-    
-    enum lora_spreading_factor sf;  /**< spreading factor */
-    enum lora_signal_bandwidth bw;  /**< bandwidth */
-    uint8_t rate;                   
-    uint8_t payload;                /**< maximum payload (accounts for max dwell time) */
-};
+bool Region_getBand(enum lora_region region, uint32_t freq, uint8_t *band);
 
-const struct lora_region *Region_getRegion(enum lora_region_id region);
+bool Region_isDynamic(enum lora_region region);
 
-void Region_getDefaultSettings(const struct lora_region *self, struct lora_region_default *defaults);
+bool Region_getChannel(enum lora_region region, uint8_t chIndex, uint32_t *freq, uint8_t *minRate, uint8_t *maxRate);
 
-/** convert a data rate into parameters for a given region
- *
- * @param[in] region
- * @param[in] rate
- * @param[out] setting
- *
- * @return true if data rate is recognised
- *
- * */
-bool Region_getRate(const struct lora_region *self, uint8_t rate, struct lora_data_rate *setting);
+uint8_t Region_numChannels(enum lora_region region);
 
-bool Region_getBand(const struct lora_region *self, uint32_t freq, uint8_t *band);
-
-bool Region_isDynamic(const struct lora_region *self);
-
-bool Region_getChannel(const struct lora_region *self, uint8_t chIndex, uint32_t *freq, uint8_t *minRate, uint8_t *maxRate);
-
-uint8_t Region_numChannels(const struct lora_region *self);
-
-uint8_t Region_getPayload(const struct lora_region *self, uint8_t rate);
-
-uint8_t Region_getJA1Delay(const struct lora_region *self);
+uint8_t Region_getJA1Delay(enum lora_region region);
 
 /** Get the default channel settings for this region via an iterator callback
  * 
@@ -134,18 +94,30 @@ uint8_t Region_getJA1Delay(const struct lora_region *self);
  * @param[in] cb this function will be called for each default channel setting
  * 
  * */
-void Region_getDefaultChannels(const struct lora_region *self, void *receiver, void (*handler)(void *reciever, uint8_t chIndex, uint32_t freq, uint8_t minRate, uint8_t maxRate));
+void Region_getDefaultChannels(enum lora_region region, void *receiver, void (*handler)(void *reciever, uint8_t chIndex, uint32_t freq, uint8_t minRate, uint8_t maxRate));
 
-uint16_t Region_getOffTimeFactor(const struct lora_region *self, uint8_t band);
+uint16_t Region_getOffTimeFactor(enum lora_region region, uint8_t band);
 
-bool Region_validateRate(const struct lora_region *self, uint8_t chIndex, uint8_t minRate, uint8_t maxRate);
-bool Region_validateFreq(const struct lora_region *self, uint8_t chIndex, uint32_t freq);
+bool Region_validateRate(enum lora_region region, uint8_t chIndex, uint8_t minRate, uint8_t maxRate);
+bool Region_validateFreq(enum lora_region region, uint8_t chIndex, uint32_t freq);
 
-bool Region_getRX1DataRate(const struct lora_region *self, uint8_t tx_rate, uint8_t rx1_offset, uint8_t *rx1_rate);
+bool Region_getRX1DataRate(enum lora_region region, uint8_t tx_rate, uint8_t rx1_offset, uint8_t *rx1_rate);
 
-bool Region_getRX1Freq(const struct lora_region *self, uint32_t txFreq, uint32_t *freq);
+bool Region_getRX1Freq(enum lora_region region, uint32_t txFreq, uint32_t *freq);
 
-uint16_t Region_getMaxFCNTGap(const struct lora_region *self);
+uint16_t Region_getMaxFCNTGap(enum lora_region region);
+
+uint8_t Region_getRX1Delay(enum lora_region region);
+
+uint8_t Region_getRX1Offset(enum lora_region region);
+uint32_t Region_getRX2Freq(enum lora_region region);
+uint8_t Region_getRX2Rate(enum lora_region region);
+uint8_t Region_getADRAckLimit(enum lora_region region);
+uint8_t Region_getADRAckDelay(enum lora_region region);
+uint8_t Region_getADRAckTimeout(enum lora_region region);
+uint8_t Region_getADRAckDither(enum lora_region region);
+uint8_t Region_getTXRate(enum lora_region region);
+uint8_t Region_getTXPower(enum lora_region region);
 
 /** derive the rate integer from bandwidth and spreading factor for a given region
  *
@@ -159,7 +131,7 @@ uint16_t Region_getMaxFCNTGap(const struct lora_region *self);
  * @return true if settings are valid for region
  *
  * */
-bool Region_rateFromParameters(const struct lora_region *self, enum lora_spreading_factor sf, enum lora_signal_bandwidth bw, uint8_t *rate);
+bool Region_rateFromParameters(enum lora_region region, enum lora_spreading_factor sf, enum lora_signal_bandwidth bw, uint8_t *rate);
 
 #ifdef __cplusplus
 }

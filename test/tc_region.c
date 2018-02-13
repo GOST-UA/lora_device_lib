@@ -6,15 +6,15 @@
 
 #include "lora_region.h"
 
-static void test_Region_getRegion(void **user)
+static void eu_868_870_is_supported(void **user)
 {
-    assert_non_null(Region_getRegion(EU_863_870));
+    assert_true(Region_supported(EU_863_870));
 }
 
 int main(void)
 {
     const struct CMUnitTest tests[] = {
-        cmocka_unit_test(test_Region_getRegion),
+        cmocka_unit_test(eu_868_870_is_supported),
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);

@@ -26,9 +26,8 @@
 extern "C" {
 #endif
 
-#ifndef LORA_TIMEBASE
-    #define LORA_TIMEBASE 100000U
-#endif
+/** ticks per second */
+#define LORA_TICKS_PER_SECOND 100000U
 
 #include "lora_region.h"
 #include "lora_radio.h"
@@ -116,7 +115,7 @@ struct lora_mac {
     
     struct lora_radio *radio;           /**< radio belonging to MAC */
     struct lora_event events;           /**< event manager */
-    const struct lora_region *region;   /**< region MAC is oeprating in */
+    enum lora_region region;   /**< region MAC is oeprating in */
     
     //void *rx1Ready;     /**< timer callback for RX1 window start */
     void *rx2Ready;     /**< timer callback for RX2 window start */
@@ -140,7 +139,7 @@ struct lora_mac {
  * @param[in] cb event callback
  * 
  * */
-void MAC_init(struct lora_mac *self, void *system, enum lora_region_id region, struct lora_radio *radio, void *receiver, lora_mac_response_fn cb);
+void MAC_init(struct lora_mac *self, void *system, enum lora_region region, struct lora_radio *radio, void *receiver, lora_mac_response_fn cb);
 
 /** Send a message upstream
  * 

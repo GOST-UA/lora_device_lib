@@ -390,7 +390,7 @@ void Init_ext_mac(void)
     cError = rb_const_get(cLDL, rb_intern("Error"));
     cRadio = rb_const_get(cLDL, rb_intern("Radio"));    
     
-    rb_const_set(cExtMAC, rb_intern("TIMEBASE"), UINT2NUM(LORA_TIMEBASE));
+    rb_const_set(cExtMAC, rb_intern("TIMEBASE"), UINT2NUM(LORA_TICKS_PER_SECOND));
 }
 
 uint32_t Radio_resetHardware(struct lora_radio *self)
@@ -455,12 +455,12 @@ static VALUE alloc_state(VALUE klass)
     return Data_Wrap_Struct(klass, 0, free, calloc(1, sizeof(struct lora_mac)));
 }
 
-static void initChannels(VALUE self, enum lora_region_id region)
+static void initChannels(VALUE self, enum lora_region region)
 {
     VALUE channels = rb_ary_new();
     uint8_t i;
     
-    for(i=0U; i < Region_numChannels(Region_getRegion(region)); i++){
+    for(i=0U; i < Region_numChannels(region); i++){
         
         VALUE channel = rb_hash_new();
         
@@ -498,7 +498,7 @@ static VALUE initialize(int argc, VALUE *argv, VALUE self)
 {
     struct region_symbol_map {
         VALUE symbol;
-        enum lora_region_id region;
+        enum lora_region region;
     };
     
     struct region_symbol_map map[] = {
@@ -509,7 +509,7 @@ static VALUE initialize(int argc, VALUE *argv, VALUE self)
     };
     
     struct lora_mac *this;    
-    enum lora_region_id region_id;
+    enum lora_region region_id;
     size_t i;
     
     VALUE region;
