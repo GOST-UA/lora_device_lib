@@ -25,7 +25,7 @@ static void encode_an_empty_frame(void **user)
     input.counter = 256;
     input.devAddr = devAddr;
      
-    outLen = Frame_putData(type, dummyKey, &input, out, sizeof(out));
+    outLen = Frame_putData(type, dummyKey, dummyKey, &input, out, sizeof(out));
     
     assert_int_equal(sizeof(expected)-1U, outLen);
     assert_memory_equal(expected, out, sizeof(expected)-1U);

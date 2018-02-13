@@ -101,7 +101,8 @@ struct lora_frame {
 /** encode a data frame
  *
  * @param[in] type type of data frame
- * @param[in] key
+ * @param[in] nwkSKey
+ * @param[in] appSKey
  * @param[in] f     frame parameter structure
  * @param[out] out  frame buffer
  * @param[in] max   maximum byte length of `out`
@@ -111,7 +112,7 @@ struct lora_frame {
  * @retval 0 frame could not be encoded
  *
  * */
-size_t Frame_putData(enum lora_frame_type type, const void *key, const struct lora_frame_data *f, void *out, size_t max);
+size_t Frame_putData(enum lora_frame_type type, const void *nwkSKey, const void *appSKey, const struct lora_frame_data *f, void *out, size_t max);
 
 /** encode a join request frame
  *

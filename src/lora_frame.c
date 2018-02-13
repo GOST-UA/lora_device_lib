@@ -54,12 +54,14 @@ static size_t putU8(uint8_t *out, size_t max, uint8_t value);
 
 /* functions **********************************************************/
 
-size_t Frame_putData(enum lora_frame_type type, const void *key, const struct lora_frame_data *f, void *out, size_t max)
+size_t Frame_putData(enum lora_frame_type type, const void *nwkSKey, const void *appSKey, const struct lora_frame_data *f, void *out, size_t max)
 {
     size_t pos = 0U;
     uint8_t *ptr = (uint8_t *)out;
     
     if(f->optsLen <= 0xfU){
+        
+        printf("foptslen = %u\n", f->optsLen);
 
         if((6U + (size_t)f->optsLen + 3U + (size_t)f->dataLen + 4U) <= max){
 
@@ -75,11 +77,11 @@ size_t Frame_putData(enum lora_frame_type type, const void *key, const struct lo
                 pos += putU8(&ptr[pos], max - pos, f->port);
 
                 (void)memcpy(&ptr[pos], f->data, f->dataLen);
-                cipherData(type, key, f->devAddr, f->counter, &ptr[pos], f->dataLen);
+                cipherData(type, (f->port == 0U) ? nwkSKey : appSKey, f->devAddr, f->counter, &ptr[pos], f->dataLen);
                 pos += f->dataLen;                                
             }
 
-            pos += putU32(&ptr[pos], max - pos, cmacData(type, key, f->devAddr, f->counter, ptr, pos));            
+            pos += putU32(&ptr[pos], max - pos, cmacData(type, nwkSKey, f->devAddr, f->counter, ptr, pos));            
         }
         else{
 
@@ -272,6 +274,7 @@ bool Frame_decode(const void *appKey, const void *nwkSKey, const void *appSKey, 
                     retval = true;
                 }
                 else{
+                    
                     LORA_INFO("unexpected frame length for join accept")
                 }                
                 break;
@@ -316,7 +319,7 @@ bool Frame_decode(const void *appKey, const void *nwkSKey, const void *appSKey, 
                         
                         key = ((f->fields.data.data != NULL) && (f->fields.data.port != 0U)) ? appSKey : nwkSKey;
                         
-                        f->valid = (cmacData(f->type, key, f->fields.data.devAddr, f->fields.data.counter, ptr, pos - sizeof(mic)) == mic);
+                        f->valid = (cmacData(f->type, nwkSKey, f->fields.data.devAddr, f->fields.data.counter, ptr, pos - sizeof(mic)) == mic);
                         
                         cipherData(f->type, key, f->fields.data.devAddr, f->fields.data.counter, &ptr[pos - f->fields.data.dataLen - sizeof(mic)], f->fields.data.dataLen);
         

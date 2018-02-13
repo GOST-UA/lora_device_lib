@@ -432,7 +432,7 @@ static VALUE _encode_data(VALUE self)
     f.dataLen = (data != Qnil) ? RSTRING_LEN(data) : 0U;
     f.port = (port != Qnil) ? NUM2UINT(port) : 0U;
 
-    len = Frame_putData(type, (f.port == 0) ? RSTRING_PTR(nwkSKey) : RSTRING_PTR(appSKey), &f, out, sizeof(out));
+    len = Frame_putData(type, RSTRING_PTR(nwkSKey), RSTRING_PTR(appSKey), &f, out, sizeof(out));
     
     assert(len != 0U);
     

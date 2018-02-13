@@ -95,7 +95,8 @@ bool MAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *d
     bool retval = false;
     
     struct lora_frame_data f;
-    uint8_t key[16U];
+    uint8_t nwkSKey[16U];
+    uint8_t appSKey[16U];
     uint64_t timeNow = System_time();
     
     if(self->status.joined){
@@ -119,17 +120,11 @@ bool MAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *d
                         f.port = port;
                         f.data = ((len > 0U) ? (const uint8_t *)data : NULL);
                         f.dataLen = len;
-                        
-                        if(port == 0U){
                             
-                            System_getNwkSKey(self->system, key);
-                        }
-                        else{
-                            
-                            System_getAppSKey(self->system, key);
-                        }
+                        System_getNwkSKey(self->system, nwkSKey);                            
+                        System_getAppSKey(self->system, appSKey);
                         
-                        self->bufferLen = Frame_putData(FRAME_TYPE_DATA_UNCONFIRMED_UP, key, &f, self->buffer, sizeof(self->buffer));
+                        self->bufferLen = Frame_putData(FRAME_TYPE_DATA_UNCONFIRMED_UP, nwkSKey, appSKey, &f, self->buffer, sizeof(self->buffer));
                         
                         (void)Event_onTimeout(&self->events, 0U, self, tx);
                         
