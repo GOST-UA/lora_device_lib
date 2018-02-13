@@ -41,31 +41,6 @@ static bool upRateRange(enum lora_region region, uint8_t chIndex, uint8_t *minRa
 static bool freqToChannel(enum lora_region region, uint32_t freq, uint8_t *chIndex);
 static bool getRateAndPayload(enum lora_region region, uint8_t rate, enum lora_spreading_factor *sf, enum lora_signal_bandwidth *bw, uint8_t *payload);
 
-/* data ***************************************************************/
-
-static const uint8_t erp_EU_863_870[] PROGMEM = {
-    20U,
-    14U,
-    11U,
-    8U,
-    5U,
-    2U
-};
-
-static const uint8_t erp_US_902_928[] PROGMEM = {
-    30U,
-    28U,
-    26U,
-    0U,
-    0U,
-    0U,
-    0U,
-    0U,
-    0U,
-    0U,
-    10U    
-};
-
 /* functions **********************************************************/
 
 bool Region_supported(enum lora_region region)
@@ -134,18 +109,30 @@ bool Region_getBand(enum lora_region region, uint32_t freq, uint8_t *band)
             
             *band = 2U;
         }
+        else if((freq > 869400000U) && (freq < 869650000U)){
+            
+            *band = 3U;
+        }
+        else if((freq > 869700000U) && (freq < 867050000U)){
+            
+            *band = 4U;
+        }
         else{
             
             retval = false;
         }        
         break;
     
+    
+    case US_902_928:            
+    case AU_915_928:
+        *band = 0U;
+        retval = true;
+        break;        
     case EU_433:
     case AS_923:
     case KR_920_923:
-    case CN_779_787:                     
-    case US_902_928:            
-    case AU_915_928:
+    case CN_779_787:                         
     case IN_865_867:
     default:
         break;
@@ -302,9 +289,8 @@ uint16_t Region_getOffTimeFactor(enum lora_region region, uint8_t band)
     
         switch(band){
         case 0U:
-            retval = 100U;  // 1.0%
-            break;
         case 1U:
+        case 4U:
             retval = 100U;  // 1.0%
             break;
         case 2U:
@@ -312,16 +298,15 @@ uint16_t Region_getOffTimeFactor(enum lora_region region, uint8_t band)
             break;
         case 3U:        
             retval = 10U;  // 10.0%
-            break;
-        case 4U:            
-            retval = 100U; // 1.0%
-            break;
+            break;                    
         default:
             break;
         }
         break;
     
-    case EU_433:
+    case EU_433:        
+        retval = 100U;
+        break;    
     case AS_923:
     case KR_920_923:
     case CN_779_787:                      
@@ -883,6 +868,7 @@ static bool getRateAndPayload(enum lora_region region, uint8_t rate, enum lora_s
             *payload = 250U;
             break;
         case 4U:
+        case 12U:
             *sf = SF_8;
             *bw = BW_500;
             *payload = 250U;
@@ -890,39 +876,34 @@ static bool getRateAndPayload(enum lora_region region, uint8_t rate, enum lora_s
         case 8U:
             *sf = SF_12;
             *bw = BW_500;
-            *payload = 41U;
+            *payload = 61U;
             break;
         case 9U:
             *sf = SF_11;
             *bw = BW_500;
-            *payload = 117U;
+            *payload = 137U;
             break;
         case 10U:
             *sf = SF_10;
             *bw = BW_500;
-            *payload = 230U;
+            *payload = 250U;
             break;
         case 11U:
             *sf = SF_9;
             *bw = BW_500;
-            *payload = 230U;
-            break;
-        case 12U:
-            *sf = SF_8;
-            *bw = BW_500;
-            *payload = 230U;
-            break;
+            *payload = 250U;
+            break;        
         case 13U:
             *sf = SF_7;
             *bw = BW_500;
-            *payload = 230U;
+            *payload = 250U;
             break;
         default:
             retval = false;
             break;
-        }
-    
+        }    
         break;
+        
     case AS_923:
     case KR_920_923:
     case CN_779_787:

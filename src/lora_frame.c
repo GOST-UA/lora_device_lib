@@ -260,6 +260,7 @@ bool Frame_decode(const void *appKey, const void *nwkSKey, const void *appSKey, 
                         for(i=0U; i < sizeof(f->fields.joinAccept.cfList)/sizeof(*f->fields.joinAccept.cfList); i++){
                         
                             pos += getU24(&ptr[pos], len - pos, &f->fields.joinAccept.cfList[i]);
+                            f->fields.joinAccept.cfList[i] *= 100U;
                         }                            
                         
                         pos++;

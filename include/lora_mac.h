@@ -100,7 +100,7 @@ struct lora_mac {
     uint8_t bufferLen;
     
     /** tracks system time for when each band will become available */
-    uint64_t bands[6U];
+    uint64_t bands[5U];
     
     uint16_t devNonce;
     
