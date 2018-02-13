@@ -48,7 +48,7 @@ static void abandonSequence(struct lora_mac *self);
 static void handleCommands(void *receiver, const struct lora_downstream_cmd *cmd);
 static void processCommands(struct lora_mac *self, const uint8_t *data, uint8_t len);
 
-static bool selectChannel(struct lora_mac *self, uint64_t timeNow, uint8_t rate, uint8_t *chIndex, uint32_t *freq);
+static bool selectChannel(struct lora_mac *self, uint64_t timeNow, uint8_t rate, uint8_t prevChIndex, uint8_t *chIndex, uint32_t *freq);
 static void registerTime(struct lora_mac *self, uint32_t freq, uint64_t timeNow, uint32_t airTime);
 static void addDefaultChannel(void *receiver, uint8_t chIndex, uint32_t freq, uint8_t minRate, uint8_t maxRate);
 static bool getChannel(struct lora_mac *self, uint8_t chIndex, uint32_t *freq, uint8_t *minRate, uint8_t *maxRate);
@@ -72,6 +72,8 @@ void MAC_init(struct lora_mac *self, void *system, enum lora_region region, stru
     LORA_PEDANTIC(Region_supported(region))
     
     (void)memset(self, 0, sizeof(*self));
+    
+    self->tx.chIndex = UINT8_MAX;
     
     self->system = system;
     self->radio = radio;    
@@ -109,7 +111,7 @@ bool MAC_send(struct lora_mac *self, bool confirmed, uint8_t port, const void *d
                 
                     if(len <= maxPayload){
                 
-                        if(selectChannel(self, timeNow, System_getTXRate(self->system), &self->tx.chIndex, &self->tx.freq)){
+                        if(selectChannel(self, timeNow, System_getTXRate(self->system), self->tx.chIndex, &self->tx.chIndex, &self->tx.freq)){
                     
                             f.devAddr = System_getDevAddr(self->system);
                             f.counter = System_incrementUp(self->system);
@@ -177,7 +179,7 @@ bool MAC_join(struct lora_mac *self)
     
     if(self->state == IDLE){
         
-        if(selectChannel(self, timeNow, System_getTXRate(self->system), &self->tx.chIndex, &self->tx.freq)){
+        if(selectChannel(self, timeNow, System_getTXRate(self->system), self->tx.chIndex, &self->tx.chIndex, &self->tx.freq)){
             
             struct lora_frame_join_request f;      
             uint8_t appKey[16U];      
@@ -862,18 +864,24 @@ static void addDefaultChannel(void *receiver, uint8_t chIndex, uint32_t freq, ui
     (void)System_setChannel(receiver, chIndex, freq, minRate, maxRate);
 }
 
-static bool selectChannel(struct lora_mac *self, uint64_t timeNow, uint8_t rate, uint8_t *chIndex, uint32_t *freq)
+static bool selectChannel(struct lora_mac *self, uint64_t timeNow, uint8_t rate, uint8_t prevChIndex, uint8_t *chIndex, uint32_t *freq)
 {
     bool retval = false;
     uint8_t i;    
     uint8_t available = 0U;
     uint8_t j = 0U;
     uint8_t minRate;
-    uint8_t maxRate;
+    uint8_t maxRate;    
+    uint8_t except = UINT8_MAX;
     
     for(i=0U; i < Region_numChannels(self->region); i++){
         
         if(isAvailable(self, i, timeNow, rate)){
+        
+            if(i == prevChIndex){
+                
+                except = i;
+            }
         
             available++;            
         }            
@@ -883,6 +891,18 @@ static bool selectChannel(struct lora_mac *self, uint64_t timeNow, uint8_t rate,
     
         uint8_t index;
     
+        if(except != UINT8_MAX){
+    
+            if(available == 1U){
+                
+                except = UINT8_MAX;
+            }
+            else{
+                
+                available--;
+            }
+        }
+    
         index = System_rand() % available;
         
         available = 0U;
@@ -891,17 +911,20 @@ static bool selectChannel(struct lora_mac *self, uint64_t timeNow, uint8_t rate,
         
             if(isAvailable(self, i, timeNow, rate)){
             
-                if(index == j){
-                    
-                    if(getChannel(self, i, freq, &minRate, &maxRate)){
+                if(except != i){
+            
+                    if(index == j){
                         
-                        *chIndex = i;
-                        retval = true;
-                        break;
-                    }                        
+                        if(getChannel(self, i, freq, &minRate, &maxRate)){
+                            
+                            *chIndex = i;
+                            retval = true;
+                            break;
+                        }                        
+                    }
+            
+                    j++;            
                 }
-        
-                j++;            
             }            
         }
     }
