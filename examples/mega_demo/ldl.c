@@ -420,10 +420,6 @@ uint64_t System_time(void)
     return retval;
 }
 
-void System_sleep(uint32_t interval)
-{
-}
-
 void System_atomic_setPtr(void **receiver, void *value)
 {
     ATOMIC_BLOCK(ATOMIC_FORCEON)
