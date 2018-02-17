@@ -100,10 +100,10 @@ void Init_ext_frame(void)
     cJoinReq = rb_define_class_under(cLDL, "JoinReq", cFrame);
     cJoinAccept = rb_define_class_under(cLDL, "JoinAccept", cFrame);
     cDataFrame = rb_define_class_under(cLDL, "DataFrame", cFrame);
-    cUnconfirmedUp = rb_define_class_under(cLDL, "UnconfirmedUp", cDataFrame);
-    cConfirmedUp = rb_define_class_under(cLDL, "ConfirmedUp", cDataFrame);
-    cUnconfirmedDown = rb_define_class_under(cLDL, "UnconfirmedDown", cDataFrame);
-    cConfirmedDown = rb_define_class_under(cLDL, "ConfirmedDown", cDataFrame);
+    cUnconfirmedUp = rb_define_class_under(cLDL, "UnconfirmedDataUp", cDataFrame);
+    cConfirmedUp = rb_define_class_under(cLDL, "ConfirmedDataUp", cDataFrame);
+    cUnconfirmedDown = rb_define_class_under(cLDL, "UnconfirmedDataDown", cDataFrame);
+    cConfirmedDown = rb_define_class_under(cLDL, "ConfirmedDataDown", cDataFrame);
     
     rb_define_singleton_method(cFrame, "decode", _decode, -1);
     
@@ -181,15 +181,7 @@ static VALUE _decode(int argc, VALUE *argv, VALUE self)
     
     VALUE mutable = rb_str_new(RSTRING_PTR(input), RSTRING_LEN(input));
         
-    if(Frame_decode(RSTRING_PTR(rb_funcall(appKey, rb_intern("value"), 0)), RSTRING_PTR(rb_funcall(nwkSKey, rb_intern("value"), 0)), RSTRING_PTR(rb_funcall(appSKey, rb_intern("value"), 0)), RSTRING_PTR(mutable), RSTRING_LEN(mutable), &f)){
-    
-        if(!f.valid){
-            
-            rb_funcall(rb_cObject, rb_intern("raise"), 1, rb_funcall(cError, rb_intern("new"), 1, rb_str_new2("invalid MIC")));
-        }
-    
-    }
-    else{
+    if(!Frame_decode(RSTRING_PTR(rb_funcall(appKey, rb_intern("value"), 0)), RSTRING_PTR(rb_funcall(nwkSKey, rb_intern("value"), 0)), RSTRING_PTR(rb_funcall(appSKey, rb_intern("value"), 0)), RSTRING_PTR(mutable), RSTRING_LEN(mutable), &f)){
         
         rb_funcall(rb_cObject, rb_intern("raise"), 1, rb_funcall(cError, rb_intern("new"), 1, rb_str_new2("bad frame")));
     }
@@ -197,6 +189,8 @@ static VALUE _decode(int argc, VALUE *argv, VALUE self)
     param = rb_hash_new();
 
     klass = frameTypeToKlass(f.type);
+    
+    rb_hash_aset(param, ID2SYM(rb_intern("valid")), f.valid ? Qtrue : Qfalse);
     
     switch(f.type){
     default:
