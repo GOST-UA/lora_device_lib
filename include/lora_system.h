@@ -1,4 +1,4 @@
-/* Copyright (c) 2017 Cameron Harper
+/* Copyright (c) 2017-2018 Cameron Harper
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -30,22 +30,12 @@ extern "C" {
 #include <stdbool.h>
 #include <stddef.h>
 
-
-/** Called by MAC to get system time (in ticks)
+/** Get system time (ticks)
  * 
- * @return system time (in ticks)
+ * @return system time (ticks)
  * 
  * */
 uint64_t System_time(void);
-
-/** Halt the program counter for interval microseconds
- * 
- * @note this can be a busy wait or sleep
- * 
- * @param[in] interval interval to wait (in ticks)
- * 
- * */
-void System_sleep(uint32_t interval);
 
 /** Set the value of receiver to value in an atomic operation
  * 
@@ -55,148 +45,355 @@ void System_sleep(uint32_t interval);
  * */
 void System_atomic_setPtr(void **receiver, void *value);
 
-/** Called by MAC to get the 8 byte Application EUI
+/** Get AppEUI
  * 
- * @param[in] receiver storage object receiving this request
+ * @param[in] receiver system object
  * @param[out] value buffer of at least 8 bytes
  * 
  * */
 void System_getAppEUI(void *receiver, void *value);
 
-/** Called by MAC to get the 8 byte Device EUI
+/** Get DevEUI
  *
- * @param[in] receiver storage object receiving this request
+ * @param[in] receiver system object
  * @param[out] value buffer of at least 8 bytes
  * 
  * */
 void System_getDevEUI(void *receiver, void *value);
 
-/** Called by MAC to get the 16 byte Application Key
+/** Get AppKey
  *
- * @param[in] receiver storage object receiving this request
+ * @param[in] receiver system object
  * @param[out] value buffer of at least 16 bytes
  * 
  * */
 void System_getAppKey(void *receiver, void *value);
 
-/** Called by MAC to get the 16 byte Network Session Key
+/** Get NwkSKey
  *
- * @param[in] receiver storage object receiving this request
+ * @param[in] receiver system object
  * @param[out] value buffer of at least 16 bytes
  * 
  * */
 void System_getNwkSKey(void *receiver, void *value);
 
-/** Called by MAC to get the 16 byte Application Session Key
+/** Get AppSKey
  *
- * @param[in] receiver storage object receiving this request
+ * @param[in] receiver system object
  * @param[out] value buffer of at least 16 bytes
  * 
  * */
 void System_getAppSKey(void *receiver, void *value);
 
-/** Called by MAC to get the Device Address
+/** Get DevAddr
  *
- * @param[in] receiver storage object receiving this request
+ * @param[in] receiver system object
  * @return Device Address
  * 
  * */
 uint32_t System_getDevAddr(void *receiver);
 
-/** Called by MAC to store the 16 byte Network Session Key
+/** Store NwkSKey
  * 
- * @param[in] receiver storage object receiving this request
+ * @param[in] receiver system object
  * @param[in] value 16 byte field
  * 
  * */
 void System_setNwkSKey(void *receiver, const void *value);
 
-/** Called by MAC to store the 16 byte Application Session Key
+/** Store AppSKey
  * 
- * @param[in] receiver storage object receiving this request
+ * @param[in] receiver system object
  * @param[in] value 16 byte field
  * 
  * */
 void System_setAppSKey(void *receiver, const void *value);
 
-/** Called by MAC to store the Device Address
+/** Store DevAddr
  * 
- * @param[in] receiver storage object receiving this request
+ * @param[in] receiver system object
  * @param[in] value Device Address
  * 
  * */
 void System_setDevAddr(void *receiver, uint32_t value);
 
-/** Called by MAC to store the MAC status
+/** Store MAC status
  * 
- * @param[in] receiver storage object receiving this request
+ * @param[in] receiver system object
  * @param[in] value status
  * 
  * */
 void System_setStatus(void *receiver, uint8_t value);
 
+/** Get MAC status
+ * 
+ * @param[in] recevier system object
+ * @return status
+ * 
+ * */
 uint8_t System_getStatus(void *receiver);
     
-/** Get the current value of the up counter
+/** Get up counter value
+ * 
+ * @param[in] receiver system object
+ * @return up counter value
  * 
  * */
 uint16_t System_getUp(void *receiver);
 
-/** Return the current value of the upcounter and post increment
+/** Get up counter value (and increment the stored up counter value)
+ * 
+ * Equivalent functionality to:
+ * 
+ * @code
+ * 
+ * uint16_t retval = System_getUp(NULL);
+ * (void)System_incrementUp(NULL);
+ * return retval;
+ *  
+ * @endcode
+ * 
+ * 
+ * @param[in] receiver system object
+ * @return up counter value (before increment)
  * 
  * */
 uint16_t System_incrementUp(void *receiver);
 
-/** Reset the up counter 
+/** Reset up counter to zero
+ * 
+ * @param[in] receiver system object
  * 
  * */
 void System_resetUp(void *receiver);
 
-/** Get the last received down counter
+/** Get down counter value
+ * 
+ * @param[in] receiver system object
  * 
  * */
 uint16_t System_getDown(void *receiver);
 
-/** Receive a downcounter value
+/** Receive a down counter value
  * 
+ * @note if successful `counter` will become the new stored down counter value
+ * 
+ * @param[in] receiver system object
+ * @param[in] counter down counter value to receive
+ * @param[in] maxGap the maximum acceptible difference between stored down counter and the counter argument
+ * @return true if counter was no more than (maxGap + System_getDown)
  * 
  * */
 bool System_receiveDown(void *receiver, uint16_t counter, uint16_t maxGap);
 
-/** Reset teh the down counter
+/** Reset the the down counter to zero
  * 
+ * @param[in] receiver system object
  * 
  * */
 void System_resetDown(void *receiver);
 
+/** Get a stored channel configuration
+ * 
+ * @param[in] receiver system object
+ * @param[in] chIndex channel index (from zero)
+ * @param[out] freq frequency in Hz
+ * @param[out] minRate minimum rate allowed on this channel
+ * @param[out] minRate maximum rate allowed on this channel
+ * 
+ * @return true if chIndex is within bounds
+ * 
+ * */
 bool System_getChannel(void *receiver, uint8_t chIndex, uint32_t *freq, uint8_t *minRate, uint8_t *maxRate);
+
+/** Store a channel configuration
+ * 
+ * @param[in] receiver system object
+ * @param[in] chIndex channel index (from zero)
+ * @param[in] freq frequency in Hz
+ * @param[in] minRate minimum rate allowed on this channel
+ * @param[in] minRate maximum rate allowed on this channel
+ * 
+ * @return true if chIndex is within bounds
+ * 
+ * */
 bool System_setChannel(void *receiver, uint8_t chIndex, uint32_t freq, uint8_t minRate, uint8_t maxRate);
+
+/** Mask a channel
+ * 
+ * @param[in] receiver system object
+ * @param[in] chIndex channel index (from zero)
+ * 
+ * @return true if chIndex is within bounds
+ * 
+ * 
+ * */
 bool System_maskChannel(void *receiver, uint8_t chIndex);
+
+/** Unmask a channel
+ * 
+ * @param[in] receiver system object
+ * @param[in] chIndex channel index (from zero)
+ * 
+ * @return true if chIndex is within bounds
+ * 
+ * */
 bool System_unmaskChannel(void *receiver, uint8_t chIndex);
+
+
+/** Test if a channel is masked
+ * 
+ * @note out of bounds chIndex must indicate 'masked'
+ * 
+ * @param[in] receiver system object
+ * @param[in] chIndex channel index (from zero)
+ * 
+ * @return true if chIndex is masked
+ * 
+ * */
 bool System_channelIsMasked(void *receiver, uint8_t chIndex);
 
+/** 
+ * @param[in] receiver system object
+ * @return battery level
+ * 
+ * */
 uint8_t System_getBatteryLevel(void *receiver);
 
+/** 
+ * @param[in] receiver system object
+ * @return RX1DROffset
+ * 
+ * */
 uint8_t System_getRX1DROffset(void *receiver);
+
+/** 
+ * @param[in] receiver system object
+ * @return MaxDutyCycle
+ * 
+ * */
 uint8_t System_getMaxDutyCycle(void *receiver);
+
+/** 
+ * @param[in] receiver system object
+ * @return RX1Delay
+ * 
+ * */
 uint8_t System_getRX1Delay(void *receiver);
+
+/** 
+ * @param[in] receiver system object
+ * @return NbTrans
+ * 
+ * */
 uint8_t System_getNbTrans(void *receiver);
+
+/** 
+ * @param[in] receiver system object
+ * @return power setting for transmit
+ * 
+ * */
 uint8_t System_getTXPower(void *receiver);
+
+/** 
+ * @param[in] receiver system object
+ * @return rate setting for transmit
+ * 
+ * */
 uint8_t System_getTXRate(void *receiver);
+
+/** 
+ * @param[in] receiver system object
+ * @return RX2Freq
+ * 
+ * */
 uint32_t System_getRX2Freq(void *receiver);
+
+/** 
+ * @param[in] receiver system object
+ * @return RX2DataRate
+ * 
+ * */
 uint8_t System_getRX2DataRate(void *receiver);
 
+/** Store RX1DROffset
+ * 
+ * @param[in] receiver system object
+ * @param[in] value
+ * 
+ * */
 void System_setRX1DROffset(void *receiver, uint8_t value);
+
+/** Store MaxDutyCycle
+ * 
+ * @param[in] receiver system object
+ * @param[in] value
+ * 
+ * */
 void System_setMaxDutyCycle(void *receiver, uint8_t value);
+
+/** Store RXDelay
+ * 
+ * @param[in] receiver system object
+ * @param[in] value
+ * 
+ * */
 void System_setRX1Delay(void *receiver, uint8_t value);
+
+/** Store transmit power setting 
+ * 
+ * @param[in] receiver system object
+ * @param[in] value
+ * 
+ * */
 void System_setTXPower(void *receiver, uint8_t value);
+
+/** Store NbTrans
+ * 
+ * @param[in] receiver system object
+ * @param[in] value
+ * 
+ * */
 void System_setNbTrans(void *receiver, uint8_t value);
+
+/** Store transmit rate setting
+ * 
+ * @param[in] receiver system object
+ * @param[in] value
+ * 
+ * */
 void System_setTXRate(void *receiver, uint8_t value);
+
+/** Store RX2Freq
+ * 
+ * @param[in] receiver system object
+ * @param[in] value
+ * 
+ * */
 void System_setRX2Freq(void *receiver, uint32_t value);
+
+/** Store RX2DataRate
+ * 
+ * @param[in] receiver system object
+ * @param[in] value
+ * 
+ * */
 void System_setRX2DataRate(void *receiver, uint8_t value);
 
+/** Store LinkStatus
+ * 
+ * @param[in] receiver system object
+ * @param[in] value
+ * 
+ * */
 void System_setLinkStatus(void *receiver, uint8_t margin, uint8_t gwCount);
 
+/** Get a random number in range 0..255
+ * 
+ * @param[in] receiver system object
+ * @return random number in range 0..255
+ * 
+ * */
 uint8_t System_rand(void);
 
 #ifdef __cplusplus
