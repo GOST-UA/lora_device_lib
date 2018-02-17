@@ -65,12 +65,6 @@ uint64_t System_time(void)
     return NUM2ULL(rb_funcall(rb_const_get(cLDL, rb_intern("SystemTime")), rb_intern("time"), 0));
 }
 
-void System_sleep(uint32_t interval)
-{
-    //don't block the thread because we are inside a mutex
-    //(void)rb_funcall(rb_const_get(cLDL, rb_intern("SystemTime")), rb_intern("wait"), 1, UINT2NUM(interval));
-}
-
 uint8_t System_rand(void)
 {
     return (uint8_t)rb_genrand_int32();
