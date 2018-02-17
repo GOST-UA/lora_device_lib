@@ -4,12 +4,17 @@ module LDL
 
     class Gateway
     
+        include LoggerMethods
+    
         MAX_TOKENS = 100
         
         # maximum allowable advance send scheduling
         MAX_ADVANCE_TIME = 10
         
         attr_reader :eui
+        
+        # shorter name assigned to make the log easier to read
+        attr_reader :name
         
         # GPS latitude of the gateway in degree (float, N is +)
         attr_reader :lati 
@@ -153,6 +158,12 @@ module LDL
             else
                 @status_interval = 20
             end
+            
+            if opts.has_key? :name
+                @name = opts[:name].to_s
+            else
+                @name = eui
+            end
 
             @q = Queue.new
 
@@ -185,6 +196,8 @@ module LDL
                 tx_end = broker.subscribe "tx_end" do |m2|
 
                     if m1 = buffer.detect{ |v| v[:eui] == m2[:eui] }
+
+                        log_info "#{name}: received frame"
 
                         increment_rxnb
                         increment_rxok
@@ -262,9 +275,8 @@ module LDL
 
                         end
 
-                        puts "send keep alive:"
-                        puts m.inspect
-                        puts ""
+                        log_info "#{name}: sending PullData (keep alive)"
+                        log_debug m.inspect
 
                         s.write m.encode
 
@@ -299,9 +311,8 @@ module LDL
 
                         end
                         
-                        puts "send status:"
-                        puts m.inspect
-                        puts ""
+                        log_info "#{name}: sending PushData (status)"
+                        log_debug m.inspect
                         
                         s.write m.encode
                         
@@ -319,14 +330,9 @@ module LDL
                         increment_token
                         increment_txnb
 
-                        puts "sending upstream:"
-                        puts m.inspect
-                        puts ""
-                        
-                        puts "upstream rxpk:"
-                        puts job[:rxpk].to_json
-                        puts ""
-                        
+                        log_info "#{name}: sending PushData (forward)"
+                        log_debug m.inspect
+
                         s.write m.encode
          
                     # message received from network
@@ -336,9 +342,8 @@ module LDL
 
                             msg = Semtech::Message.decode(job[:data])    
 
-                            puts "message received:"
-                            puts msg.inspect
-                            puts ""
+                            log_info "#{name}: received #{msg.class.name.split("::").last}"
+                            log_debug msg.inspect
 
                             case msg.class
                             when Semtech::PushAck, Semtech::PullAck    
@@ -363,6 +368,8 @@ module LDL
                                         increment_token
                                         increment_txnb
                                         
+                                        log_info "#{name}: transmit frame immediately (imme=true)"
+                                        
                                         transmit(msg.txpk)
                                                                 
                                     # send according to time stamp
@@ -370,19 +377,17 @@ module LDL
                                 
                                         timeNow = tmst
                                     
-                                        puts "tmst: #{timeNow}"
-                                        puts "msg_tmst: #{msg.txpk.tmst}"
-                                        
                                         if msg.txpk.tmst > timeNow
                                             delta = msg.txpk.tmst - timeNow
                                         else
                                             delta = timeNow - msg.txpk.tmst
                                         end
                                     
-                                        puts "delta: #{delta}"
-                                        
                                         # I expect the advance time to never be more than tens of seconds
                                         if delta <= 10000000
+                                        
+                                            log_info "#{name}: transmit frame in #{delta}us (tmst=#{msg.txpk.tmst})"
+                                            log_info "#{name}: send up TXAck (error=NONE)"
                                         
                                             s.write(
                                                 Semtech::TXAck.new(
@@ -402,10 +407,10 @@ module LDL
                                             end
                                         
                                         else
-                                    
-                                            puts "too late to send"
-                                            puts ""
                                         
+                                            log_info "#{name}: too late to transmit frame (tmst=#{msg.txpk.tmst})"
+                                            log_info "#{name}: send up TXAck (error=TOO_LATE)"
+                                            
                                             s.write(
                                                 Semtech::TXAck.new(
                                                     token: msg.token,
@@ -421,6 +426,9 @@ module LDL
                                     
                                     # don't support the use of time field 
                                     elsif msg.tkpk.time
+                                    
+                                        log_info "#{name}: transmit frame at #{msg.txpk.time} (not supported)"
+                                        log_info "#{name}: send up TXAck (error=GPS_UNLOCKED)"
                                     
                                         s.write(
                                             Semtech::TXAck.new(
@@ -441,12 +449,9 @@ module LDL
 
                         rescue => e
                         
-                            puts job[:data]
-                        
-                            puts e
-                            puts e.backtrace.join("\n")
-                        
-                        
+                            log_info "#{name}: could not decode message received from network"
+                            log_debug e.backtrace.join("\n")
+                            
                         end
 
                     end
@@ -476,14 +481,15 @@ module LDL
                 :bw => txpk.bw,
                 :cr => txpk.codr,
                 :freq => (txpk.freq * 1000000).to_i,
-                :power => 0                            
+                :power => 0,
+                :airTime => MAC.transmitTimeDown(txpk.bw, txpk.sf, txpk.size)                            
             }
             
             m2 = {
                 :eui => m1[:eui]                        
             }
             
-            puts "gateway transmit at #{SystemTime.time}"
+            log_info "#{name}: transmitting frame"
             
             broker.publish m1, "tx_begin"
             
@@ -492,7 +498,6 @@ module LDL
                 broker.publish m2, "tx_end"
                 
             end
-                
             
         end
 

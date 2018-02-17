@@ -82,15 +82,13 @@ struct lora_radio_rx_setting {
  * */
 struct lora_radio * Radio_init(struct lora_radio *self, const struct lora_board *board);
 
-/** Perform a hardware reset to return the transeiver to POR state
- * 
- * @warning transeiver will not be fully operational until after the interval returned by this function
+/** Set the state of the reset line for the purpose of performing POR
  * 
  * @param[in] self
- * @return microseconds until transeiver is full operational
+ * @param[in] state true for reset active
  * 
  * */
-uint32_t Radio_resetHardware(struct lora_radio *self);
+void Radio_reset(struct lora_radio *self, bool state);
 
 /** Put transeiver into sleep mode
  * 

@@ -117,11 +117,10 @@ struct lora_mac {
     struct lora_event events;           /**< event manager */
     enum lora_region region;   /**< region MAC is oeprating in */
     
-    //void *rx1Ready;     /**< timer callback for RX1 window start */
-    void *rx2Ready;     /**< timer callback for RX2 window start */
-    
+    void *rx2Ready;     /**< timer callback for RX2 window start */    
     void *rxComplete;   /**< RX complete IO event */
     void *rxTimeout;    /**< RX timeout IO event */
+    void *radioTimer;
     
     lora_mac_response_fn responseHandler;
     void *responseReceiver;

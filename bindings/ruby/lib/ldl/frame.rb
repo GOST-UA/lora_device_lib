@@ -2,10 +2,26 @@ module LDL
 
     class Frame
     
+        def valid?
+            @valid
+        end
+    
+        def self.===(other)
+            self == other
+        end
+    
         def initialize(**param)
+            
             if self.class == Frame
                 raise "#{self.class} is an abstract class"
             end
+            
+            if param.has_key? :valid
+                @valid = ( param[:valid] ? true : false )
+            else
+                @valid = true
+            end
+            
         end
     
     end    
@@ -19,6 +35,8 @@ module LDL
         attr_reader :devNonce
         
         def initialize(**param)
+            
+            super
             
             @appKey = param[:appKey]
             @appEUI = param[:appEUI]
@@ -86,6 +104,8 @@ module LDL
         # @option param [Integer] :appNonce
         #
         def initialize(**param)
+            
+            super
             
             @appKey = param[:appKey]
             @netID = param[:netID]
@@ -208,6 +228,8 @@ module LDL
         #
         def initialize(**param)
             
+            super
+            
             if self.class == DataFrame
                 raise "#{self.class} is an abstract class"
             end
@@ -300,16 +322,16 @@ module LDL
         end    
     end
     
-    class UnconfirmedUp < DataFrame
+    class UnconfirmedDataUp < DataFrame
     end
     
-    class ConfirmedUp < DataFrame
+    class ConfirmedDataUp < DataFrame
     end
     
-    class UnconfirmedDown < DataFrame
+    class UnconfirmedDataDown < DataFrame
     end
     
-    class ConfirmedDown < DataFrame
+    class ConfirmedDataDown < DataFrame
     end
     
 end

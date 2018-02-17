@@ -40,10 +40,7 @@ static void rxReady(void *receiver, uint64_t time, uint64_t error);
 static void rxTimeout(void *receiver, uint64_t time, uint64_t error);
 static void rxFinish(struct lora_mac *self);
 
-//static void resetRadio(void *receiver, uint64_t time);
 static bool collect(struct lora_mac *self, struct lora_frame *frame);
-
-static void abandonSequence(struct lora_mac *self);
 
 static void handleCommands(void *receiver, const struct lora_downstream_cmd *cmd);
 static void processCommands(struct lora_mac *self, const uint8_t *data, uint8_t len);
@@ -436,13 +433,13 @@ static void tx(void *receiver, uint64_t time, uint64_t error)
         else{
             
             LORA_INFO("radio rejected parameters")            
-            abandonSequence(self);
+            self->state = IDLE;
         }
     }
     else{
         
         LORA_INFO("invalid rate")            
-        abandonSequence(self);
+        self->state = IDLE;
     }
 }
 
@@ -519,7 +516,7 @@ static void rxStart(void *receiver, uint64_t time, uint64_t error)
             else{
                 
                 LORA_INFO("could not apply radio settings")
-                abandonSequence(self);
+                self->state = IDLE;
             }         
         }
         else{
@@ -611,32 +608,6 @@ static void rxFinish(struct lora_mac *self)
         self->state = WAIT_RX2;
     }                
 }
-
-
-#if 0
-static void resetRadio(void *receiver, uint32_t error)
-{
-    LORA_PEDANTIC(receiver != NULL)
-    
-    struct lora_mac *self = (struct lora_mac *)receiver;    
-    uint32_t delay;
-    
-    LORA_INFO("radio has been reset")
-    
-    Event_cancel(&self->events, &self->rxReady);
-    self->rxReady = NULL;
-    
-    Event_cancel(&self->events, &self->rxTimeout);
-    self->rxTimeout = NULL;
-    
-    Event_cancel(&self->events, &self->txComplete);
-    self->txComplete = NULL;    
-    
-    delay = Radio_resetHardware(self->radio);
-    
-    abandonSequence(self);
-}
-#endif
         
 static bool collect(struct lora_mac *self, struct lora_frame *frame)
 {
@@ -839,12 +810,6 @@ static void handleCommands(void *receiver, const struct lora_downstream_cmd *cmd
 static void processCommands(struct lora_mac *self, const uint8_t *data, uint8_t len)
 {
     (void)MAC_eachDownstreamCommand(self, data, len, handleCommands);
-}
-
-static void abandonSequence(struct lora_mac *self)
-{
-    
-    self->state = IDLE;
 }
 
 static void registerTime(struct lora_mac *self, uint32_t freq, uint64_t timeNow, uint32_t airTime)

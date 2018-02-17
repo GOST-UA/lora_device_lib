@@ -10,6 +10,7 @@ module LDL
         attr_reader :nwkSKey, :appSKey, :appKey
         attr_reader :devEUI, :appEUI
         attr_reader :devAddr
+        attr_reader :name
         
         # @param broker [Broker] for sending/recieving events
         # @param opts [Hash]
@@ -19,7 +20,7 @@ module LDL
         def initialize(broker, **opts)
         
             raise "SystemTime must be defined" unless defined? SystemTime
-            
+
             @mutex = Mutex.new            
             
             super(Radio.new(self, broker), **opts)
@@ -33,6 +34,12 @@ module LDL
                 if this.ticksUntilNextEvent                
                     SystemTime.onTimeout this.ticksUntilNextEvent, &ticker
                 end                
+            end
+            
+            if opts.has_key? :name
+                @name = opts[:name]
+            else
+                @name = devEUI
             end
             
         end

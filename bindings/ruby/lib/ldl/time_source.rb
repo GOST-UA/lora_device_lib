@@ -9,7 +9,7 @@ module LDL
     # 
     class TimeSource
     
-        INTERVAL = MAC::TIMEBASE.to_f
+        INTERVAL = MAC::TICKS_PER_SECOND.to_f
     
         # @return [Integer] system time
         attr_reader :time

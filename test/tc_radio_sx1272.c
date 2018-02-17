@@ -11,18 +11,7 @@
 #include <string.h>
 
 
-/**********************************************************************/
-
-#if 0
-static void handle_event(void *receiver, enum lora_radio_event event, uint64_t time)
-{
-}
-#endif
-
-
-/**********************************************************************/
-
-static int setup_preInit(void **user)
+static int init_a_board(void **user)
 {
     static struct user_data u;
     (void)memset(&u, 0, sizeof(u));
@@ -38,11 +27,11 @@ static int setup_preInit(void **user)
     return 0;
 }
 
-static int setup_postInit(void **user)
+static int init_a_radio(void **user)
 {
     struct user_data *u;
     
-    (void)setup_preInit(user);
+    (void)init_a_board(user);
     
     u = (struct user_data *)(*user);
     
@@ -51,26 +40,25 @@ static int setup_postInit(void **user)
     return 0;
 }
 
-static void test_Radio_init(void **user)
+static void radio_shall_initialise(void **user)
 {
     struct user_data *u = (struct user_data *)(*user);
     
     Radio_init(&u->radio, &u->board);
 }
 
-static void test_Radio_resetHardware(void **user)
+static void radio_shall_perform_a_reset(void **user)
 {
     struct user_data *u = (struct user_data *)(*user);
-    
-    /* Radio_init will perform a chip reset */
     
     expect_value(board_reset, state, true);
     expect_value(board_reset, state, false);    
     
-    Radio_resetHardware(&u->radio);
+    Radio_reset(&u->radio, true);
+    Radio_reset(&u->radio, false);
 }
 
-static void test_Radio_transmit_noPayload(void **user)
+static void radio_shall_not_transmit_an_empty_message(void **user)
 {
     struct user_data *u = (struct user_data *)(*user);        
     
@@ -85,7 +73,7 @@ static void test_Radio_transmit_noPayload(void **user)
     Radio_transmit(&u->radio, &setting, NULL, 0U);
 }
 
-static void test_Radio_transmit(void **user)
+static void radio_shall_transmit_a_message(void **user)
 {
     struct user_data *u = (struct user_data *)(*user);        
     size_t i;
@@ -211,7 +199,7 @@ static void test_Radio_transmit(void **user)
     Radio_transmit(&u->radio, &setting, payload, sizeof(payload));
 }
 
-static void test_Radio_receive(void **user)
+static void radio_shall_receive(void **user)
 {
     struct user_data *u = (struct user_data *)(*user);        
     
@@ -313,7 +301,7 @@ static void test_Radio_receive(void **user)
     Radio_receive(&u->radio, &setting);
 }
 
-static void test_Radio_sleep(void **user)
+static void radio_shall_sleep(void **user)
 {
     struct user_data *u = (struct user_data *)(*user);
     
@@ -325,7 +313,7 @@ static void test_Radio_sleep(void **user)
     Radio_sleep(&u->radio);
 }
 
-static void test_Radio_collect(void **user)
+static void radio_shall_return_a_buffer(void **user)
 {
     struct user_data *u = (struct user_data *)(*user);
     uint8_t buffer[100];
@@ -346,13 +334,13 @@ static void test_Radio_collect(void **user)
 int main(void)
 {
     const struct CMUnitTest tests[] = {
-        cmocka_unit_test_setup(test_Radio_init, setup_preInit),
-        cmocka_unit_test_setup(test_Radio_resetHardware, setup_postInit),
-        cmocka_unit_test_setup(test_Radio_transmit, setup_postInit),
-        cmocka_unit_test_setup(test_Radio_transmit_noPayload, setup_postInit),
-        cmocka_unit_test_setup(test_Radio_sleep, setup_postInit),
-        cmocka_unit_test_setup(test_Radio_collect, setup_postInit),
-        cmocka_unit_test_setup(test_Radio_receive, setup_postInit),
+        cmocka_unit_test_setup(radio_shall_initialise, init_a_board),
+        cmocka_unit_test_setup(radio_shall_perform_a_reset, init_a_radio),
+        cmocka_unit_test_setup(radio_shall_transmit_a_message, init_a_radio),
+        cmocka_unit_test_setup(radio_shall_not_transmit_an_empty_message, init_a_radio),
+        cmocka_unit_test_setup(radio_shall_sleep, init_a_radio),
+        cmocka_unit_test_setup(radio_shall_return_a_buffer, init_a_radio),
+        cmocka_unit_test_setup(radio_shall_receive, init_a_radio),
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);

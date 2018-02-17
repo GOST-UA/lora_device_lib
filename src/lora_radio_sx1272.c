@@ -63,13 +63,11 @@ void Radio_setEventHandler(struct lora_radio *self, void *receiver, radioEventCB
     System_atomic_setPtr(&self->eventReceiver, receiver);    
 }
 
-uint32_t Radio_resetHardware(struct lora_radio *self)
+void Radio_reset(struct lora_radio *self, bool state)
 {
-    self->board.reset(self->board.receiver, true);
-    System_sleep(100U);
-    self->board.reset(self->board.receiver, false);
+    LORA_PEDANTIC(self != NULL)
     
-    return 10000U;  // should only take 5ms following reset but we want this to work on power up as well
+    self->board.reset(self->board.receiver, state);
 }
 
 bool Radio_transmit(struct lora_radio *self, const struct lora_radio_tx_setting *settings, const void *data, uint8_t len)

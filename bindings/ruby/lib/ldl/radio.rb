@@ -2,9 +2,11 @@ module LDL
 
     class Radio
     
+        include LoggerMethods
+    
         attr_accessor :broker, :mac, :active
         attr_reader :buffer
-    
+        
         def initialize(mac, broker)
 
             raise "SystemTime must be defined" unless defined? SystemTime
@@ -39,6 +41,7 @@ module LDL
             msg = {
                 :eui => mac.devEUI, 
                 :time => SystemTime.time,
+                :airTime => mac.class.transmitTimeUp(bw, sf, data.size),
                 :data => data.dup,
                 :sf => sf,
                 :bw => bw,
@@ -50,7 +53,7 @@ module LDL
             
             broker.publish msg, "tx_begin"
             
-            SystemTime.onTimeout(mac.class.transmitTimeUp(bw, sf, data.size)) do
+            SystemTime.onTimeout(msg[:airTime]) do
             
                 mac.io_event :tx_complete, SystemTime.time
                                 
@@ -74,8 +77,6 @@ module LDL
             
             window = Range.new(SystemTime.time, SystemTime.time + ((settings[:timeout] * t_sym) * 100000).ceil.to_i)
             
-            puts window
-            
             # work out if there were any overlapping transmissions at window timeout
             SystemTime.onTimeout( settings[:timeout] * t_sym ) do
                
@@ -89,11 +90,11 @@ module LDL
                 
                     if m1
                 
-                        puts "found packet at end of window"
-                
                         tx_end = broker.subscribe "tx_end" do |m2|
                         
                             if m2[:eui] == m1[:eui]
+                            
+                                log_info "#{mac.name}: received message"
                             
                                 broker.unsubscribe tx_end
                                 buffer.push(m1[:data].dup)                                

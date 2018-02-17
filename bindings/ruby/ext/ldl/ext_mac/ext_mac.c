@@ -390,7 +390,7 @@ void Init_ext_mac(void)
     cError = rb_const_get(cLDL, rb_intern("Error"));
     cRadio = rb_const_get(cLDL, rb_intern("Radio"));    
     
-    rb_const_set(cExtMAC, rb_intern("TIMEBASE"), UINT2NUM(LORA_TICKS_PER_SECOND));
+    rb_const_set(cExtMAC, rb_intern("TICKS_PER_SECOND"), UINT2NUM(LORA_TICKS_PER_SECOND));
 }
 
 uint32_t Radio_resetHardware(struct lora_radio *self)

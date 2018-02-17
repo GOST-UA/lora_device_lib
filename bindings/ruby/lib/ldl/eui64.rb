@@ -70,6 +70,7 @@ module LDL
                     end
                     
                     @eui.chop!
+                    @eui = @eui.upcase
                     
                     @bytes = integerArray.pack("c*")
                     @msb = @bytes.bytes.first

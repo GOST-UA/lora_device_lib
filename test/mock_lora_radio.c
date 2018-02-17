@@ -12,9 +12,8 @@ struct lora_radio * Radio_init(struct lora_radio *self, const struct lora_board 
     return mock_ptr_type(struct lora_radio *);
 }
 
-uint32_t Radio_resetHardware(struct lora_radio *self)
+void Radio_reset(struct lora_radio *self, bool state)
 {
-    return mock_type(uint32_t);
 }
 
 void Radio_sleep(struct lora_radio *self)

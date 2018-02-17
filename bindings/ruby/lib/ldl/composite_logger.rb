@@ -2,7 +2,7 @@ require 'logger'
 
 module LDL
 
-    class Logger
+    class CompositeLogger
 
         @loggers = []
         
@@ -10,21 +10,21 @@ module LDL
             @loggers << logger
         end
     
-        def self.error(msg)
+        def self.error(*args, &block)
             @loggers.each do |logger|
-                logger.error(msg)
+                logger.error(*args, &block)
             end
         end
         
-        def self.info(msg)
+        def self.info(*args, &block)
             @loggers.each do |logger|
-                logger.info(msg)
+                logger.info(*args, &block)
             end
         end
         
-        def self.debug(msg)
+        def self.debug(*args, &block)
             @loggers.each do |logger|
-                logger.debug(msg)
+                logger.debug(*args, &block)
             end
         end
     
