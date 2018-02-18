@@ -9,7 +9,7 @@ A LoRaWAN device implementation still in an early stage of development.
 
 - Portable design
 - Event driven
-- Multiple region database
+- Region may be selected at run-time
 - Support for SX1272
 - Build-time options for optimisation and/or conformance to your project requirements
 - Tests utilising the Cmocka framework
