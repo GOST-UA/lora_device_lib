@@ -51,7 +51,7 @@ and receive pattern implemented by a LoRaWAN device.
 
 - The device turns on its radio to TX a message
 - The device captures a timestamp at the moment TX completes and calculates the time for RX1_START and RX2_START
-- The device turns on its radio at RX1_START and RX2_START (+/- 10us) to listen for downstream messages
+- The device turns on its radio at RX1_START and RX2_START (+/- 20us) to listen for downstream messages
 - RX1_INTERVAL is configured to be between 1 and 16 seconds (in one second increments)
 - RX2_INTERVAL is always 1 greater than RX1_INTERVAL
 
