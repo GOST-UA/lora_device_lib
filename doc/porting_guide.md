@@ -1,17 +1,9 @@
 LoraDeviceLib Porting Guide
 ===========================
 
-To port LDL, you must to review each item on the Mandatory list. 
-
-To optimise LDL, you should consider items in the optional list.
-
 ## Mandatory
 
 ### Implement All [lora_system.h](/include/lora_system.h) Interfaces
-
-A comment block for each interface describes its purpose. Please raise
-an issue if the comment block does not contain enough information to
-implement the function.
 
 Most of these interfaces exist to give the integrator a choice in how
 data is stored on their target (i.e. in volatile or non-volatile memory).

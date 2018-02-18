@@ -23,7 +23,6 @@
 #include "lora_frame.h"
 #include "lora_debug.h"
 #include "lora_aes.h"
-#include "lora_cmac.h"
 #include "lora_system.h"
 #include "lora_mac_commands.h"
 
