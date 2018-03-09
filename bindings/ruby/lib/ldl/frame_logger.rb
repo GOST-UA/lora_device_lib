@@ -3,7 +3,7 @@ require 'base64'
 module LDL
 
     # logs 'tx_begin' topics
-    class PacketLogger
+    class FrameLogger
         
         attr_reader :broker
 

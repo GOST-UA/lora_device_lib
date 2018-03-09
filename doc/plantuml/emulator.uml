@@ -1,0 +1,76 @@
+@startuml
+
+class Clock {
+
+    #time()
+    #onTimeout()
+
+    #start()
+    #stop()
+}
+
+class MAC {
+
+    #data(port, message)
+    #join()
+
+}
+
+class Device {
+
+    #start()
+    #stop()
+}
+
+class Radio {
+
+    #transmit()
+    #receive()
+    #collect()
+    #sleep()
+
+}
+
+ExtMAC <|-- MAC
+
+MAC -* Device
+MAC *-- Radio
+
+class Gateway {
+
+    #start()
+    #stop()
+}
+
+class Broker {
+
+    #publish()
+    #subscribe()
+    
+}
+
+class FrameLogger {
+
+}
+
+class ExtMAC 
+note left: This wraps LDL
+
+hide Broker circle
+hide Device circle
+hide Clock circle
+hide Gateway circle
+hide ExtMAC circle
+hide MAC circle
+hide Radio circle
+hide FrameLogger circle
+
+
+Gateway "*" *-- Broker
+Radio "*" *-- Broker
+MAC "*" *-- Broker
+Device "*" *-- Broker
+FrameLogger *-- Broker
+
+
+@enduml

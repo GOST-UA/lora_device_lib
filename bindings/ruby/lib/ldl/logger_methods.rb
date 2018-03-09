@@ -9,16 +9,24 @@ module LDL
     module LoggerMethods
     
         def log_info(msg)
-            Logger.info { "#{SystemTime.time.to_s.rjust(10)} #{msg}" } 
+        
+            if LDL.const_defined? "LDL::Logger"
+                LDL::Logger.info { "#{SystemTime.time.to_s.rjust(10)} #{msg}" } 
+            end
         end
         
         def log_error(msg)
-            Logger.error { "[#{SystemTime.time.to_s.rjust(10)}] #{msg}" } 
+            if LDL.const_defined? "LDL::Logger"
+                LDL::Logger.error { "[#{SystemTime.time.to_s.rjust(10)}] #{msg}" } 
+            end                
         end
         
         def log_debug(msg)
-            Logger.debug { "[#{SystemTime.time.to_s.rjust(10)}] #{msg}" } 
+            if LDL.const_defined? "LDL::Logger"
+                LDL::Logger.debug { "[#{SystemTime.time.to_s.rjust(10)}] #{msg}" } 
+            end
         end
+    
     
     end
 

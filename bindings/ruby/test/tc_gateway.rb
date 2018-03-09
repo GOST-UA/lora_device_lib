@@ -88,6 +88,7 @@ class TestGateway < Minitest::Test
             
     end
     
+=begin    
     def test_expect_status_on_start
         
         Timeout::timeout 0.5 do
@@ -105,7 +106,9 @@ class TestGateway < Minitest::Test
         end
         
     end
+=end    
     
+=begin    
     def test_expect_status_on_interval
         
         count = 0
@@ -135,6 +138,7 @@ class TestGateway < Minitest::Test
         assert count == 2
             
     end
+=end
     
     def test_upstream
     

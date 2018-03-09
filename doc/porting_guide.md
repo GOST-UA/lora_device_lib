@@ -47,7 +47,7 @@ This file can contain anything you like. Normally it will contain any definition
 required for your customised debug macros 
 (i.e. `LORA_ERROR`, `LORA_DEBUG`, `LORA_INFO`, `LORA_ASSERT`, and `LORA_PEDANTIC`).
 
-#### Define LORA_ERROR(...)
+### Define LORA_ERROR(...)
 
 Define this macro to be a printf-like function that captures error level messages at run-time.
 If not defined, all LORA_ERROR messages will be left out of the build.
