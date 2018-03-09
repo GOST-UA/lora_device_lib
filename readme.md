@@ -8,7 +8,6 @@ A LoRaWAN device implementation still in an early stage of development.
 ## Highlights
 
 - Portable design
-- Event driven
 - Region may be selected at run-time
 - Support for SX1272
 - Build-time options for optimisation and/or conformance to your project requirements

@@ -2,7 +2,7 @@ require 'minitest/autorun'
 require 'ldl'
 require 'timeout'
 
-class TestTimeSource < Minitest::Test
+class TestClock < Minitest::Test
 
     include LDL
 
@@ -10,7 +10,7 @@ class TestTimeSource < Minitest::Test
 
     def setup
         Thread.abort_on_exception = true
-        @state = TimeSource.new
+        @state = Clock.new
         state.start
     end
 

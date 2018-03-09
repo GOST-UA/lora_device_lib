@@ -23,7 +23,7 @@ class TestGateway < Minitest::Test
         @s = UDPSocket.new
         s.bind('localhost', 0)
     
-        LDL.const_set 'SystemTime', TimeSource.new
+        LDL.const_set 'SystemTime', Clock.new
         
         SystemTime.start
         

@@ -15,7 +15,7 @@ class TestMAC < Minitest::Test
     
         Thread.abort_on_exception = true
    
-        LDL.const_set 'SystemTime', TimeSource.new
+        LDL.const_set 'SystemTime', Clock.new
         SystemTime.start
     
         @broker = Broker.new    

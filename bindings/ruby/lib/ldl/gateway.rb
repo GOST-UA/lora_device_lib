@@ -269,7 +269,7 @@ module LDL
                         increment_txnb
                         
                         # schedule keep alive: note this will probably fire once after we stop this thread
-                        SystemTime.onTimeout (keepalive_interval * TimeSource::INTERVAL) do
+                        SystemTime.onTimeout (keepalive_interval * Clock::INTERVAL) do
 
                             @q << {:task => :keepalive}                
 
@@ -305,7 +305,7 @@ module LDL
                         increment_txnb
                         
                         # recur on this interval
-                        SystemTime.onTimeout (status_interval * TimeSource::INTERVAL) do
+                        SystemTime.onTimeout (status_interval * Clock::INTERVAL) do
 
                             @q << {:task => :status}                
 

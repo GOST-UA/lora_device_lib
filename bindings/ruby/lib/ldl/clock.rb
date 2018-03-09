@@ -1,13 +1,6 @@
 module LDL
 
-    # A TimeSource instance provides #onTimeout and #wait methods,
-    # as well as #time method for returning system time.
-    #
-    # The timer queue ensures that events can be scheduled to occur when system time
-    # is a specific value. Events are never late or early unless they have been programmed to be that way, 
-    # regardless of when the garbage collector runs.
-    # 
-    class TimeSource
+    class Clock
     
         INTERVAL = MAC::TICKS_PER_SECOND.to_f
     
