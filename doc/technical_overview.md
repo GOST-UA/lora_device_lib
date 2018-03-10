@@ -1,16 +1,11 @@
 Technical Overview
 ==================
 
-## Modules
+## Classes / Modules
 
-LoraDeviceLib (LDL) is composed of the following modules:
+LDL is composed of the following classes:
 
-![image missing](/doc/plantuml/modules.png "LoraDeviceLib Modules")
-
-- Each module can be isolated for testing
-- Useful modules (like Frame) are easy to extract and reuse in other projects
-- Modules are written in an OO style     
-- It is possible to have more than one instance of LDL in the same program
+![image missing](/doc/plantuml/modules.png "LDL classes")
     
 ## Execution
 
@@ -20,11 +15,11 @@ The _interrupt_ level task signals when IO events occur. It runs for a short tim
 be interrupted by the _mainloop_ level task. 
 
 The _mainloop_ level task drives all other functionality from a single thread. 
-There are a small number of critical sections between the _interrupt_ level and _mainloop_ level threads - the _mainloop_ level task
+There are a small number of critical sections between the _interrupt_ level and _mainloop_ level threads; the _mainloop_ level task
 must use atomic operations when accessing these sections.
 
-To perform a MAC operation, the application must first schedule the operation by calling a scheduling function (e.g. MAC.join()), and then action the operation
-by calling MAC.tick() one or more times until a callback is received. 
+MAC operations are non-blocking. To perform an operation, the application must first schedule the operation by calling the relevant function (e.g. MAC.join()), 
+and then action the operation my calling MAC.tick() one or more times until a callback is received.
 
 The application must decide when to call MAC.tick() so that events are not missed. It can use MAC.ticksUntilNextEvent()
 to work out the best time to call, or, simply poll MAC.tick() as often as possible from _mainloop_.
@@ -53,7 +48,7 @@ and receive pattern implemented by a LoRaWAN device.
 - The device captures a timestamp at the moment TX completes and calculates the time for RX1_START and RX2_START
 - The device turns on its radio at RX1_START and RX2_START (+/- 20us) to listen for downstream messages
 - RX1_INTERVAL is configured to be between 1 and 16 seconds (in one second increments)
-- RX2_INTERVAL is always 1 greater than RX1_INTERVAL
+- RX2_INTERVAL is always 1 second more than RX1_INTERVAL
 
 If the event is early, the MAC will need to open the window early which will require more energy. If the event is late, the MAC
 will miss the downstream window.

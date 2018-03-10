@@ -1,4 +1,4 @@
-/* Copyright (c) 2017 Cameron Harper
+/* Copyright (c) 2017-2018 Cameron Harper
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -77,8 +77,6 @@ void System_atomic_setPtr(void **receiver, void *value)
 
 void System_getAppEUI(void *receiver, void *value)
 {
-    
-    
     VALUE self = (VALUE)receiver;
     
     VALUE appEUI = rb_iv_get(self, "@appEUI");

@@ -26,6 +26,7 @@ See [doc/technical_overview.md](doc/technical_overview.md).
 ## Examples
 
 - [AVR ATMega328p target](examples/mega_demo)
+- [Ruby port](bindings/ruby/ext/ldl/ext_mac/ext_mac.c)
 
 ## License
 
